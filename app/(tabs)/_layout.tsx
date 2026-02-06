@@ -1,33 +1,74 @@
-import { Tabs } from 'expo-router';
-import React from 'react';
+import { Tabs } from "expo-router";
+import React from "react";
 
-import { HapticTab } from '@/components/haptic-tab';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { HapticTab } from "@/components/haptic-tab";
+import { HEADER_BG_DARK, HEADER_BG_LIGHT } from "@/constants/theme";
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import { useColorScheme } from "react-native";
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
-
+  const theme = useColorScheme();
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
         headerShown: false,
         tabBarButton: HapticTab,
-      }}>
+        tabBarActiveTintColor: "orange",
+
+        tabBarStyle: {
+          backgroundColor: theme === "dark" ? HEADER_BG_DARK : HEADER_BG_LIGHT,
+          borderTopColor: theme === "dark" ? "#333" : "#ccc",
+        },
+      }}
+    >
       <Tabs.Screen
-        name="index"
+        name="delivery"
         options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+          title: "Home",
+          tabBarIcon: ({ color }) => (
+            <MaterialIcons size={24} name="home" color={color} />
+          ),
         }}
       />
       <Tabs.Screen
-        name="explore"
+        name="food"
         options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
+          title: "Restaurants",
+          tabBarIcon: ({ color }) => (
+            <MaterialIcons size={24} name="restaurant" color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="laundry/index"
+        options={{
+          title: "Laundry",
+          tabBarIcon: ({ color }) => (
+            <MaterialCommunityIcons
+              size={24}
+              name="washing-machine"
+              color={color}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="marketplace"
+        options={{
+          title: "Marketplace",
+          tabBarIcon: ({ color }) => (
+            <MaterialIcons size={24} name="store" color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="profile/index"
+        options={{
+          title: "Profile",
+          tabBarIcon: ({ color }) => (
+            <MaterialIcons size={24} name="person" color={color} />
+          ),
         }}
       />
     </Tabs>
