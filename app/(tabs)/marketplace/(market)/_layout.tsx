@@ -35,7 +35,7 @@ const DeliveryLayout = () => {
           tabBarPressOpacity: 0,
           tabBarIndicatorStyle: {
             backgroundColor: "orange",
-            height: 3,
+            height: 1,
           },
           tabBarStyle: {
             backgroundColor:

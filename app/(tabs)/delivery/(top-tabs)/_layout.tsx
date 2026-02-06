@@ -33,10 +33,9 @@ const TopTab = () => {
         lazyPlaceholder: () => <TabLoadingFallback />,
         swipeEnabled: false,
         tabBarLabelStyle: {
-          // fontSize: 12,
           textAlign: "center",
-          textTransform: "capitalize",
           fontFamily: "Poppins-Medium",
+          fontSize: 12,
         },
         tabBarActiveTintColor: theme === "dark" ? "#fff" : "#000",
         tabBarInactiveTintColor: theme === "dark" ? "#aaa" : "#555",

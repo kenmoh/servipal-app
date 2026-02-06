@@ -12,7 +12,7 @@ import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import { View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import "react-native-reanimated";
+import { KeyboardProvider } from "react-native-keyboard-controller";
 
 Sentry.init({
   dsn: "https://945bccd1ed4b5bcb5eab8cf7e3c776fa@o4505603287023616.ingest.us.sentry.io/4510143988629504",
@@ -79,154 +79,155 @@ export default function RootLayout() {
   return (
     <View className="bg-background flex-1">
       <GestureHandlerRootView style={{ flex: 1 }}>
-        <QueryClientProvider client={queryClient}>
-          <BottomSheetModalProvider>
-            <ToastProvider>
-              <Stack
-                screenOptions={{
-                  headerTintColor:
-                    colorScheme === "dark" ? HEADER_BG_DARK : HEADER_BG_LIGHT,
-                  headerShadowVisible: false,
-                  headerStyle: {
-                    backgroundColor: BG_COLOR,
-                  },
-                }}
-              >
-                {/* Auth Screens */}
-                <Stack.Protected guard={!user?.id}>
-                  <Stack.Screen
-                    name="sign-in"
-                    // options={{ headerShown: false }}
-                  />
-                  <Stack.Screen name="sign-up" options={{}} />
-                  <Stack.Screen
-                    name="forgot-password"
-                    options={{ headerShown: false }}
-                  />
-                  <Stack.Screen
-                    name="reset-password"
-                    options={{ headerShown: false }}
-                  />
-                </Stack.Protected>
+        <KeyboardProvider>
+          <QueryClientProvider client={queryClient}>
+            <BottomSheetModalProvider>
+              <ToastProvider>
+                <Stack
+                  screenOptions={{
+                    headerTintColor:
+                      colorScheme === "dark" ? HEADER_BG_DARK : HEADER_BG_LIGHT,
+                    headerShadowVisible: false,
+                    headerStyle: {
+                      backgroundColor: BG_COLOR,
+                    },
+                  }}
+                >
+                  {/* Auth Screens */}
+                  <Stack.Protected guard={!user?.id}>
+                    <Stack.Screen
+                      name="sign-in"
+                      // options={{ headerShown: false }}
+                    />
+                    <Stack.Screen name="sign-up" options={{}} />
+                    <Stack.Screen
+                      name="forgot-password"
+                      options={{ headerShown: false }}
+                    />
+                    <Stack.Screen
+                      name="reset-password"
+                      options={{ headerShown: false }}
+                    />
+                  </Stack.Protected>
 
-                {/* Protected Screens */}
-                <Stack.Protected guard={!!user?.id}>
-                  <Stack.Screen
-                    name="(tabs)"
-                    options={{ headerShown: false }}
-                  />
-                  <Stack.Screen
-                    name="wallet"
-                    options={{
-                      headerShown: false,
-                      animation: "fade_from_bottom",
-                    }}
-                  />
-                  <Stack.Screen
-                    name="wallet/fund"
-                    options={{
-                      title: "",
-                      headerTransparent: true,
-                      headerShadowVisible: false,
-                      animation: "fade_from_bottom",
-                    }}
-                  />
-                  <Stack.Screen
-                    name="wallet/transaction/[id]"
-                    options={{
-                      title: "",
-                      headerTransparent: true,
-                      headerShadowVisible: false,
-                      animation: "fade_from_bottom",
-                    }}
-                  />
-                  <Stack.Screen
-                    name="riders"
-                    options={{
-                      title: "Available Riders",
-                      animation: "slide_from_right",
-                      headerShown: true,
-                      headerTintColor:
-                        colorScheme === "dark"
-                          ? HEADER_BG_LIGHT
-                          : HEADER_BG_DARK,
-                    }}
-                  />
-                  <Stack.Screen
-                    name="messages"
-                    options={{
-                      headerShown: false,
-                      headerTintColor:
-                        colorScheme === "dark"
-                          ? HEADER_BG_LIGHT
-                          : HEADER_BG_DARK,
-                      title: "Messages",
-                      animation: "slide_from_right",
-                    }}
-                  />
-                  <Stack.Screen
-                    name="change-password"
-                    options={{
-                      title: "Change Password",
-                      animation: "fade_from_bottom",
-                    }}
-                  />
-                  <Stack.Screen
-                    name="delivery-detail"
-                    options={{
-                      headerShown: false,
-                      animation: "fade_from_bottom",
-                    }}
-                  />
-                  <Stack.Screen
-                    name="send-package"
-                    options={{
-                      headerShown: false,
-                      animation: "slide_from_bottom",
-                    }}
-                  />
-                  <Stack.Screen
-                    name="product-detail"
-                    options={{
-                      headerShown: false,
-                      animation: "fade_from_bottom",
-                    }}
-                  />
-                  <Stack.Screen
-                    name="store"
-                    options={{
-                      headerShown: false,
-                      animation: "slide_from_right",
-                    }}
-                  />
-                  <Stack.Screen
-                    name="cart"
-                    options={{
-                      title: "Review Order",
-                      animation: "slide_from_right",
-                      headerTintColor:
-                        colorScheme === "dark"
-                          ? HEADER_BG_LIGHT
-                          : HEADER_BG_DARK,
-                    }}
-                  />
-                  <Stack.Screen
-                    name="update-profile"
-                    options={{
-                      headerTintColor:
-                        colorScheme === "dark"
-                          ? HEADER_BG_LIGHT
-                          : HEADER_BG_DARK,
-                      title: "Update Profile",
-                      animation: "slide_from_right",
-                    }}
-                  />
-                </Stack.Protected>
-              </Stack>
-              <StatusBar style="auto" />
-            </ToastProvider>
-          </BottomSheetModalProvider>
-        </QueryClientProvider>
+                  {/* Protected Screens */}
+                  <Stack.Protected guard={!!user?.id}>
+                    <Stack.Screen
+                      name="(tabs)"
+                      options={{ headerShown: false }}
+                    />
+                    <Stack.Screen
+                      name="wallet"
+                      options={{
+                        headerShown: false,
+                        animation: "fade_from_bottom",
+                      }}
+                    />
+                    <Stack.Screen
+                      name="wallet/fund"
+                      options={{
+                        title: "",
+                        headerTransparent: true,
+                        headerShadowVisible: false,
+                        animation: "fade_from_bottom",
+                      }}
+                    />
+                    <Stack.Screen
+                      name="wallet/transaction/[id]"
+                      options={{
+                        title: "",
+                        headerTransparent: true,
+                        headerShadowVisible: false,
+                        animation: "fade_from_bottom",
+                      }}
+                    />
+                    <Stack.Screen
+                      name="riders"
+                      options={{
+                        title: "Available Riders",
+                        animation: "slide_from_right",
+                        headerTintColor:
+                          colorScheme === "dark"
+                            ? HEADER_BG_LIGHT
+                            : HEADER_BG_DARK,
+                      }}
+                    />
+                    <Stack.Screen
+                      name="messages"
+                      options={{
+                        headerShown: false,
+                        headerTintColor:
+                          colorScheme === "dark"
+                            ? HEADER_BG_LIGHT
+                            : HEADER_BG_DARK,
+                        title: "Messages",
+                        animation: "slide_from_right",
+                      }}
+                    />
+                    <Stack.Screen
+                      name="change-password"
+                      options={{
+                        title: "Change Password",
+                        animation: "fade_from_bottom",
+                      }}
+                    />
+                    <Stack.Screen
+                      name="delivery-detail"
+                      options={{
+                        headerShown: false,
+                        animation: "fade_from_bottom",
+                      }}
+                    />
+                    <Stack.Screen
+                      name="send-package"
+                      options={{
+                        headerShown: false,
+                        animation: "slide_from_bottom",
+                      }}
+                    />
+                    <Stack.Screen
+                      name="product-detail"
+                      options={{
+                        headerShown: false,
+                        animation: "fade_from_bottom",
+                      }}
+                    />
+                    <Stack.Screen
+                      name="store"
+                      options={{
+                        headerShown: false,
+                        animation: "slide_from_right",
+                      }}
+                    />
+                    <Stack.Screen
+                      name="cart"
+                      options={{
+                        title: "Review Order",
+                        animation: "slide_from_right",
+                        headerTintColor:
+                          colorScheme === "dark"
+                            ? HEADER_BG_LIGHT
+                            : HEADER_BG_DARK,
+                      }}
+                    />
+                    <Stack.Screen
+                      name="update-profile"
+                      options={{
+                        headerTintColor:
+                          colorScheme === "dark"
+                            ? HEADER_BG_LIGHT
+                            : HEADER_BG_DARK,
+                        title: "Update Profile",
+                        animation: "slide_from_right",
+                      }}
+                    />
+                  </Stack.Protected>
+                </Stack>
+                <StatusBar style="auto" />
+              </ToastProvider>
+            </BottomSheetModalProvider>
+          </QueryClientProvider>
+        </KeyboardProvider>
       </GestureHandlerRootView>
     </View>
   );

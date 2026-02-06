@@ -9,6 +9,7 @@ import {
 import { useUserStore } from "@/store/userStore";
 import type { DisputeMessage } from "@/types/dispute-types";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import { useHeaderHeight } from "@react-navigation/elements";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as ImagePicker from "expo-image-picker";
 import { Stack, useLocalSearchParams } from "expo-router";
@@ -18,14 +19,24 @@ import {
   FlatList,
   Image,
   Keyboard,
-  KeyboardAvoidingView,
-  Platform,
   Pressable,
   Text,
   TextInput,
   View,
 } from "react-native";
+import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+/**
+ * Get initials from a name for avatar display
+ */
+const getInitials = (name: string): string => {
+  const parts = name.trim().split(" ");
+  if (parts.length >= 2) {
+    return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+  }
+  return name.slice(0, 2).toUpperCase();
+};
 
 /**
  * Format timestamp for message display
@@ -46,70 +57,111 @@ const MessageBubble = ({
   message,
   isOwn,
   isOptimistic,
+  sender,
 }: {
   message: DisputeMessage;
   isOwn: boolean;
   isOptimistic?: boolean;
+  sender?: {
+    full_name?: string;
+    profile_image_url?: string | null;
+  };
 }) => {
   const hasAttachments = message.attachments && message.attachments.length > 0;
 
-  return (
-    <View className={`max-w-[80%] mb-2 ${isOwn ? "self-end" : "self-start"}`}>
-      <View
-        className={`px-4 py-3 rounded-2xl ${
-          isOwn
-            ? "bg-brand-primary rounded-br-sm"
-            : "bg-surface-elevated rounded-bl-sm"
-        } ${isOptimistic ? "opacity-70" : ""}`}
-      >
-        {/* Attachments */}
-        {hasAttachments && (
-          <View className="mb-2">
-            {message.attachments!.map((url, index) => (
-              <Image
-                key={index}
-                source={{ uri: url }}
-                className="w-48 h-36 rounded-lg mb-1"
-                resizeMode="cover"
-              />
-            ))}
-          </View>
-        )}
+  // Render avatar helper
+  const renderAvatar = () => {
+    if (sender?.profile_image_url) {
+      return (
+        <Image
+          source={{ uri: sender.profile_image_url }}
+          className="w-8 h-8 rounded-full"
+        />
+      );
+    }
+    return (
+      <View className="w-8 h-8 rounded-full bg-brand-primary items-center justify-center">
+        <Text className="text-white font-poppins-bold text-[10px]">
+          {sender?.full_name ? getInitials(sender.full_name) : "?"}
+        </Text>
+      </View>
+    );
+  };
 
-        {/* Message text */}
-        {message.message_text && (
-          <Text
-            className={`text-sm font-poppins ${
-              isOwn ? "text-white" : "text-primary"
-            }`}
-          >
-            {message.message_text}
+  return (
+    <View
+      className={`flex-row mb-4 ${isOwn ? "justify-end" : "justify-start"}`}
+    >
+      {!isOwn && (
+        <View className="mr-2 self-end shrink-0">{renderAvatar()}</View>
+      )}
+
+      <View className="max-w-[75%]">
+        {!isOwn && sender?.full_name && (
+          <Text className="text-muted text-[10px] font-poppins-medium mb-1 ml-1">
+            {sender.full_name}
           </Text>
         )}
+        <View
+          className={`px-4 py-3 rounded-2xl ${
+            isOwn
+              ? "bg-brand-primary rounded-br-sm"
+              : "bg-surface-elevated rounded-bl-sm"
+          } ${isOptimistic ? "opacity-70" : ""}`}
+        >
+          {/* Attachments */}
+          {hasAttachments && (
+            <View className="mb-2">
+              {message.attachments!.map((url, index) => (
+                <Image
+                  key={index}
+                  source={{ uri: url }}
+                  className="w-48 h-36 rounded-lg mb-1"
+                  resizeMode="cover"
+                />
+              ))}
+            </View>
+          )}
+
+          {/* Message text */}
+          {message.message_text && (
+            <Text
+              className={`text-sm font-poppins ${
+                isOwn ? "text-white" : "text-primary"
+              }`}
+            >
+              {message.message_text}
+            </Text>
+          )}
+        </View>
+
+        <View
+          className={`flex-row items-center mt-1 ${isOwn ? "justify-end" : "justify-start"}`}
+        >
+          <Text className="text-muted text-[10px]">
+            {formatMessageTime(message.created_at)}
+          </Text>
+          {isOwn && (
+            <Ionicons
+              name={message.is_read ? "checkmark-done" : "checkmark"}
+              size={12}
+              color={message.is_read ? "#22C55E" : "#9CA3AF"}
+              style={{ marginLeft: 4 }}
+            />
+          )}
+          {isOptimistic && (
+            <ActivityIndicator
+              size={10}
+              color="#9CA3AF"
+              style={{ marginLeft: 4 }}
+            />
+          )}
+        </View>
       </View>
 
-      <View
-        className={`flex-row items-center mt-1 ${isOwn ? "justify-end" : "justify-start"}`}
-      >
-        <Text className="text-muted text-[10px]">
-          {formatMessageTime(message.created_at)}
-        </Text>
-        {isOwn && (
-          <Ionicons
-            name={message.is_read ? "checkmark-done" : "checkmark"}
-            size={12}
-            color={message.is_read ? "#22C55E" : "#9CA3AF"}
-            style={{ marginLeft: 4 }}
-          />
-        )}
-        {isOptimistic && (
-          <ActivityIndicator
-            size={10}
-            color="#9CA3AF"
-            style={{ marginLeft: 4 }}
-          />
-        )}
-      </View>
+      {isOwn && (
+        <View className="ml-2 self-end shrink-0">{renderAvatar()}</View>
+      )}
     </View>
   );
 };
@@ -176,8 +228,8 @@ const MessageInput = ({
 
   return (
     <View
-      className="bg-surface-elevated border-t border-border-subtle px-4 py-2"
-      style={{ paddingBottom: Math.max(insets.bottom, 12) }}
+      className="bg-surface-elevated border-t border-border-subtle px-4 pt-2"
+      style={{ paddingBottom: Math.max(insets.bottom, 8) }}
     >
       {/* Image preview */}
       {selectedImage && (
@@ -206,7 +258,7 @@ const MessageInput = ({
       {/* Unified input container */}
       <View className="flex-row items-center bg-input rounded-full px-2 py-1.5 mx-auto w-full border border-border-subtle">
         {/* Text input */}
-        <View className="flex-1 px-4 py-2 min-h-[40px] max-h-[100px]">
+        <View className="flex-1 px-4 min-h-[40px] max-h-[100px]">
           <TextInput
             value={text}
             onChangeText={setText}
@@ -254,13 +306,12 @@ const MessageInput = ({
     </View>
   );
 };
-
 /**
  * Conversation Screen
  */
 const ConversationScreen = () => {
   const { id: disputeId } = useLocalSearchParams<{ id: string }>();
-  const { user } = useUserStore();
+  const { user, profile, profileImageUrl } = useUserStore();
   const queryClient = useQueryClient();
   const flatListRef = useRef<FlatList>(null);
   const [optimisticMessages, setOptimisticMessages] = useState<
@@ -268,6 +319,7 @@ const ConversationScreen = () => {
   >([]);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const headerHeight = useHeaderHeight();
 
   // Fetch dispute details
   const { data: disputeDetails } = useQuery({
@@ -414,15 +466,41 @@ const ConversationScreen = () => {
     ({ item }: { item: DisputeMessage }) => {
       const isOwn = item.sender_id === user?.id;
       const isOptimistic = item.id.startsWith("temp-");
+
+      // Find sender info
+      let senderInfo: any = null;
+
+      if (isOwn) {
+        // Use current user's profile
+        senderInfo = {
+          full_name: profile?.full_name || "Me",
+          profile_image_url: profile?.profile_image_url || null,
+        };
+      } else if (disputeDetails) {
+        // Check if sender is initiator or respondent
+        if (
+          item.sender_id === disputeDetails.initiator?.id ||
+          item.sender_id === disputeDetails.initiator_id
+        ) {
+          senderInfo = disputeDetails.initiator;
+        } else if (
+          item.sender_id === disputeDetails.respondent?.id ||
+          item.sender_id === disputeDetails.respondent_id
+        ) {
+          senderInfo = disputeDetails.respondent;
+        }
+      }
+
       return (
         <MessageBubble
           message={item}
           isOwn={isOwn}
           isOptimistic={isOptimistic}
+          sender={senderInfo || undefined}
         />
       );
     },
-    [user?.id],
+    [user, profile, profileImageUrl, disputeDetails],
   );
 
   const keyExtractor = useCallback((item: DisputeMessage) => item.id, []);
@@ -474,9 +552,10 @@ const ConversationScreen = () => {
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      className="flex-1 bg-background"
-      keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
+      style={{ flex: 1 }}
+      behavior="padding"
+      keyboardVerticalOffset={50}
+      className="bg-background"
     >
       {/* Native Stack Header */}
       <Stack.Screen
@@ -495,12 +574,16 @@ const ConversationScreen = () => {
         renderItem={renderMessage}
         contentContainerStyle={{
           paddingHorizontal: 16,
-          paddingVertical: 16,
+          paddingTop: 16,
+          paddingBottom: 16,
           flexGrow: 1,
         }}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="interactive"
+        maintainVisibleContentPosition={{
+          minIndexForVisible: 0,
+        }}
         onContentSizeChange={() => {
           flatListRef.current?.scrollToEnd({ animated: true });
         }}
@@ -520,6 +603,7 @@ const ConversationScreen = () => {
         }
       />
 
+      {/* Just use a regular View for the input - KeyboardAvoidingView handles positioning */}
       <MessageInput
         onSend={handleSend}
         onPickImage={handlePickImage}

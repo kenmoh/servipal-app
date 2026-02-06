@@ -10,7 +10,7 @@ const _layout = () => {
       <Stack.Screen
         name="index"
         options={{
-          title: "Restaurants",
+          title: "Laundry",
           headerShadowVisible: false,
           headerStyle: {
             backgroundColor:
