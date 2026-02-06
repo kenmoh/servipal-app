@@ -23,8 +23,13 @@ const StoreCard = ({
 }) => {
   const theme = useColorScheme();
   const handleStoreSelect = async () => {
+    const finalPath =
+      item?.user_type === "LAUNDRY_VENDOR"
+        ? "/laundry-store/[storeId]"
+        : (pathName as RelativePathString);
+
     router.push({
-      pathname: pathName as RelativePathString,
+      pathname: finalPath as any,
       params: {
         storeId: item?.id,
       },

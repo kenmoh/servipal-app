@@ -1,19 +1,17 @@
+import { fetchVendorMenuItems } from "@/api/food";
 import CartInfoBtn from "@/components/CartInfoBtn";
 import EmptyList from "@/components/EmptyList";
 import FoodCard from "@/components/FoodCard";
 import ItemCustomizationSheet from "@/components/ItemCustomizationSheet";
 import { useCartStore } from "@/store/cartStore";
+import { useUserStore } from "@/store/userStore";
+import { RestaurantMenuItemResponse } from "@/types/item-types";
 import { BottomSheetModal } from "@gorhom/bottom-sheet";
 import { FlashList } from "@shopify/flash-list";
 import { useQuery } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useMemo, useRef, useState } from "react";
-import { View } from "react-native";
-
-import { fetchVendorMenuItems } from "@/api/food";
-import { useUserStore } from "@/store/userStore";
-import { RestaurantMenuItemResponse } from "@/types/item-types";
-import { Text } from "react-native";
+import { Text, View } from "react-native";
 
 interface GroupedItem {
   type: "header" | "item";
@@ -166,7 +164,7 @@ const FoodMenu = () => {
       </View>
       <CartInfoBtn
         label="View Cart"
-        totalCost={totalCost?.toString()!}
+        totalCost={totalCost || 0}
         totalItem={cart.order_items.length}
         onPress={() => router.push("/cart")}
       />

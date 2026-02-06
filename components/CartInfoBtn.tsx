@@ -20,7 +20,7 @@ const AnimatedTouchableOpacity =
   Animated.createAnimatedComponent(TouchableOpacity);
 
 interface ViewCartBtnProps {
-  totalCost: string;
+  totalCost: string | number;
   label: string;
   totalItem: number;
   onPress: () => void;
