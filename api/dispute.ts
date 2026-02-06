@@ -1,4 +1,4 @@
-import type {
+import {
   CreateDisputeRequest,
   Dispute,
   DisputeDetails,
@@ -218,4 +218,99 @@ export const subscribeToDisputeUpdates = (
     .subscribe();
 
   return channel;
+};
+
+/**
+ * Mark messages as read for a dispute
+ */
+export const markMessagesAsRead = async (disputeId: string): Promise<void> => {
+  try {
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession();
+
+    if (sessionError || !session) {
+      throw new Error("User not authenticated");
+    }
+
+    // Mark all unread messages as read (where current user is NOT the sender)
+    const { error: messageError } = await supabase
+      .from("dispute_messages")
+      .update({ is_read: true, read_at: new Date().toISOString() })
+      .eq("dispute_id", disputeId)
+      .neq("sender_id", session.user.id)
+      .eq("is_read", false);
+
+    if (messageError) {
+      console.error("❌ Mark messages as read failed:", messageError);
+      throw new Error(messageError.message);
+    }
+
+    // Reset unread count on the dispute
+    const { error: disputeError } = await supabase
+      .from("disputes")
+      .update({ unread_count: 0 })
+      .eq("id", disputeId);
+
+    if (disputeError) {
+      console.error("❌ Reset unread count failed:", disputeError);
+    }
+
+    console.log("✅ Messages marked as read");
+  } catch (error) {
+    console.error("❌ Mark as read error:", error);
+    throw error;
+  }
+};
+
+/**
+ * Upload an image to dispute-images bucket
+ */
+export const uploadDisputeImage = async (
+  disputeId: string,
+  imageUri: string,
+): Promise<string> => {
+  try {
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession();
+
+    if (sessionError || !session) {
+      throw new Error("User not authenticated");
+    }
+
+    // Generate unique filename
+    const fileExt = imageUri.split(".").pop() || "jpg";
+    const fileName = `${disputeId}/${Date.now()}.${fileExt}`;
+
+    // Fetch the image and convert to blob
+    const response = await fetch(imageUri);
+    const blob = await response.blob();
+
+    // Upload to Supabase storage
+    const { data, error } = await supabase.storage
+      .from("dispute-images")
+      .upload(fileName, blob, {
+        contentType: `image/${fileExt}`,
+        upsert: false,
+      });
+
+    if (error) {
+      console.error("❌ Upload image failed:", error);
+      throw new Error(error.message);
+    }
+
+    // Get public URL
+    const { data: urlData } = supabase.storage
+      .from("dispute-images")
+      .getPublicUrl(data.path);
+
+    console.log("✅ Image uploaded:", urlData.publicUrl);
+    return urlData.publicUrl;
+  } catch (error) {
+    console.error("❌ Upload image error:", error);
+    throw error;
+  }
 };

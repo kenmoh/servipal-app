@@ -155,7 +155,7 @@ export default function RootLayout() {
                   <Stack.Screen
                     name="messages"
                     options={{
-                      headerShown: true,
+                      headerShown: false,
                       headerTintColor:
                         colorScheme === "dark"
                           ? HEADER_BG_LIGHT
