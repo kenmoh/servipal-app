@@ -61,10 +61,7 @@ const GoogleTextInput = ({
   }, [value]);
 
   const styles = StyleSheet.create({
-    container: {
-      flex: 1,
-      alignSelf: "center",
-    },
+    container: {},
     suggestionsContainer: {
       backgroundColor: BG_COLOR,
       maxHeight: 350,
@@ -87,7 +84,7 @@ const GoogleTextInput = ({
     } as any,
 
     input: {
-      height: 50,
+      height: 56,
       borderRadius: 8,
       borderWidth: StyleSheet.hairlineWidth,
       color: TEXT,
@@ -110,7 +107,7 @@ const GoogleTextInput = ({
   });
 
   return (
-    <View className="gpa-2">
+    <View className="gap-2 w-full">
       {label && (
         <Text className="text-muted ml-5 mb-1 self-start font-poppins text-sm">
           {label}

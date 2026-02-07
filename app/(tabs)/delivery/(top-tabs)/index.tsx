@@ -4,6 +4,7 @@ import ErrorBoundary from "@/components/ErrorBoundary";
 import FAB from "@/components/FAB";
 import HDivider from "@/components/HDivider";
 import LoadingIndicator from "@/components/LoadingIndicator";
+import StatCard from "@/components/StatCard";
 import { useUserStore } from "@/store/userStore";
 import { DeliveryOrder } from "@/types/delivey-types";
 import Feather from "@expo/vector-icons/Feather";
@@ -13,8 +14,8 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { FlashList } from "@shopify/flash-list";
 import { useQuery } from "@tanstack/react-query";
 import { router } from "expo-router";
-import React, { ReactNode, useCallback, useMemo } from "react";
-import { Text, useColorScheme, View } from "react-native";
+import React, { useCallback, useMemo } from "react";
+import { useColorScheme, View } from "react-native";
 
 const UserOrders = () => {
   const { user } = useUserStore();
@@ -28,7 +29,7 @@ const UserOrders = () => {
     isFetching,
     isPending,
   } = useQuery({
-    queryKey: ["user-orders", user?.id],
+    queryKey: ["user-delivery-orders", user?.id],
     queryFn: () => getUserDeliveryOrders(),
     refetchOnWindowFocus: true,
     refetchOnMount: true,
@@ -126,7 +127,6 @@ const UserOrders = () => {
                 icon={item.icon}
                 label={item.label}
                 value={item.value}
-                theme={theme}
               />
             )}
             horizontal
@@ -165,39 +165,3 @@ const UserOrders = () => {
 };
 
 export default UserOrders;
-
-const StatCard = React.memo(
-  ({
-    icon,
-    label,
-    value,
-    theme,
-  }: {
-    icon: ReactNode;
-    label: string;
-    value: number;
-    theme: any;
-  }) => {
-    return (
-      <View className="bg-input mx-1 items-center justify-evenly py-2 h-[90px] w-[100px] rounded-lg border border-border-subtle">
-        {icon}
-        <Text
-          className="text-primary"
-          style={{
-            fontSize: 20,
-            fontWeight: "500",
-          }}
-        >
-          {value}
-        </Text>
-        <Text
-          style={{ fontSize: 12, color: theme === "dark" ? "#888" : "#555" }}
-        >
-          {label}
-        </Text>
-      </View>
-    );
-  },
-);
-
-StatCard.displayName = "StatCard";

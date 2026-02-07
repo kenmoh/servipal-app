@@ -1,7 +1,7 @@
 import React, { useEffect } from "react";
 import { ActivityIndicator, ScrollView, View } from "react-native";
 
-import { fetchCategories } from "@/api/item";
+import { fetchCategories } from "@/api/food";
 import {
   createLaundryItem,
   fetchLaundryItem,
@@ -249,7 +249,7 @@ const AddLaundryItem = () => {
                   []
                 }
                 onValueChange={onChange}
-                value={value}
+                value={value || ""}
                 placeholder="Select Category"
               />
             )}

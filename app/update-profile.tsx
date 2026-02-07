@@ -15,7 +15,15 @@ import * as Location from "expo-location";
 import { router, Stack } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
-import { ActivityIndicator, Alert, ScrollView, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  ScrollView,
+  Text,
+  View,
+} from "react-native";
+import DateTimePickerModal from "react-native-modal-datetime-picker";
 import z from "zod";
 
 const profileUpdateSchema = z.object({
@@ -41,6 +49,8 @@ const UpdateProfile = () => {
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
   const [isGettingLocation, setIsGettingLocation] = useState(false);
+  const [isOpeningPickerVisible, setOpeningPickerVisibility] = useState(false);
+  const [isClosingPickerVisible, setClosingPickerVisibility] = useState(false);
 
   const userType = user?.user_metadata?.user_type;
 
@@ -86,8 +96,8 @@ const UpdateProfile = () => {
         // @ts-ignore
         business_registration_number:
           profile.business_registration_number || "",
-        opening_hours: profile.opening_hours || "",
-        closing_hours: profile.closing_hours || "",
+        opening_hours: profile.opening_hour || "",
+        closing_hours: profile.closing_hour || "",
         // @ts-ignore
         pickup_and_delivery_charge: profile.pickup_and_delivery_charge || 0,
       });
@@ -106,6 +116,32 @@ const UpdateProfile = () => {
       showError("Update Failed", error.message);
     },
   });
+
+  const showOpeningPicker = () => setOpeningPickerVisibility(true);
+  const hideOpeningPicker = () => setOpeningPickerVisibility(false);
+
+  const handleConfirmOpening = (date: Date) => {
+    const formattedTime = date.toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    });
+    setValue("opening_hours", formattedTime);
+    hideOpeningPicker();
+  };
+
+  const showClosingPicker = () => setClosingPickerVisibility(true);
+  const hideClosingPicker = () => setClosingPickerVisibility(false);
+
+  const handleConfirmClosing = (date: Date) => {
+    const formattedTime = date.toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    });
+    setValue("closing_hours", formattedTime);
+    hideClosingPicker();
+  };
 
   const onSubmit = (data: ProfileUpdateFormData) => {
     // Filter data based on user type to avoid sending irrelevant fields
@@ -133,8 +169,8 @@ const UpdateProfile = () => {
     }
 
     if (userType === "RESTAURANT_VENDOR" || userType === "LAUNDRY_VENDOR") {
-      updateData.opening_hours = data.opening_hours;
-      updateData.closing_hours = data.closing_hours;
+      updateData.opening_hour = data.opening_hours;
+      updateData.closing_hour = data.closing_hours;
       updateData.pickup_and_delivery_charge =
         data.pickup_and_delivery_charge || undefined;
     }
@@ -189,13 +225,10 @@ const UpdateProfile = () => {
         contentContainerStyle={{ paddingBottom: 300 }}
         showsVerticalScrollIndicator={false}
       >
-        <View className="w-[90%] self-center">
-          <Text className="text-secondary font-poppins-semibold text-base my-4">
-            Proile Information
+        <View className="w-[90%] self-center gap-5">
+          <Text className="text-secondary font-poppins-semibold text-base mt-4">
+            Profile Information
           </Text>
-        </View>
-
-        <View className="gap-5">
           {/* COMMON FIELDS */}
           <Controller
             control={control}
@@ -207,7 +240,6 @@ const UpdateProfile = () => {
                 onChangeText={onChange}
                 placeholder="Enter your full name"
                 errorMessage={errors.full_name?.message}
-                width="90%"
                 editable={!isPending}
               />
             )}
@@ -224,7 +256,6 @@ const UpdateProfile = () => {
                 placeholder="e.g. 08012345678"
                 keyboardType="phone-pad"
                 errorMessage={errors.phone_number?.message}
-                width="90%"
                 editable={!isPending}
               />
             )}
@@ -238,8 +269,8 @@ const UpdateProfile = () => {
                 label="State"
                 items={states || []}
                 onValueChange={onChange}
-                value={value}
-                error={errors.state?.message}
+                value={value!}
+                width="100%"
               />
             )}
           />
@@ -256,7 +287,6 @@ const UpdateProfile = () => {
                   onChangeText={onChange}
                   placeholder="Your display name"
                   errorMessage={errors.store_name?.message}
-                  width="90%"
                   editable={!isPending}
                 />
               )}
@@ -278,7 +308,6 @@ const UpdateProfile = () => {
                     onChangeText={onChange}
                     placeholder="Enter business name"
                     errorMessage={errors.business_name?.message}
-                    width="90%"
                     editable={!isPending}
                   />
                 )}
@@ -288,26 +317,32 @@ const UpdateProfile = () => {
                 control={control}
                 name="business_address"
                 render={({ field: { onChange, value } }) => (
-                  <View className="flex-row items-end ">
-                    <View className="w-[80%]">
-                      <GoogleTextInput
-                        label="Business Address"
-                        placeholder="Search or enter address"
-                        scrollEnabled={false}
-                        value={value || ""}
-                        onPlaceSelect={(lat, lng, address) => {
-                          onChange(address);
-                        }}
-                        onChangeText={onChange}
-                        error={errors.business_address?.message}
-                      />
-                    </View>
-                    <View className="w-[20%]">
-                      <CurrentLocationButton
-                        onLocationSet={(address, coords) => {
-                          onChange(address);
-                        }}
-                      />
+                  <View>
+                    <Text className="text-muted font-poppins-medium mb-1.5 ml-1 text-sm">
+                      Business Address
+                    </Text>
+                    <View className="flex-row items-center gap-2">
+                      <View className="flex-1">
+                        <GoogleTextInput
+                          placeholder="Search or enter address"
+                          scrollEnabled={false}
+                          value={value || ""}
+                          onPlaceSelect={(lat, lng, address) => {
+                            onChange(address);
+                          }}
+                          onChangeText={onChange}
+                          error={errors.business_address?.message}
+                        />
+                      </View>
+                      <View>
+                        <CurrentLocationButton
+                          height={56}
+                          width={56}
+                          onLocationSet={(address, coords) => {
+                            onChange(address);
+                          }}
+                        />
+                      </View>
                     </View>
                   </View>
                 )}
@@ -323,7 +358,6 @@ const UpdateProfile = () => {
                     onChangeText={onChange}
                     placeholder="CAC Number"
                     errorMessage={errors.business_registration_number?.message}
-                    width="90%"
                     editable={!isPending}
                   />
                 )}
@@ -340,16 +374,18 @@ const UpdateProfile = () => {
                   <Controller
                     control={control}
                     name="opening_hours"
-                    render={({ field: { onChange, value } }) => (
-                      <AppTextInput
-                        label="Opening Time"
-                        value={value}
-                        onChangeText={onChange}
-                        placeholder="e.g. 08:00 AM"
-                        errorMessage={errors.opening_hours?.message}
-                        width="90%"
-                        editable={!isPending}
-                      />
+                    render={({ field: { value } }) => (
+                      <Pressable onPress={showOpeningPicker}>
+                        <View pointerEvents="none">
+                          <AppTextInput
+                            label="Opening Time"
+                            value={value}
+                            placeholder="e.g. 08:00 AM"
+                            errorMessage={errors.opening_hours?.message}
+                            editable={false}
+                          />
+                        </View>
+                      </Pressable>
                     )}
                   />
                 </View>
@@ -357,20 +393,36 @@ const UpdateProfile = () => {
                   <Controller
                     control={control}
                     name="closing_hours"
-                    render={({ field: { onChange, value } }) => (
-                      <AppTextInput
-                        label="Closing Time"
-                        value={value}
-                        onChangeText={onChange}
-                        placeholder="e.g. 09:00 PM"
-                        errorMessage={errors.closing_hours?.message}
-                        width="90%"
-                        editable={!isPending}
-                      />
+                    render={({ field: { value } }) => (
+                      <Pressable onPress={showClosingPicker}>
+                        <View pointerEvents="none">
+                          <AppTextInput
+                            label="Closing Time"
+                            value={value}
+                            placeholder="e.g. 09:00 PM"
+                            errorMessage={errors.closing_hours?.message}
+                            editable={false}
+                          />
+                        </View>
+                      </Pressable>
                     )}
                   />
                 </View>
               </View>
+
+              <DateTimePickerModal
+                isVisible={isOpeningPickerVisible}
+                mode="time"
+                onConfirm={handleConfirmOpening}
+                onCancel={hideOpeningPicker}
+              />
+
+              <DateTimePickerModal
+                isVisible={isClosingPickerVisible}
+                mode="time"
+                onConfirm={handleConfirmClosing}
+                onCancel={hideClosingPicker}
+              />
 
               <Controller
                 control={control}
@@ -383,7 +435,6 @@ const UpdateProfile = () => {
                     placeholder="0"
                     keyboardType="numeric"
                     errorMessage={errors.pickup_and_delivery_charge?.message}
-                    width="90%"
                     editable={!isPending}
                   />
                 )}
@@ -392,8 +443,8 @@ const UpdateProfile = () => {
           )}
 
           {/* BANKING INFO */}
-          <View className="w-[90%] self-center">
-            <Text className="text-secondary font-poppins-semibold text-base mt-4">
+          <View>
+            <Text className="text-secondary font-poppins-semibold text-base mt-4 mb-2">
               Payout Account Information
             </Text>
           </View>
@@ -408,7 +459,6 @@ const UpdateProfile = () => {
                 onChangeText={onChange}
                 placeholder="Enter bank name"
                 errorMessage={errors.bank_name?.message}
-                width="90%"
                 editable={!isPending}
               />
             )}
@@ -425,22 +475,20 @@ const UpdateProfile = () => {
                 placeholder="10-digit account number"
                 keyboardType="numeric"
                 errorMessage={errors.bank_account_number?.message}
-                width="90%"
                 editable={!isPending}
               />
             )}
           />
-        </View>
 
-        <View className="mt-10 mb-10">
-          <AppButton
-            className="self-center"
-            width={"90%"}
-            text="Update Profile"
-            onPress={handleSubmit(onSubmit)}
-            disabled={isPending}
-            icon={isPending ? <ActivityIndicator color="white" /> : undefined}
-          />
+          <View className="mt-5 mb-10">
+            <AppButton
+              text="Update Profile"
+              onPress={handleSubmit(onSubmit)}
+              disabled={isPending}
+              icon={isPending ? <ActivityIndicator color="white" /> : undefined}
+              width="100%"
+            />
+          </View>
         </View>
       </ScrollView>
     </View>

@@ -109,7 +109,7 @@ const ItemInfo = () => {
         queryKey: ["delivery-orders"],
       });
 
-      showInfo("Payment Successful", "Please select a rider ");
+      // showInfo("Payment Successful", "Please select a rider ");
       reset();
 
       router.push({
@@ -129,6 +129,7 @@ const ItemInfo = () => {
           pickupLocation: data.pickup_location,
           destination: data.destination,
           packageName: data.package_name,
+          serviceType: "DELIVERY",
         },
       });
       return;
@@ -307,19 +308,21 @@ const ItemInfo = () => {
               )}
             />
 
-            <Controller
-              control={control}
-              name="imageUrl"
-              render={({ field: { onChange, value } }) => (
-                <ImagePickerInput
-                  // imageHeight={1000}
-                  iconSize={50}
-                  value={value}
-                  onChange={onChange}
-                  errorMessage={errors.imageUrl?.message?.toString()}
-                />
-              )}
-            />
+            <View className="w-[90%] self-center">
+              <Controller
+                control={control}
+                name="imageUrl"
+                render={({ field: { onChange, value } }) => (
+                  <ImagePickerInput
+                    // imageHeight={1000}
+                    iconSize={50}
+                    value={value}
+                    onChange={onChange}
+                    errorMessage={errors.imageUrl?.message?.toString()}
+                  />
+                )}
+              />
+            </View>
           </View>
           <View className="self-center w-full items-center mt-4">
             <AppButton

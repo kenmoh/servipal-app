@@ -8,10 +8,11 @@ import {
   View,
 } from "react-native";
 
-import { fetchOrder } from "@/api/order";
+import { fetchOrderDetails } from "@/api/order";
 import LoadingIndicator from "@/components/LoadingIndicator";
 import { useToast } from "@/components/ToastProvider";
 import { HEADER_BG_DARK, HEADER_BG_LIGHT } from "@/constants/theme";
+import { DetailResponse, OrderItem } from "@/types/order-types";
 import Feather from "@expo/vector-icons/Feather";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
@@ -21,32 +22,40 @@ import { useLocalSearchParams } from "expo-router";
 import * as Sharing from "expo-sharing";
 
 const ReceiptPage = () => {
-  const { deliveryId: orderId } = useLocalSearchParams();
   const screenWidth = Dimensions.get("window").width;
   const theme = useColorScheme();
   const { showError, showSuccess } = useToast();
 
-  const BG_COLOR = theme === "dark" ? HEADER_BG_DARK : HEADER_BG_LIGHT;
+  const isDark = theme === "dark";
+  const BG_COLOR = isDark ? HEADER_BG_DARK : HEADER_BG_LIGHT;
+  const CARD_BG = isDark ? "bg-gray-800/40" : "bg-white";
+  const TEXT_PRIMARY = isDark ? "text-white" : "text-gray-900";
+  const TEXT_SECONDARY = isDark ? "text-gray-400" : "text-gray-600";
+  const BORDER_COLOR = isDark ? "border-gray-700" : "border-gray-200";
 
-  const { data, isLoading } = useQuery({
-    queryKey: ["order", orderId],
-    queryFn: () => fetchOrder(orderId as string),
+  const { id, orderType } = useLocalSearchParams<{
+    id: string;
+    orderType: "FOOD" | "LAUNDRY";
+  }>();
+
+  const { data, isLoading } = useQuery<DetailResponse>({
+    queryKey: ["order", id, orderType],
+    queryFn: () => fetchOrderDetails(id, orderType),
+    enabled: !!id && !!orderType,
   });
 
   const generateReceiptHTML = () => {
     if (!data) return "";
 
-    // Function to truncate long text
     const truncateText = (text: string, maxLength: number = 150) => {
       if (!text) return "";
       if (text.length <= maxLength) return text;
       return text.substring(0, maxLength) + "...";
     };
 
-    // Calculate total: sum of items total and delivery fee if present
     const itemsTotal = Number(data.order?.total_price || 0);
     const deliveryFee = Number(data.delivery?.delivery_fee || 0);
-    const total = itemsTotal + deliveryFee;
+    const total = Number(data.order?.grand_total || itemsTotal + deliveryFee);
 
     return `
             <html>
@@ -57,229 +66,174 @@ const ReceiptPage = () => {
                         
                         body { 
                             font-family: 'Poppins', sans-serif;
-                            padding: 20px;
-                            color: #333;
-                            background-color: #fff;
+                            padding: 40px 20px;
+                            color: #1a1a1a;
+                            background-color: #fcfcfc;
                             margin: 0;
                             line-height: 1.6;
-                            height: 100vh;
-                            overflow-y: auto;
                         }
                         
                         .container {
-                            max-width: 800px;
+                            max-width: 600px;
                             margin: 0 auto;
-                            padding: 20px;
-                            min-height: 100%;
+                            background: white;
+                            padding: 40px;
+                            border-radius: 24px;
+                            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
                         }
                         
                         .header { 
                             text-align: center; 
-                            margin-bottom: 30px;
-                            padding-bottom: 20px;
-                            border-bottom: 2px solid #f0f0f0;
+                            margin-bottom: 40px;
                         }
 
-                        .logo {
-                            width: 80px;
-                            height: 80px;
-                            margin: 0 auto 12px;
-                            display: block;
-                        }
-                        
                         .header h1 {
-                            color: #333;
+                            color: #FF8C00;
                             margin: 0;
-                            font-size: 24px;
+                            font-size: 28px;
+                            font-weight: 700;
+                            letter-spacing: -0.5px;
+                        }
+
+                        .business-name {
+                            font-size: 18px;
                             font-weight: 600;
+                            color: #333;
+                            margin-top: 5px;
                         }
                         
+                        .order-meta {
+                            text-align: center;
+                            font-size: 14px;
+                            color: #666;
+                            margin-top: 8px;
+                        }
+
                         .section { 
-                            margin-bottom: 25px;
-                            padding: 20px;
-                            background-color: #f8f9fa;
-                            border-radius: 12px;
-                            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+                            margin-bottom: 30px;
                         }
                         
                         .section h2 {
-                            color: #444;
+                            color: #1a1a1a;
                             margin: 0 0 15px 0;
-                            font-size: 18px;
-                            font-weight: 500;
+                            font-size: 16px;
+                            font-weight: 600;
+                            text-transform: uppercase;
+                            letter-spacing: 1px;
                         }
                         
-                        .row { 
+                        .line-item { 
                             display: flex; 
                             justify-content: space-between; 
-                            margin-bottom: 12px;
-                            padding: 8px 0;
-                            gap: 5px;
-                            border-bottom: 1px solid #eee;
+                            padding: 12px 0;
+                            border-bottom: 1px solid #f0f0f0;
                         }
                         
-                        .row:last-child {
+                        .line-item:last-child {
                             border-bottom: none;
                         }
                         
-                        .row span:first-child {
+                        .label {
                             color: #666;
-                            font-weight: 400;
                         }
                         
-                        .row span:last-child {
+                        .value {
                             font-weight: 500;
+                            color: #1a1a1a;
                         }
                         
-                        .total { 
-                            font-weight: 600;
-                            font-size: 1.1em;
+                        .total-block { 
+                            margin-top: 20px;
+                            padding-top: 20px;
+                            border-top: 2px solid #f0f0f0;
+                        }
+                        
+                        .grand-total {
+                            display: flex;
+                            justify-content: space-between;
+                            align-items: center;
+                            font-weight: 700;
+                            font-size: 22px;
                             color: #000;
-                            background-color: #f0f0f0;
-                            padding: 10px;
-                            border-radius: 6px;
                             margin-top: 10px;
                         }
                         
-                        .status-paid {
-                            color: #28a745;
+                        .status {
+                            display: inline-block;
+                            padding: 6px 16px;
+                            border-radius: 50px;
+                            font-size: 12px;
                             font-weight: 600;
+                            text-transform: uppercase;
+                        }
+                        
+                        .status-paid {
+                            background: #e6f4ea;
+                            color: #1e7e34;
                         }
                         
                         .status-unpaid {
-                            color: #dc3545;
-                            font-weight: 600;
+                            background: #fdeaea;
+                            color: #d93025;
                         }
                         
-                        .amount {
-                            font-family: 'Poppins', monospace;
-                            font-weight: 600;
+                        .address-box {
+                            background: #fcfcfc;
+                            padding: 16px;
+                            border-radius: 12px;
+                            border: 1px solid #f0f0f0;
+                            font-size: 14px;
+                            margin-bottom: 15px;
                         }
 
-                        .address-info {
-                            display: flex;
-                            flex-direction: column;
-                            gap: 4px;
-                            margin-bottom: 12px;
-                        }
-
-                        .address-label {
-                            font-weight: 600;
-                            color: #666;
-                            font-size: 13px;
-                        }
-
-                        .address-value {
-                            color: #4a4a4a;
-                            font-size: 13px;
-                            line-height: 1.4;
-                            word-wrap: break-word;
-                            overflow-wrap: break-word;
-                            max-width: 100%;
-                            padding: 8px;
-                            background-color: #fff;
-                            border-radius: 6px;
-                            border: 1px solid #eee;
-                        }
-                        
                         .footer {
                             text-align: center;
-                            margin-top: 30px;
-                            padding-top: 20px;
-                            border-top: 2px solid #f0f0f0;
-                            color: #666;
-                            font-size: 12px;
-                        }
-                        
-                        @media print {
-                            body {
-                                padding: 0;
-                            }
-                            .section {
-                                break-inside: avoid;
-                            }
+                            margin-top: 50px;
+                            color: #999;
+                            font-size: 11px;
+                            letter-spacing: 0.5px;
                         }
                     </style>
                 </head>
                 <body>
                     <div class="container">
                         <div class="header">
-                            
-                            <h1>Receipt</h1>
+                            <h1>ServiPal</h1>
+                            <div class="business-name">${data.order?.vendor_name || "Vendor"}</div>
+                            <div class="order-meta">Order #${data.order?.order_number}</div>
                         </div>
                         
                         <div class="section">
-                            <div class="row">
-                                <span>Order Number</span>
-                                <span>#${data.order?.order_number}</span>
+                            <div class="line-item">
+                                <span class="label">Customer</span>
+                                <span class="value">${data.order?.customer_name || "User"}</span>
                             </div>
-                            <div class="row">
-                                <span>Date</span>
-                                <span>${format(
-                                  new Date(data.delivery?.created_at || ""),
-                                  "PPP",
-                                )}</span>
-                            </div>
-                            ${
-                              data.order?.order_items &&
-                              data.order.order_items.length > 0
-                                ? `
-                                <div class="row">
-                                    <span>Items Total</span>
-                                    <span class="amount">₦${itemsTotal.toFixed(
-                                      2,
-                                    )}</span>
-                                </div>
-                            `
-                                : ""
-                            }
-                            ${
-                              data.delivery?.delivery_fee
-                                ? `
-                                <div class="row">
-                                    <span>Delivery Fee</span>
-                                    <span class="amount">₦${deliveryFee.toFixed(
-                                      2,
-                                    )}</span>
-                                </div>
-                            `
-                                : ""
-                            }
-                            <div class="row total">
-                                <span>Total Amount</span>
-                                <span class="amount">₦${total.toFixed(2)}</span>
-                            </div>
-                            <div class="row">
-                                <span>Payment Status</span>
-                                <span class="status-${
-                                  data.order?.order_payment_status === "paid"
-                                    ? "paid"
-                                    : "unpaid"
-                                }">
+                            <div class="line-item">
+                                <span class="label">Payment Status</span>
+                                <span class="status status-${data.order?.order_payment_status === "paid" ? "paid" : "unpaid"}">
                                     ${data.order?.order_payment_status?.toUpperCase()}
                                 </span>
+                            </div>
+                            <div class="line-item">
+                                <span class="label">Date</span>
+                                <span class="value">${format(new Date(data.order?.created_at || ""), "PPP")}</span>
                             </div>
                         </div>
 
                         ${
                           data.order?.order_items &&
-                          data?.order?.order_type !== "package" &&
                           data.order.order_items.length > 0
                             ? `
                             <div class="section">
-                                <h2>Order Items</h2>
+                                <h2>Items</h2>
                                 ${data.order.order_items
                                   .map(
-                                    (item: any) => `
-                                    <div class="row">
-                                        <span>${item.quantity}X  ${
-                                          item.name
-                                        }</span>
-                                        <span class="amount">₦${Number(
-                                          item.price * item.quantity,
-                                        ).toFixed(2)}</span>
+                                    (item) => `
+                                    <div class="line-item">
+                                        <span>${item.quantity}X ${item.name}</span>
+                                        <span class="value">₦${Number(item.price * item.quantity).toFixed(2)}</span>
                                     </div>
-                                `,
+                                  `,
                                   )
                                   .join("")}
                             </div>
@@ -287,29 +241,42 @@ const ReceiptPage = () => {
                             : ""
                         }
 
+                        <div class="section total-block">
+                            <div class="line-item">
+                                <span class="label">Subtotal</span>
+                                <span class="value">₦${itemsTotal.toFixed(2)}</span>
+                            </div>
+                            ${
+                              deliveryFee > 0
+                                ? `
+                                <div class="line-item">
+                                    <span class="label">Delivery Fee</span>
+                                    <span class="value">₦${deliveryFee.toFixed(2)}</span>
+                                </div>
+                            `
+                                : ""
+                            }
+                            <div class="grand-total">
+                                <span>Total</span>
+                                <span>₦${total.toFixed(2)}</span>
+                            </div>
+                        </div>
+
                         <div class="section">
                             <h2>Delivery Details</h2>
-                            <div class="address-info">
-                                <div class="address-label">From</div>
-                                <div class="address-value">${truncateText(
-                                  data.delivery?.origin || "",
-                                )}</div>
+                            <div class="address-box">
+                                <strong style="display:block; margin-bottom:4px; font-size:11px; color:#999;">PICKUP</strong>
+                                ${truncateText(data.delivery?.origin || "")}
                             </div>
-                            <div class="address-info">
-                                <div class="address-label">To</div>
-                                <div class="address-value">${truncateText(
-                                  data.delivery?.destination || "",
-                                )}</div>
-                            </div>
-                            <div class="row" style="margin-top: 12px;">
-                                <span>Status</span>
-                                <span>${data.delivery?.delivery_status?.toUpperCase()}</span>
+                            <div class="address-box">
+                                <strong style="display:block; margin-bottom:4px; font-size:11px; color:#999;">DROP-OFF</strong>
+                                ${truncateText(data.delivery?.destination || "")}
                             </div>
                         </div>
                         
                         <div class="footer">
-                            <p>Thank you for using ServiPal</p>
-                            <p>This is a computer-generated receipt and does not require a signature.</p>
+                            <p>Thank you for choosing ServiPal!</p>
+                            <p>Computer generated receipt. Valid without signature.</p>
                         </div>
                     </div>
                 </body>
@@ -320,8 +287,6 @@ const ReceiptPage = () => {
   const handleDownload = async () => {
     try {
       const html = generateReceiptHTML();
-
-      // Generate the PDF
       const { uri } = await Print.printToFileAsync({
         html,
         width: screenWidth,
@@ -331,37 +296,30 @@ const ReceiptPage = () => {
 
       const fileName = `Receipt_${data?.order?.order_number || "unknown"}.pdf`;
 
-      // For iOS and Android sharing
       if (await Sharing.isAvailableAsync()) {
-        // Direct sharing (recommended)
         await Sharing.shareAsync(uri, {
           UTI: ".pdf",
           mimeType: "application/pdf",
           dialogTitle: "Share Receipt",
         });
-
         showSuccess("Success", "Receipt ready to share or save");
       } else {
-        // Fallback: Copy to document directory using new File API
         const sourceFile = new File(uri);
         const destinationFile = new File(Paths.document, fileName);
-
         sourceFile.copy(destinationFile);
-
-        showSuccess("Success", `Receipt saved to ${destinationFile.uri}`);
+        showSuccess("Success", `Receipt saved to Documents`);
       }
     } catch (error) {
-      console.error("PDF Download Error:", error);
       showError("Error", "Failed to download receipt");
     }
   };
+
   const handleShare = async () => {
     try {
       const html = generateReceiptHTML();
       const { uri } = await Print.printToFileAsync({
         html,
         width: screenWidth,
-        height: screenWidth * 1.4,
         base64: false,
       });
 
@@ -371,172 +329,196 @@ const ReceiptPage = () => {
           dialogTitle: `Receipt #${data?.order?.order_number}`,
           UTI: "com.adobe.pdf",
         });
-      } else {
-        showError("Error", "Sharing is not available on this device");
       }
     } catch (error) {
       showError("Error", "Failed to share receipt");
     }
   };
 
-  if (isLoading) {
-    return <LoadingIndicator />;
-  }
+  if (isLoading) return <LoadingIndicator />;
+  if (!data) return null;
 
-  if (!data) {
-    return null;
-  }
+  const { order, delivery } = data;
+  const itemsTotal = Number(order?.total_price || 0);
+  const deliveryFee = Number(delivery?.delivery_fee || 0);
+  const total = Number(order?.grand_total || itemsTotal + deliveryFee);
 
   return (
     <ScrollView
-      style={{
-        flex: 1,
-        backgroundColor: BG_COLOR,
-        alignContent: "center",
-      }}
+      style={{ flex: 1, backgroundColor: BG_COLOR }}
+      contentContainerStyle={{ paddingVertical: 40, paddingHorizontal: 20 }}
     >
-      <View className="gap-4 flex-1 overflow-scroll">
-        {/* <Text fontSize={20} fontWeight="bold" textAlign="center">Receipt</Text> */}
+      <View
+        className={`${CARD_BG} rounded-[32px] p-8 ${BORDER_COLOR} border shadow-sm`}
+      >
+        {/* Header */}
+        <View className="items-center mb-8">
+          <View className="w-16 h-16 bg-orange-500/10 rounded-full items-center justify-center mb-4">
+            <Feather name="file-text" size={32} color="#FF8C00" />
+          </View>
+          <Text className={`text-2xl font-poppins-bold ${TEXT_PRIMARY}`}>
+            {order?.vendor_name || "Reciept"}
+          </Text>
+          <Text className={`text-sm ${TEXT_SECONDARY} mt-1`}>
+            Order #{order?.order_number}
+          </Text>
+        </View>
 
-        <View className="p-1 bg-background border border-border-subtle px-5 py-3 mt-5 rounded-lg w-[95%] self-center">
-          <View className="gap-1">
-            <View className="flex-row justify-between">
-              <Text className="text-primary">Payment Status</Text>
+        {/* Status Section */}
+        <View className={`py-4 border-y ${BORDER_COLOR} mb-8 gap-4`}>
+          <View className="flex-row justify-between items-center">
+            <Text className={`${TEXT_SECONDARY} font-poppins`}>Customer</Text>
+            <Text className={`${TEXT_PRIMARY} font-poppins-medium`}>
+              {order?.customer_name || "User"}
+            </Text>
+          </View>
+          <View className="flex-row justify-between items-center">
+            <Text className={`${TEXT_SECONDARY} font-poppins`}>
+              Payment Status
+            </Text>
+            <View
+              className={`${order?.order_payment_status === "paid" ? "bg-green-500/10" : "bg-red-500/10"} px-4 py-1.5 rounded-full`}
+            >
               <Text
-                className={`${data?.order?.order_payment_status === "paid" ? "text-green-700 bg-green-600/20" : "text-red-700 bg-red-600/20"} px-3 py-1 rounded-full`}
+                className={`${order?.order_payment_status === "paid" ? "text-green-600" : "text-red-600"} text-xs font-poppins-semibold uppercase`}
               >
-                {data?.order?.order_payment_status?.toUpperCase()}
+                {order?.order_payment_status || "Pending"}
               </Text>
             </View>
-            <View className="flex-row justify-between">
-              <Text className="text-primary font-poppins">Order Number</Text>
-              <Text className="text-primary font-poppins-bold">
-                #{data?.order?.order_number}
-              </Text>
-            </View>
-
-            <View className="flex-row justify-between">
-              <Text className="text-primary font-poppins">Date</Text>
-              <Text className="text-primary">
-                {format(new Date(data?.delivery?.created_at || ""), "PPP")}
-              </Text>
-            </View>
-
-            {data?.order?.order_items &&
-              data?.order?.order_type !== "package" &&
-              data.order.order_items.length > 0 && (
-                <View className="flex-row justify-between">
-                  <Text className="text-primary font-poppins">Items Total</Text>
-                  <Text className="font-poppins text-primary">
-                    ₦{Number(data.order?.total_price || 0).toFixed(2)}
-                  </Text>
-                </View>
-              )}
-
-            {data?.delivery?.delivery_fee && (
-              <View className="flex-row justify-between">
-                <Text className="text-primary font-poppins">Delivery Fee</Text>
-                <Text className="font-poppins text-primary">
-                  ₦{Number(data.delivery.delivery_fee).toFixed(2)}
-                </Text>
-              </View>
-            )}
-
-            <View className="flex-row justify-between">
-              <Text className="text-primary font-poppins-bold">
-                Total Amount
-              </Text>
-              {data?.order?.order_type !== "package" ? (
-                <Text className="font-poppins-bold text-primary">
-                  ₦
-                  {(
-                    Number(data.order?.total_price || 0) +
-                    Number(data.delivery?.delivery_fee || 0)
-                  ).toFixed(2)}
-                </Text>
-              ) : (
-                <Text className="font-poppins-bold text-primary">
-                  ₦{data?.delivery?.delivery_fee}
-                </Text>
-              )}
-            </View>
+          </View>
+          <View className="flex-row justify-between items-center">
+            <Text className={`${TEXT_SECONDARY} font-poppins`}>Date</Text>
+            <Text className={`${TEXT_PRIMARY} font-poppins-medium`}>
+              {format(new Date(order?.created_at || ""), "MMM dd, yyyy")}
+            </Text>
           </View>
         </View>
 
-        {data?.order?.order_items &&
-          data?.order?.order_type !== "package" &&
-          data.order.order_items.length > 0 && (
-            <View className="p-2 bg-input border border-border-subtle px-5 py-3 w-[95%] self-center rounded-lg">
-              <View className="gap-1">
-                <Text className="text-primary font-poppins-bold">
-                  Order Items
+        {/* Order Items */}
+        {order?.order_items && order.order_items.length > 0 && (
+          <View className="mb-8">
+            <Text
+              className={`${TEXT_PRIMARY} font-poppins-bold uppercase text-[10px] tracking-[2px] mb-4`}
+            >
+              Order Items
+            </Text>
+            {order.order_items.map((item: OrderItem) => (
+              <View
+                className="flex-row justify-between items-center py-2"
+                key={item.id || item.item_id}
+              >
+                <View className="flex-1 mr-4">
+                  <Text className={`${TEXT_PRIMARY} font-poppins-medium`}>
+                    {item.quantity}x {item.name}
+                  </Text>
+                  {(item.size || (item.sides && item.sides.length > 0)) && (
+                    <Text className="text-[10px] text-gray-400 mt-0.5">
+                      {item.size} {item.sides?.join(", ")}
+                    </Text>
+                  )}
+                </View>
+                <Text className={`${TEXT_PRIMARY} font-poppins-semibold`}>
+                  ₦{Number(item.price * item.quantity).toFixed(2)}
                 </Text>
-                {data.order.order_items.map((item: any) => (
-                  <View className="flex-row justify-between" key={item.id}>
-                    <Text className="text-primary font-poppins">
-                      {item.quantity}X {item.name}
-                    </Text>
-                    <Text className="text-primary font-poppins-bold">
-                      ₦{Number(item.price * item.quantity).toFixed(2)}
-                    </Text>
-                  </View>
-                ))}
               </View>
+            ))}
+          </View>
+        )}
+
+        {/* Totals */}
+        <View className={`pt-6 border-t ${BORDER_COLOR} gap-3`}>
+          <View className="flex-row justify-between">
+            <Text className={`${TEXT_SECONDARY} font-poppins`}>Subtotal</Text>
+            <Text className={`${TEXT_PRIMARY} font-poppins-medium`}>
+              ₦{itemsTotal.toFixed(2)}
+            </Text>
+          </View>
+          {deliveryFee > 0 && (
+            <View className="flex-row justify-between">
+              <Text className={`${TEXT_SECONDARY} font-poppins`}>
+                Delivery Fee
+              </Text>
+              <Text className={`${TEXT_PRIMARY} font-poppins-medium`}>
+                ₦{deliveryFee.toFixed(2)}
+              </Text>
             </View>
           )}
-
-        <View className="p-2 bg-input border border-border-subtle self-center rounded-lg w-[95%] px-5 py-3">
-          <View className="gap-1">
-            <Text className="text-primary font-poppins-bold">
-              Delivery Details
+          <View className="flex-row justify-between items-center mt-2 group">
+            <Text className={`${TEXT_PRIMARY} text-xl font-poppins-bold`}>
+              Total Amount
             </Text>
-
-            <View className="gap-1">
-              <Text className="text-gray-400 font-poppins">From</Text>
-              <Text
-                className="text-primary font-poppins"
-                numberOfLines={2}
-                ellipsizeMode="tail"
-              >
-                {data?.delivery?.origin}
-              </Text>
-            </View>
-
-            <View className="gap-1">
-              <Text className="text-gray-400 font-poppins">To</Text>
-              <Text
-                className="text-primary font-poppins-light text-sm"
-                numberOfLines={2}
-                ellipsizeMode="tail"
-              >
-                {data?.delivery?.destination}
-              </Text>
-            </View>
-
-            <View className="justify-between flex-row">
-              <Text className="text-gray-400">Status</Text>
-              <Text className="text-primary">
-                {data?.delivery?.delivery_status?.toUpperCase()}
-              </Text>
-            </View>
+            <Text className="text-xl font-poppins-bold text-orange-500">
+              ₦{total.toFixed(2)}
+            </Text>
           </View>
         </View>
 
-        <View className="flex-row items-center justify-center mt-6 gap-6 ">
-          <TouchableOpacity
-            onPress={handleDownload}
-            className="bg-gray-700/30 p-5 rounded-full"
+        {/* Delivery Details */}
+        <View className={`mt-8 pt-8 border-t ${BORDER_COLOR}`}>
+          <Text
+            className={`${TEXT_PRIMARY} font-poppins-bold uppercase text-[10px] tracking-[2px] mb-4`}
           >
-            <Feather color={"white"} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={handleShare}
-            className="bg-orange-700/30 p-5 rounded-full"
-          >
-            <Feather name="share" color={"orange"} />
-          </TouchableOpacity>
+            Delivery Details
+          </Text>
+
+          <View className="gap-6">
+            <View>
+              <Text className="text-[10px] text-gray-400 font-poppins-bold uppercase mb-2">
+                From
+              </Text>
+              <View
+                className={`p-4 rounded-xl ${isDark ? "bg-gray-700/30" : "bg-gray-50"} border ${BORDER_COLOR}`}
+              >
+                <Text
+                  className={`${TEXT_PRIMARY} text-xs leading-5 font-poppins`}
+                  numberOfLines={2}
+                >
+                  {delivery?.origin || "Store Location"}
+                </Text>
+              </View>
+            </View>
+
+            <View>
+              <Text className="text-[10px] text-gray-400 font-poppins-bold uppercase mb-2">
+                To
+              </Text>
+              <View
+                className={`p-4 rounded-xl ${isDark ? "bg-gray-700/30" : "bg-gray-50"} border ${BORDER_COLOR}`}
+              >
+                <Text
+                  className={`${TEXT_PRIMARY} text-xs leading-5 font-poppins`}
+                  numberOfLines={2}
+                >
+                  {delivery?.destination || "Delivery Address"}
+                </Text>
+              </View>
+            </View>
+          </View>
         </View>
       </View>
+
+      {/* Action Buttons */}
+      <View className="flex-row items-center justify-center mt-10 gap-6">
+        <TouchableOpacity
+          onPress={handleDownload}
+          activeOpacity={0.7}
+          className={`${isDark ? "bg-white" : "bg-gray-900"} w-14 h-14 rounded-full items-center justify-center shadow-lg`}
+        >
+          <Feather name="download" size={20} color={isDark ? "#111" : "#fff"} />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={handleShare}
+          activeOpacity={0.7}
+          className="bg-orange-500 w-14 h-14 rounded-full items-center justify-center shadow-lg"
+        >
+          <Feather name="share-2" size={20} color="white" />
+        </TouchableOpacity>
+      </View>
+
+      <Text className="text-center text-[10px] text-gray-500 mt-10 font-poppins tracking-widest uppercase">
+        ServiPal • Premium Delivery
+      </Text>
     </ScrollView>
   );
 };

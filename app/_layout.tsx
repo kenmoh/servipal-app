@@ -133,6 +133,19 @@ export default function RootLayout() {
                       }}
                     />
                     <Stack.Screen
+                      name="payment/index"
+                      options={{
+                        title: "Order Sumary",
+                        headerTransparent: true,
+                        headerShadowVisible: false,
+                        animation: "fade_from_bottom",
+                        headerTintColor:
+                          colorScheme === "dark"
+                            ? HEADER_BG_LIGHT
+                            : HEADER_BG_DARK,
+                      }}
+                    />
+                    <Stack.Screen
                       name="wallet/transaction/[id]"
                       options={{
                         title: "",

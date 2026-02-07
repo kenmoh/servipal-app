@@ -28,10 +28,10 @@ const StoreTabLayout = () => {
         initialLayout={{ width: Dimensions.get("window").width }}
         screenOptions={{
           tabBarLabelStyle: {
-            fontSize: 12,
+            fontSize: 11,
             textAlign: "center",
             textTransform: "capitalize",
-            fontFamily: "Poppins-Bold",
+            fontFamily: "Poppins-Medium",
           },
           swipeEnabled: false,
           lazy: true,

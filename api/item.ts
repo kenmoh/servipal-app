@@ -1,73 +1,36 @@
-import {
-  CategoryResponse,
-  CreateCategory,
-} from "@/types/item-types";
 import { apiClient } from "@/utils/client";
 import { ApiResponse } from "apisauce";
 import { ErrorResponse } from "./auth";
 
+export interface CreateMenuItmItem {
+  name: string;
+  price: number;
+  description: string;
+  itemType?: string;
+  side?: string;
+  images: any[];
+}
+
+export interface UpdateMenuItmItem extends CreateMenuItmItem {
+  foodGroup: string;
+  category_id?: string;
+}
+
+export interface ItemMenuResponse {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  item_type: string;
+  images: string[];
+  [key: string]: any;
+}
+
 const BASE_URL = "/items";
-
-// Fetch categories
-export const fetchCategories = async (): Promise<CategoryResponse[]> => {
-  try {
-    const response: ApiResponse<CategoryResponse[] | ErrorResponse> =
-      await apiClient.get(`${BASE_URL}/categories`, {
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-
-    if (!response.ok || !response.data || "detail" in response.data) {
-      const errorMessage =
-        response.data && "detail" in response.data
-          ? response.data.detail
-          : "Error fetching categories.";
-      throw new Error(errorMessage);
-    }
-    return response.data;
-  } catch (error) {
-    if (error instanceof Error) {
-      throw new Error(error.message);
-    }
-    throw new Error("An unexpected error occurred");
-  }
-};
-
-// Create Category
-export const createCategory = async (
-  catData: CreateCategory
-): Promise<CategoryResponse> => {
-  const data = {
-    name: catData.name,
-  };
-  try {
-    const response: ApiResponse<CategoryResponse | ErrorResponse> =
-      await apiClient.post(`${BASE_URL}/categories`, data, {
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-
-    if (!response.ok || !response.data || "detail" in response.data) {
-      const errorMessage =
-        response.data && "detail" in response.data
-          ? response.data.detail
-          : "Error creating category.";
-      throw new Error(errorMessage);
-    }
-    return response.data;
-  } catch (error) {
-    if (error instanceof Error) {
-      throw new Error(error.message);
-    }
-    throw new Error("An unexpected error occurred");
-  }
-};
 
 // Create Food Item
 export const createRestaurantMenuItem = async (
-  itemData: CreateMenuItmItem
+  itemData: CreateMenuItmItem,
 ): Promise<ItemMenuResponse> => {
   const data = new FormData();
 
@@ -122,7 +85,7 @@ export const createRestaurantMenuItem = async (
 
 // Create Laundry Item
 export const createLaundryItem = async (
-  itemData: CreateMenuItmItem
+  itemData: CreateMenuItmItem,
 ): Promise<ItemMenuResponse> => {
   const data = new FormData();
 
@@ -173,7 +136,7 @@ export const createLaundryItem = async (
 // Update Food Item
 export const updateMenuItem = async (
   itemId: string,
-  itemData: UpdateMenuItmItem
+  itemData: UpdateMenuItmItem,
 ): Promise<ItemMenuResponse> => {
   const data = new FormData();
   data.append("name", itemData.name);
@@ -231,11 +194,10 @@ export const updateMenuItem = async (
   }
 };
 
-
 // Update Food Item
 export const updateLaundryItem = async (
   itemId: string,
-  itemData: UpdateMenuItmItem
+  itemData: UpdateMenuItmItem,
 ): Promise<ItemMenuResponse> => {
   const data = new FormData();
   data.append("name", itemData.name);
@@ -316,7 +278,7 @@ export const deleteItem = async (itemId: string): Promise<void> => {
         headers: {
           "Content-Type": "application/json",
         },
-      }
+      },
     );
   } catch (error) {
     if (error instanceof Error) {

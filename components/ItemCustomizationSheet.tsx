@@ -5,7 +5,6 @@ import {
   BottomSheetModal,
   BottomSheetView,
 } from "@gorhom/bottom-sheet";
-import Checkbox from "expo-checkbox";
 import React, { forwardRef, useCallback, useMemo, useState } from "react";
 import {
   Image,
@@ -38,12 +37,6 @@ const ItemCustomizationSheet = forwardRef<
 
   // Reset state when item changes or sheet opens (handled via useEffect in practice,
   // but for simplicity here we'll assume the parent manages it or we reset on close)
-
-  const handleToggleSide = (side: string) => {
-    setSelectedSides((prev) =>
-      prev.includes(side) ? prev.filter((s) => s !== side) : [...prev, side],
-    );
-  };
 
   const handleAdd = () => {
     if (item) {
@@ -155,34 +148,47 @@ const ItemCustomizationSheet = forwardRef<
           {hasSides && (
             <View className="mb-8">
               <Text className="text-base font-poppins-semibold text-primary mb-3">
-                Add Sides
+                Choose Side
               </Text>
-              <View className="bg-input rounded-2xl overflow-hidden border border-gray-600">
-                {item?.sides?.map((side, index) => {
+              <View className="flex-row flex-wrap gap-2">
+                {item?.sides?.map((side) => {
                   const isSelected = selectedSides.includes(side);
+                  const toggleSide = () => {
+                    setSelectedSides((prev) =>
+                      prev.includes(side)
+                        ? prev.filter((s) => s !== side)
+                        : [...prev, side],
+                    );
+                  };
+
                   return (
                     <TouchableOpacity
                       key={side}
-                      onPress={() => handleToggleSide(side)}
-                      className={`flex-row items-center justify-between p-4 ${
-                        index !== item?.sides?.length! - 1
-                          ? "border-b border-gray-600"
-                          : ""
+                      onPress={toggleSide}
+                      className={`px-5 py-2 rounded-full flex-row items-center ${
+                        isSelected
+                          ? "bg-button-primary/10 border border-button-primary"
+                          : "bg-input"
                       }`}
                     >
+                      <View
+                        className={`w-4 h-4 rounded-md border items-center justify-center mr-2 ${
+                          isSelected
+                            ? "border-button-primary bg-button-primary"
+                            : "border-gray-300"
+                        }`}
+                      >
+                        {isSelected && (
+                          <View className="w-2 h-2 bg-white rounded-sm" />
+                        )}
+                      </View>
                       <Text
                         className={`text-sm font-poppins-medium ${
-                          isSelected ? "text-primary" : "text-gray-500"
+                          isSelected ? "text-button-primary" : "text-gray-500"
                         }`}
                       >
                         {side}
                       </Text>
-                      <Checkbox
-                        value={isSelected}
-                        onValueChange={() => handleToggleSide(side)}
-                        color={isSelected ? "#FF8C00" : undefined}
-                        style={{ borderRadius: 6, width: 22, height: 22 }}
-                      />
                     </TouchableOpacity>
                   );
                 })}
@@ -196,11 +202,25 @@ const ItemCustomizationSheet = forwardRef<
             text={`Add to Cart • ₦${Number(item.price).toFixed(2)}`}
             onPress={handleAdd}
             width="100%"
-            disabled={hasSizes && !selectedSize}
+            disabled={
+              (hasSizes && !selectedSize) ||
+              (hasSides && selectedSides.length === 0)
+            }
           />
-          {hasSizes && !selectedSize && (
+          {((hasSizes && !selectedSize) ||
+            (hasSides && selectedSides.length === 0)) && (
             <Text className="text-center text-xs text-status-error font-poppins mt-2">
-              Please select a size to continue
+              Please select {hasSizes && !selectedSize ? "a size" : ""}
+              {hasSizes &&
+              !selectedSize &&
+              hasSides &&
+              selectedSides.length === 0
+                ? " and "
+                : ""}
+              {hasSides && selectedSides.length === 0
+                ? "at least one side"
+                : ""}{" "}
+              to continue
             </Text>
           )}
         </View>

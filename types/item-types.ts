@@ -44,3 +44,14 @@ export interface LaundryItemResponse extends CreateLaundryItem {
   created_at: string;
   updated_at: string;
 }
+export interface CategoryResponse {
+  id: string;
+  name: string;
+  category_type: string;
+  created_at?: string;
+}
+
+export interface CreateCategory {
+  name: string;
+  category_type: string;
+}

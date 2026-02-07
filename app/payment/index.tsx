@@ -23,6 +23,7 @@ const payment = () => {
     pickupLocation,
     destination,
     packageName,
+    serviceType,
   } = useLocalSearchParams<{
     logo: string;
     receiverPhoneNumber?: string;
@@ -38,6 +39,7 @@ const payment = () => {
     amount: string;
     publicKey: string;
     packageName?: string;
+    serviceType?: string;
   }>();
 
   const handleOnRedirect = (data: RedirectParams) => {
@@ -45,10 +47,31 @@ const payment = () => {
       "Payment Successful",
       "Your payment was successful. Please select a rider.",
     );
-    router.push({
-      pathname: "/riders",
-      params: { txRef: data.tx_ref, paymentStatus: data.status },
-    });
+
+    if (serviceType === "DELIVERY") {
+      router.push({
+        pathname: "/riders",
+        params: { txRef: data.tx_ref, paymentStatus: data.status },
+      });
+    }
+    if (serviceType === "FOOD") {
+      router.push({
+        pathname: "/delivery/food",
+        params: { txRef: data.tx_ref, paymentStatus: data.status },
+      });
+    }
+    if (serviceType === "LAUNDRY") {
+      router.push({
+        pathname: "/delivery/laundry",
+        params: { txRef: data.tx_ref, paymentStatus: data.status },
+      });
+    }
+    if (serviceType === "PRODUCT") {
+      router.push({
+        pathname: "/marketplace/orders",
+        params: { txRef: data.tx_ref, paymentStatus: data.status },
+      });
+    }
   };
 
   return (
@@ -58,20 +81,24 @@ const payment = () => {
         <Text className="font-poppins text-sm text-muted">{description}</Text>
       </View>
 
-      <View className="bg-slate-50 dark:bg-slate-900 rounded-2xl p-4 mb-4">
+      <View className="bg-input rounded-2xl p-4 mb-4">
         {packageName ? (
           <DisplayDetails label="Package" value={packageName} />
         ) : null}
         <DisplayDetails label="Amount" value={`₦${amount}`} />
-        <DisplayDetails label="Order Reference" value={txRef} />
+        <HDivider />
+        <DisplayDetails label="Ref" value={txRef} />
+        <HDivider />
 
         {receiverPhoneNumber ? (
           <DisplayDetails label="Receiver Phone" value={receiverPhoneNumber} />
         ) : null}
+        <HDivider />
 
         {distance ? (
           <DisplayDetails label="Distance" value={`${distance} km`} />
         ) : null}
+        <HDivider />
 
         {pickupLocation ? (
           <DisplayDetails
@@ -83,6 +110,7 @@ const payment = () => {
             }
           />
         ) : null}
+        <HDivider />
 
         {destination ? (
           <DisplayDetails
@@ -96,7 +124,7 @@ const payment = () => {
         ) : null}
       </View>
 
-      <View className="flex-1 justify-end pb-8 w-full">
+      <View className="flex-1 justify-end pb-16 w-full">
         <PayWithFlutterwave
           onRedirect={handleOnRedirect}
           options={{
@@ -120,7 +148,7 @@ const payment = () => {
           }}
           customButton={({ onPress, disabled }) => (
             <TouchableOpacity
-              className="bg-button-primary h-14 rounded-full flex-row items-center justify-center shadow-md"
+              className="bg-button-primary h-14 mb-4 rounded-full flex-row items-center justify-center shadow-md"
               activeOpacity={0.7}
               onPress={() => onPress()}
               disabled={disabled}
@@ -145,7 +173,7 @@ export default payment;
 
 const DisplayDetails = ({ label, value }: { label: string; value: string }) => (
   <>
-    <View className="flex-row justify-between my-3 w-full">
+    <View className="flex-row justify-between my-3 w-full gap-1">
       <Text className="font-poppins text-sm text-muted">{label}</Text>
       <Text
         className="font-poppins-medium text-[12px] text-primary"
@@ -155,6 +183,5 @@ const DisplayDetails = ({ label, value }: { label: string; value: string }) => (
         {value}
       </Text>
     </View>
-    <HDivider />
   </>
 );

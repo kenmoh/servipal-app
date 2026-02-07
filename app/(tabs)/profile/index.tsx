@@ -163,20 +163,24 @@ const ProfileScreen = () => {
     authStorage.storeTheme(newTheme);
   };
 
+  const handleStoreRedirect = () => {
+    if (user?.user_metadata?.user_type === "RESTAURANT_VENDOR") {
+      router.push({
+        pathname: "/store/[storeId]",
+        params: { storeId: user?.id },
+      });
+    }
+    if (user?.user_metadata?.user_type === "LAUNDRY_VENDOR") {
+      router.push({
+        pathname: "/laundry-store",
+        params: { storeId: user?.id },
+      });
+    }
+  };
+
   return (
     <ScrollView className="flex-1 bg-background">
       <View className="w-full h-44">
-        {/* <ImageBackground
-          source={{
-            uri:
-              backdropImageUrl ||
-              "https://images.unsplash.com/photo-1520975922216-3cc665ef190c?q=80&w=1200&auto=format&fit=crop",
-          }}
-          resizeMode="cover"
-          className="w-full h-full"
-        >
-          <View className="flex-1 bg-black/25" />
-        </ImageBackground> */}
         <View className="w-full">
           <ProfileImagePicker
             onImageSelect={handleBackdropImageSelect}
@@ -208,14 +212,6 @@ const ProfileScreen = () => {
               </View>
             )}
           </View>
-          {/* <Image
-            source={{
-              uri:
-                profileImageUrl ||
-                "https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=400&auto=format&fit=crop",
-            }}
-            className="w-24 h-24 rounded-full border-4 border-background"
-          /> */}
         </View>
       </View>
 
@@ -259,12 +255,7 @@ const ProfileScreen = () => {
               ) && (
                 <>
                   <AppLink
-                    onPress={() =>
-                      router.push({
-                        pathname: "/store/[storeId]",
-                        params: { storeId: user?.id! },
-                      })
-                    }
+                    onPress={handleStoreRedirect}
                     name="Store"
                     icon={
                       <Ionicons

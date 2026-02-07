@@ -1,4 +1,5 @@
 import {
+  CategoryResponse,
   CreateRestaurantMenuItem,
   RestaurantMenuItemResponse,
   UpdateRestaurantMenuItem,
@@ -8,6 +9,16 @@ import { supabase } from "@/utils/supabase";
 const FOOD_TABLE = "food_items";
 
 const MENU_IMAGES_BUCKET = "menu-images";
+
+export const fetchCategories = async (): Promise<CategoryResponse[]> => {
+  const { data, error } = await supabase.from("food_categories").select("*");
+
+  if (error) {
+    throw new Error(error.message || "Failed to fetch categories");
+  }
+
+  return (data || []) as CategoryResponse[];
+};
 
 export const normalizeMenuImages = async (
   images: string[] = [],
@@ -215,7 +226,7 @@ export const softDeleteFoodItem = async (id: string): Promise<void> => {
 
 export const fetchVendorMenuItems = async (
   vendorId: string,
-  restaurantItemType?: "FOOD" | "DRINK",
+  restaurantItemType?: "FOOD" | "DRINK" | "EXTRAS",
 ): Promise<RestaurantMenuItemResponse[]> => {
   try {
     let query = supabase

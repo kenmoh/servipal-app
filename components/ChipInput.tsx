@@ -64,7 +64,7 @@ const ChipInput: React.FC<ChipInputProps> = ({
   };
 
   return (
-    <View className="rounder-lg mt-2 w-[90%] self-center">
+    <View className="rounder-lg mt-2">
       {label && (
         <Text className="text-sm font-poppins-medium text-muted">{label}</Text>
       )}

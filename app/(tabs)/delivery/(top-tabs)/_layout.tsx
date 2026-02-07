@@ -35,12 +35,18 @@ const TopTab = () => {
         tabBarLabelStyle: {
           textAlign: "center",
           fontFamily: "Poppins-Medium",
-          fontSize: 12,
+          fontSize: 11,
+          textTransform: "none",
+          margin: 0,
         },
         tabBarActiveTintColor: theme === "dark" ? "#fff" : "#000",
         tabBarInactiveTintColor: theme === "dark" ? "#aaa" : "#555",
         tabBarAndroidRipple: { borderless: false },
         tabBarPressOpacity: 0,
+        tabBarScrollEnabled: false,
+        tabBarItemStyle: {
+          paddingHorizontal: 0,
+        },
         tabBarIndicatorStyle: {
           backgroundColor: "orange",
           height: 1,
@@ -53,6 +59,7 @@ const TopTab = () => {
           borderBottomWidth: StyleSheet.hairlineWidth,
           elevation: 0,
           shadowOpacity: 0,
+          paddingHorizontal: 0,
         },
       }}
     >

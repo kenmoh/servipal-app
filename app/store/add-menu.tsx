@@ -9,11 +9,11 @@ import {
 
 import {
   createFoodItem,
+  fetchCategories,
   fetchFoodItem,
   softDeleteFoodItem,
   updateFoodItem,
 } from "@/api/food";
-import { fetchCategories } from "@/api/item";
 import ImagePickerInput from "@/components/AppImagePicker";
 
 import AppPicker from "@/components/AppPicker";
@@ -23,6 +23,7 @@ import LoadingIndicator from "@/components/LoadingIndicator";
 import { useToast } from "@/components/ToastProvider";
 import { useUserStore } from "@/store/userStore";
 import {
+  CategoryResponse,
   CreateRestaurantMenuItem,
   UpdateRestaurantMenuItem,
 } from "@/types/item-types";
@@ -59,7 +60,7 @@ const schema = z
       (!data.description || !data.description.trim())
     ) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         message: "Ingredients is a required field",
         path: ["description"],
       });
@@ -71,6 +72,7 @@ type MenuFormData = z.infer<typeof schema>;
 const RESTAURANT_ITEM_TYPE = [
   { id: "FOOD", name: "FOOD" },
   { id: "DRINK", name: "DRINK" },
+  { id: "EXTRAS", name: "EXTRAS" },
 ];
 
 const addMenu = () => {
@@ -103,16 +105,29 @@ const addMenu = () => {
     },
   });
 
+  const itemType = watch("restaurant_item_type");
+
   const { data: categories } = useQuery({
     queryKey: ["categories"],
     queryFn: fetchCategories,
-    select: (cats) =>
-      cats.filter((cat) => cat.category_type.toLowerCase() === "food"),
+    select: (cats: CategoryResponse[]) => {
+      if (itemType === "DRINK") {
+        return cats.filter(
+          (cat) => cat.category_type?.toLowerCase() === "drink",
+        );
+      }
+      if (itemType === "EXTRAS") {
+        return cats.filter(
+          (cat) => cat.category_type?.toLowerCase() === "extras",
+        );
+      }
+      // Show FOOD categories for both FOOD and EXTRAS
+      return cats.filter((cat) => cat.category_type?.toLowerCase() === "food");
+    },
   });
 
   const sides = watch("sides");
   const sizes = watch("sizes");
-  const itemType = watch("restaurant_item_type");
 
   // Fetch menu data if editing
   const { data: existingMenuItem, isLoading: isLoadingProduct } = useQuery({
@@ -256,7 +271,7 @@ const addMenu = () => {
             title: isEditing ? "Update Menu" : "Add Menu",
           }}
         />
-        <View className="mt-3 mb-8 gap-3">
+        <View className="w-[90%] self-center mt-3 mb-8 gap-5">
           <Controller
             control={control}
             name="name"
@@ -264,7 +279,6 @@ const addMenu = () => {
               <AppTextInput
                 placeholder="Name"
                 label="Name"
-                width={"90%"}
                 onBlur={onBlur}
                 onChangeText={onChange}
                 value={value}
@@ -273,45 +287,48 @@ const addMenu = () => {
             )}
           />
 
-          <View className="flex-row items-center w-[90%] self-center">
-            <Controller
-              control={control}
-              name="price"
-              render={({ field: { onChange, onBlur, value } }) => (
-                <AppTextInput
-                  placeholder="Price"
-                  label="Price"
-                  width={"50%"}
-                  onBlur={onBlur}
-                  onChangeText={(text) => onChange(Number(text))}
-                  value={value?.toString()}
-                  keyboardType="numeric"
-                  errorMessage={errors.price?.message}
-                />
-              )}
-            />
+          <View className="flex-row items-center gap-4">
+            <View className="flex-1">
+              <Controller
+                control={control}
+                name="price"
+                render={({ field: { onChange, onBlur, value } }) => (
+                  <AppTextInput
+                    placeholder="Price"
+                    label="Price"
+                    onBlur={onBlur}
+                    onChangeText={(text) => onChange(Number(text))}
+                    value={value?.toString()}
+                    keyboardType="numeric"
+                    errorMessage={errors.price?.message}
+                  />
+                )}
+              />
+            </View>
 
-            <Controller
-              control={control}
-              name="restaurant_item_type"
-              render={({ field: { onChange, value } }) => (
-                <AppPicker
-                  label="Type"
-                  width={"50%"}
-                  items={RESTAURANT_ITEM_TYPE ?? []}
-                  onValueChange={(val) => {
-                    onChange(val);
-                    if (val === "DRINK") {
-                      // Clear food-only fields when switching to DRINK
-                      setValue("description", "");
-                      setValue("sides", []);
-                      setValue("sizes", []);
-                    }
-                  }}
-                  value={value}
-                />
-              )}
-            />
+            <View className="flex-1">
+              <Controller
+                control={control}
+                name="restaurant_item_type"
+                render={({ field: { onChange, value } }) => (
+                  <AppPicker
+                    label="Type"
+                    width="100%"
+                    items={RESTAURANT_ITEM_TYPE ?? []}
+                    onValueChange={(val) => {
+                      onChange(val);
+                      if (val === "DRINK" || val === "EXTRAS") {
+                        // Clear food-only fields
+                        setValue("description", "");
+                        setValue("sides", []);
+                        setValue("sizes", []);
+                      }
+                    }}
+                    value={value}
+                  />
+                )}
+              />
+            </View>
           </View>
 
           <Controller
@@ -320,13 +337,15 @@ const addMenu = () => {
             render={({ field: { onChange, value } }) => (
               <AppPicker
                 label="Category"
-                width={"90%"}
+                width="100%"
                 items={
-                  categories?.map((cat) => ({ id: cat.id, name: cat.name })) ||
-                  []
+                  categories?.map((cat: CategoryResponse) => ({
+                    id: cat.id,
+                    name: cat.name,
+                  })) || []
                 }
                 onValueChange={onChange}
-                value={value}
+                value={value!}
                 placeholder="Select Category"
               />
             )}
@@ -343,7 +362,6 @@ const addMenu = () => {
                       placeholder="Ingredients"
                       height={60}
                       onBlur={onBlur}
-                      width={"90%"}
                       onChangeText={onChange}
                       multiline={true}
                       numberOfLines={4}
@@ -371,8 +389,8 @@ const addMenu = () => {
                   control={control}
                   name="sizes"
                   render={({ field: { value, onChange } }) => (
-                    <View className="w-[90%] self-center mt-2 mb-4">
-                      <Text className="mb-1 font-poppins text-[14px] text-gray-400">
+                    <View className="mt-2 mb-4">
+                      <Text className="mb-1.5 ml-1 font-poppins-medium text-sm text-muted">
                         Sizes (select one or more)
                       </Text>
                       <View className="flex-row flex-wrap gap-2">
@@ -429,7 +447,7 @@ const addMenu = () => {
               />
             )}
           />
-          <View className="my-4 w-[90%] self-center">
+          <View className="my-4">
             <AppButton
               text={isEditing ? "Update" : "Submit"}
               disabled={

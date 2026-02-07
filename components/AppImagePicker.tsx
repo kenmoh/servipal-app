@@ -43,7 +43,7 @@ const ImagePickerInput = ({
 
   return (
     <TouchableOpacity onPress={pickImage}>
-      <View className="w-[90%] self-center items-center">
+      <View className="items-center">
         {/* Preview Image or Placeholder */}
         {value ? (
           <Image

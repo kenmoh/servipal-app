@@ -46,7 +46,7 @@ const AppPicker = ({
   const COLOR = theme === "dark" ? "rgba(30, 33, 39, 0.5)" : "#eee";
 
   return (
-    <View className="overflow-hidden self-center" style={{ width: width }}>
+    <View className="overflow-hidden" style={{ width: width }}>
       {label && (
         <Text className="text-muted font-poppins text-sm">{label}</Text>
       )}
