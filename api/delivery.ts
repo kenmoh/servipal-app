@@ -1,6 +1,10 @@
-import { DeliveryOrder } from "@/types/order-types";
+import { DeliveryOrder, SendItem } from "@/types/delivey-types";
+import { InitiatePaymentResponse } from "@/types/payment-types";
 import { RiderAssignmentResponse } from "@/types/user-types";
+import { apiClient } from "@/utils/client";
 import { supabase } from "@/utils/supabase";
+
+const BASE_URL = "/delivery";
 
 /**
  * Fetches delivery orders where current user is sender, rider, or dispatch
@@ -95,6 +99,34 @@ export async function getUserDeliveryOrders(
     throw new Error(`Failed to load orders: ${error}`);
   }
 }
+
+/**
+ * Fetches a delivery order by its transaction reference
+ * Used to verify if an order exists after payment
+ *
+ * @param txRef - The transaction reference
+ */
+export const getDeliveryOrderByTxRef = async (
+  txRef: string,
+): Promise<DeliveryOrder | null> => {
+  try {
+    const { data, error } = await supabase
+      .from("delivery_orders")
+      .select("*")
+      .eq("tx_ref", txRef)
+      .maybeSingle();
+
+    if (error) {
+      console.error("Error fetching order by txRef:", error);
+      return null;
+    }
+
+    return data as DeliveryOrder;
+  } catch (error) {
+    console.error("Error in getDeliveryOrderByTxRef:", error);
+    return null;
+  }
+};
 
 /**
  * Assign a rider to a delivery order
@@ -401,6 +433,72 @@ export const updateDeliveryCoords = async (
     }
   } catch (error) {
     console.error("❌ Location update error:", error);
+    throw error;
+  }
+};
+
+/**
+ * Initiates a delivery request by sending package details to the backend.
+ *
+ * @param item - The package details (SendItem)
+ * @returns Promise<InitiatePaymentResponse>
+ */
+export const sendItem = async (
+  item: SendItem,
+): Promise<InitiatePaymentResponse> => {
+  const formData = new FormData();
+
+  formData.append("package_name", item.packageName);
+  formData.append("receiver_phone", item.receiverPhone);
+  formData.append("pickup_location", item.origin);
+  formData.append("destination", item.destination);
+  formData.append("pickup_lat", String(item.pickupLat));
+  formData.append("pickup_lng", String(item.pickupLng));
+  formData.append("dropoff_lat", String(item.dropoffLat));
+  formData.append("dropoff_lng", String(item.dropoffLng));
+  formData.append("duration", item.duration);
+  formData.append("distance", String(item.distance));
+  formData.append("description", item.description);
+  formData.append("delivery_type", "STANDARD");
+
+  if (item.imageUrl) {
+    const fileName = item.imageUrl.split("/").pop() || "upload.jpg";
+    const match = /\.(\w+)$/.exec(fileName);
+    const type = match ? `image/${match[1]}` : `image`;
+
+    // Append image as a file object
+    // @ts-ignore - FormData in React Native expects an object with uri, name, type
+    formData.append("package_image", {
+      uri: item.imageUrl,
+      name: fileName,
+      type: type,
+    });
+  }
+
+  try {
+    const response = await apiClient.post(
+      `${BASE_URL}/initiate-payment`,
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      },
+    );
+
+    if (!response.ok) {
+      const errorData = response.data as any;
+      console.error("❌ Send item failed:", errorData);
+      throw new Error(
+        errorData?.detail ||
+          errorData?.message ||
+          "Failed to initiate delivery request",
+      );
+    }
+
+    return response.data as InitiatePaymentResponse;
+  } catch (error) {
+    console.error("❌ Send item error:", error);
     throw error;
   }
 };

@@ -8,7 +8,7 @@ import {
 
 import React, { useEffect, useState } from "react";
 
-import { sendItem } from "@/api/order";
+import { sendItem } from "@/api/delivery";
 import ImagePickerInput from "@/components/AppImagePicker";
 import HDivider from "@/components/HDivider";
 import LoadingIndicator from "@/components/LoadingIndicator";
@@ -115,13 +115,13 @@ const ItemInfo = () => {
       router.push({
         pathname: "/payment",
         params: {
-          logo: data.logo,
-          email: data.email,
+          logo: data.customization.logo,
+          email: data.customer.email,
           distance: data.distance,
-          phonenumber: data.phonenumber,
-          fullName: data.fullName,
-          description: data.description,
-          title: data.title,
+          phonenumber: data.customer.phone_number,
+          fullName: data.customer.full_name,
+          description: data.customization.description,
+          title: data.customization.title,
           txRef: data.tx_ref,
           amount: data.amount,
           publicKey: data.public_key,
@@ -286,6 +286,7 @@ const ItemInfo = () => {
                   onBlur={onBlur}
                   onChangeText={onChange}
                   value={value}
+                  keyboardType="phone-pad"
                   width={"90%"}
                   errorMessage={errors.receiverPhone?.message}
                 />

@@ -2,7 +2,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as Location from "expo-location";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 
-import { assignRiderToDeliveryOrder } from "@/api/delivery";
+import {
+  assignRiderToDeliveryOrder,
+  getDeliveryOrderByTxRef,
+} from "@/api/delivery";
 import { getNearbyRiders, updatecurrentUserLocation } from "@/api/user";
 import HDivider from "@/components/HDivider";
 import LoadingIndicator from "@/components/LoadingIndicator";
@@ -20,8 +23,9 @@ import Feather from "@expo/vector-icons/Feather";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
 import * as Sentry from "@sentry/react-native";
-import { useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import {
+  ActivityIndicator,
   Alert,
   FlatList,
   Image,
@@ -64,7 +68,7 @@ const RidersScreen = () => {
   );
   const [isLayoutComplete, setIsLayoutComplete] = useState(false);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
-  const { showError, showSuccess } = useToast();
+  const { showError, showSuccess, showInfo } = useToast();
   const { txRef, paymentStatus } = useLocalSearchParams<{
     txRef: string;
     paymentStatus: "successful" | "cancelled" | "PAID";
@@ -98,6 +102,23 @@ const RidersScreen = () => {
     [],
   );
 
+  // Poll for order existence
+  const { data: orderExists, isLoading: isCheckingOrder } = useQuery({
+    queryKey: ["check-order", txRef],
+    queryFn: async () => {
+      if (!txRef) return false;
+      const order = await getDeliveryOrderByTxRef(txRef);
+      return !!order;
+    },
+    enabled:
+      !!txRef && (paymentStatus === "successful" || paymentStatus === "PAID"),
+    refetchInterval: (query) => {
+      if (query.state.data) return false; // Stop polling once found
+      return 1000; // Poll every second
+    },
+    refetchIntervalInBackground: true,
+  });
+
   const handleRiderPress = useCallback(
     (rider: RiderResponse) => {
       const isPaid = paymentStatus === "successful" || paymentStatus === "PAID";
@@ -109,10 +130,21 @@ const RidersScreen = () => {
         );
         return;
       }
+
+      if (!orderExists && isCheckingOrder) {
+        showInfo("Processing", "Please wait while we confirm your order...");
+        return;
+      }
+
+      if (!orderExists && !isCheckingOrder) {
+        showError("Error", "Order not found. Please contact support.");
+        return;
+      }
+
       setSelectedRider(rider);
       bottomSheetRef.current?.snapToIndex(0);
     },
-    [txRef, paymentStatus],
+    [txRef, paymentStatus, orderExists, isCheckingOrder],
   );
 
   const handleScrollToHide = useCallback(() => {
@@ -137,6 +169,8 @@ const RidersScreen = () => {
       await queryClient.invalidateQueries({
         queryKey: ["orders", user?.id],
       });
+      // Navigate to tracking or home
+      router.replace("/(tabs)/delivery/(top-tabs)");
     },
   });
 
@@ -386,6 +420,14 @@ const RidersScreen = () => {
   }
   return (
     <View className="bg-background flex-1 p-2 gap-2">
+      {!orderExists && isCheckingOrder && (
+        <View className="bg-blue-50 p-2 rounded-lg flex-row items-center justify-center mb-2">
+          <ActivityIndicator size="small" color="#2563EB" />
+          <Text className="ml-2 text-blue-600 text-sm font-poppins">
+            Processing your order...
+          </Text>
+        </View>
+      )}
       <HDivider />
 
       <FlatList
