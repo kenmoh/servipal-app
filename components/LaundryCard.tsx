@@ -96,18 +96,6 @@ const LaundryCard = ({
           >
             <Ionicons name="create-outline" color="gray" size={18} />
           </Pressable>
-          <Pressable
-            onPress={openDialog}
-            hitSlop={10}
-            style={({ pressed }) => [
-              {
-                opacity: pressed ? 0.5 : 1,
-                transform: [{ scale: pressed ? 0.95 : 1 }],
-              },
-            ]}
-          >
-            <Ionicons name="trash-outline" color="red" size={18} />
-          </Pressable>
         </View>
       )}
       <View className="flex-row gap-4">
@@ -125,13 +113,13 @@ const LaundryCard = ({
             <Text className="text-primary tracking-tight font-poppins-medium text-sm">
               {item.name}
             </Text>
-            {item.wash_type && (
+            {/* {item.wash_type && (
               <View className="bg-blue-100 px-2 py-0.5 rounded">
                 <Text className="text-blue-600 text-[10px] font-poppins-bold">
                   {item.wash_type.replace("_", " ")}
                 </Text>
               </View>
-            )}
+            )} */}
           </View>
           <Text className="text-wrap mt-1 text-muted text-sm flex-wrap">
             {item.description}

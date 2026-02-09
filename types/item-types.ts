@@ -29,18 +29,13 @@ export interface CreateLaundryItem {
   name: string;
   description?: string;
   price: number;
-  wash_type?: LaundryType;
   images: string[];
-  is_available?: boolean;
-  is_deleted?: boolean;
-  category_id?: string;
 }
 
 export interface LaundryItemResponse extends CreateLaundryItem {
   id: string;
+  is_deleted?: boolean;
   vendor_id: string;
-  average_rating?: number;
-  review_count?: number;
   created_at: string;
   updated_at: string;
 }

@@ -306,13 +306,12 @@ export const useUserStore = create<UserStore>((set, get) => ({
       const { data, error } = await supabase
         .from("delivery_orders")
         .select("id, delivery_status")
-        .eq("customer_id", userId)
+        .eq("sender_id", userId)
         .in("delivery_status", [
           "PENDING",
           "PAID_NEEDS_RIDER",
           "PICKED_UP",
           "IN_TRANSIT",
-          "OUT_FOR_DELIVERY",
         ])
         .limit(1);
 

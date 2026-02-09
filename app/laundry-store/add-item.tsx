@@ -9,7 +9,6 @@ import {
   updateLaundryItem,
 } from "@/api/laundry";
 import ImagePickerInput from "@/components/AppImagePicker";
-import AppPicker from "@/components/AppPicker";
 import LoadingIndicator from "@/components/LoadingIndicator";
 import { useToast } from "@/components/ToastProvider";
 import { AppButton } from "@/components/ui/app-button";
@@ -28,11 +27,9 @@ const schema = z.object({
     .number({ message: "Price must be a number" })
     .positive("Price must be greater than 0"),
   description: z.string().min(1, "Description is a required field"),
-  wash_type: z.string({ message: "Please select a wash type" }),
   images: z.array(z.any()).nonempty({
     message: "Image is required",
   }),
-  category_id: z.string().optional(),
 });
 
 type LaundryFormData = z.infer<typeof schema>;
@@ -64,8 +61,6 @@ const AddLaundryItem = () => {
       price: 0,
       description: "",
       images: [],
-      wash_type: "",
-      category_id: "",
     },
   });
 
@@ -89,8 +84,6 @@ const AddLaundryItem = () => {
         description: existingMenuItem.description || "",
         price: existingMenuItem.price || 0,
         images: (existingMenuItem.images as any[]) || [],
-        wash_type: existingMenuItem.wash_type || "",
-        category_id: existingMenuItem.category_id || "",
       });
     }
   }, [existingMenuItem, reset, isEditing]);
@@ -106,10 +99,7 @@ const AddLaundryItem = () => {
         name: data.name,
         description: data.description,
         price: data.price,
-        wash_type: data.wash_type as any,
         images: (data.images as any[]) || [],
-        is_deleted: existingMenuItem.is_deleted,
-        category_id: data.category_id || undefined,
       });
     },
     onSuccess: () => {
@@ -132,11 +122,7 @@ const AddLaundryItem = () => {
         name: data.name,
         description: data.description,
         price: data.price,
-        wash_type: data.wash_type as any,
         images: (data.images as any[]) || [],
-        is_available: true,
-        is_deleted: false,
-        category_id: data.category_id || undefined,
       };
 
       return createLaundryItem(payload);
@@ -203,54 +189,19 @@ const AddLaundryItem = () => {
             )}
           />
 
-          <View className="flex-row items-center w-[90%] self-center">
-            <Controller
-              control={control}
-              name="price"
-              render={({ field: { onChange, onBlur, value } }) => (
-                <AppTextInput
-                  placeholder="Price"
-                  label="Price"
-                  width={"50%"}
-                  onBlur={onBlur}
-                  onChangeText={(text) => onChange(Number(text))}
-                  value={value?.toString()}
-                  keyboardType="numeric"
-                  errorMessage={errors.price?.message}
-                />
-              )}
-            />
-
-            <Controller
-              control={control}
-              name="wash_type"
-              render={({ field: { onChange, value } }) => (
-                <AppPicker
-                  label="Wash Type"
-                  width={"50%"}
-                  items={WASH_TYPE_OPTIONS}
-                  onValueChange={onChange}
-                  value={value}
-                  placeholder="Select Type"
-                />
-              )}
-            />
-          </View>
-
           <Controller
             control={control}
-            name="category_id"
-            render={({ field: { onChange, value } }) => (
-              <AppPicker
-                label="Category"
+            name="price"
+            render={({ field: { onChange, onBlur, value } }) => (
+              <AppTextInput
+                placeholder="Price"
+                label="Price"
+                onBlur={onBlur}
                 width={"90%"}
-                items={
-                  categories?.map((cat) => ({ id: cat.id, name: cat.name })) ||
-                  []
-                }
-                onValueChange={onChange}
-                value={value || ""}
-                placeholder="Select Category"
+                onChangeText={(text) => onChange(Number(text))}
+                value={value?.toString()}
+                keyboardType="numeric"
+                errorMessage={errors.price?.message}
               />
             )}
           />
@@ -262,29 +213,29 @@ const AddLaundryItem = () => {
               <AppTextInput
                 label="Description"
                 placeholder="Description"
-                height={80}
                 onBlur={onBlur}
-                width={"90%"}
                 onChangeText={onChange}
                 multiline={true}
-                numberOfLines={4}
+                width={"90%"}
                 value={value}
                 errorMessage={errors.description?.message}
               />
             )}
           />
 
-          <Controller
-            control={control}
-            name="images"
-            render={({ field: { onChange, value } }) => (
-              <ImagePickerInput
-                value={value && value.length > 0 ? value[0] : null}
-                onChange={(image) => onChange(image ? [image] : [])}
-                errorMessage={errors.images?.message?.toString()}
-              />
-            )}
-          />
+          <View className="w-[90%] self-center">
+            <Controller
+              control={control}
+              name="images"
+              render={({ field: { onChange, value } }) => (
+                <ImagePickerInput
+                  value={value && value.length > 0 ? value[0] : null}
+                  onChange={(image) => onChange(image ? [image] : [])}
+                  errorMessage={errors.images?.message?.toString()}
+                />
+              )}
+            />
+          </View>
 
           <View className="my-4 w-[90%] self-center">
             <AppButton

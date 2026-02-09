@@ -130,6 +130,7 @@ const StoreHeader = ({ storeId }: StoreHeaderProps) => {
         </View>
       </View>
       <HDivider />
+      <View className="mb-2" />
     </>
   );
 };
