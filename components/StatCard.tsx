@@ -13,7 +13,7 @@ const StatCard = React.memo(
   }) => {
     const theme = useColorScheme();
     return (
-      <View className="bg-input items-center justify-evenly py-2 mb-6 h-[90] w-[100] rounded-lg border border-collapse-transparent border-border-subtle border-rounded-lg">
+      <View className="bg-input items-center justify-evenly mx-1.5 py-2 mb-6 h-[90] w-[100] rounded-lg border border-collapse-transparent border-border-subtle border-rounded-lg">
         {icon}
         <View className="items-center">
           <Text

@@ -71,7 +71,6 @@ const orders = () => {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={{
             paddingHorizontal: 10,
-            gap: 10,
             paddingVertical: 10,
             height: "100%",
           }}

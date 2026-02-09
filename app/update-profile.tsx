@@ -11,13 +11,11 @@ import { useUserStore } from "@/store/userStore";
 import { UserProfileUpdate } from "@/types/user-types";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import * as Location from "expo-location";
 import { router, Stack } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import {
   ActivityIndicator,
-  Alert,
   Pressable,
   ScrollView,
   Text,
@@ -28,10 +26,32 @@ import z from "zod";
 
 const profileUpdateSchema = z.object({
   full_name: z.string().min(1, "Full name is required"),
-  phone_number: z.string().min(10, "Invalid phone number"),
+  phone_number: z
+    .string()
+    .min(1, "Phone number is required")
+    .refine((val) => {
+      const digits = val.replace(/\D/g, "");
+      return digits.length >= 11 && digits.length <= 15;
+    }, "Invalid phone number (11-15 digits required)"),
   state: z.string().optional(),
   bank_name: z.string().optional(),
-  bank_account_number: z.coerce.number().optional().or(z.literal(0)),
+  bank_account_number: z
+    .union([
+      z
+        .string()
+        .transform((val) => (val.trim() === "" ? undefined : Number(val))),
+      z.number(),
+      z.undefined(),
+      z.null(),
+    ])
+    .refine(
+      (val) => val === undefined || val === null || (!isNaN(val) && val > 0),
+      {
+        message: "Invalid account number",
+      },
+    )
+    .optional()
+    .nullable(),
   // Conditional fields
   store_name: z.string().optional(),
   business_name: z.string().optional(),
@@ -39,16 +59,32 @@ const profileUpdateSchema = z.object({
   business_registration_number: z.string().optional(),
   opening_hours: z.string().optional(),
   closing_hours: z.string().optional(),
-  pickup_and_delivery_charge: z.coerce.number().optional().or(z.literal(0)),
+  pickup_and_delivery_charge: z
+    .union([
+      z
+        .string()
+        .transform((val) => (val.trim() === "" ? undefined : Number(val))),
+      z.number(),
+      z.undefined(),
+      z.null(),
+    ])
+    .refine(
+      (val) => val === undefined || val === null || (!isNaN(val) && val >= 0),
+      {
+        message: "Invalid charge amount",
+      },
+    )
+    .optional()
+    .nullable(),
 });
 
 type ProfileUpdateFormData = z.infer<typeof profileUpdateSchema>;
 
 const UpdateProfile = () => {
   const { profile, user, fetchProfile } = useUserStore();
+
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
-  const [isGettingLocation, setIsGettingLocation] = useState(false);
   const [isOpeningPickerVisible, setOpeningPickerVisibility] = useState(false);
   const [isClosingPickerVisible, setClosingPickerVisibility] = useState(false);
 
@@ -80,26 +116,29 @@ const UpdateProfile = () => {
 
   useEffect(() => {
     if (profile) {
+      // Sanitize phone number to ensure it's a valid string
+      const sanitizedPhone = profile.phone_number
+        ? String(profile.phone_number).replace(/\D/g, "").padStart(11, "0")
+        : "";
+
       reset({
-        full_name: profile.full_name || "",
-        phone_number: profile.phone_number || "",
-        // @ts-ignore - state might be in profile even if not in type
-        state: profile.state || "",
-        // @ts-ignore
+        full_name: profile.full_name || profile.business_name || "",
+        phone_number: sanitizedPhone, // Critical fix
+        state: profile?.state || "",
         bank_name: profile.bank_name || "",
-        // @ts-ignore
-        bank_account_number: profile.bank_account_number || 0,
-        // @ts-ignore
-        store_name: profile.store_name || "",
+        bank_account_number: profile.bank_account_number
+          ? Number(profile.bank_account_number)
+          : undefined,
+        store_name: profile.store_name || profile.business_name || "",
         business_name: profile.business_name || "",
         business_address: profile.business_address || "",
-        // @ts-ignore
         business_registration_number:
           profile.business_registration_number || "",
         opening_hours: profile.opening_hour || "",
         closing_hours: profile.closing_hour || "",
-        // @ts-ignore
-        pickup_and_delivery_charge: profile.pickup_and_delivery_charge || 0,
+        pickup_and_delivery_charge: profile.pickup_and_delivery_charge
+          ? Number(profile.pickup_and_delivery_charge)
+          : undefined,
       });
     }
   }, [profile, reset]);
@@ -178,36 +217,6 @@ const UpdateProfile = () => {
     updateMutation.mutate(updateData);
   };
 
-  const getCurrentLocation = async () => {
-    try {
-      setIsGettingLocation(true);
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== "granted") {
-        Alert.alert(
-          "Permission denied",
-          "Allow location access to use this feature",
-        );
-        return;
-      }
-
-      const location = await Location.getCurrentPositionAsync({});
-      const [address] = await Location.reverseGeocodeAsync({
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
-      });
-
-      if (address) {
-        const formattedAddress = `${address.name || ""}${address.street ? ", " + address.street : ""}${address.city ? ", " + address.city : ""}${address.region ? ", " + address.region : ""}`;
-        setValue("business_address", formattedAddress);
-      }
-    } catch (error) {
-      console.error("Error getting location:", error);
-      showError("Location Error", "Failed to get current location");
-    } finally {
-      setIsGettingLocation(false);
-    }
-  };
-
   if (!profile) return <LoadingIndicator />;
 
   const isPending = updateMutation.isPending;
@@ -230,20 +239,22 @@ const UpdateProfile = () => {
             Profile Information
           </Text>
           {/* COMMON FIELDS */}
-          <Controller
-            control={control}
-            name="full_name"
-            render={({ field: { onChange, value } }) => (
-              <AppTextInput
-                label="Full Name"
-                value={value}
-                onChangeText={onChange}
-                placeholder="Enter your full name"
-                errorMessage={errors.full_name?.message}
-                editable={!isPending}
-              />
-            )}
-          />
+          {user?.user_metadata?.user_type === "CUSTOMER" && (
+            <Controller
+              control={control}
+              name="full_name"
+              render={({ field: { onChange, value } }) => (
+                <AppTextInput
+                  label="Full Name"
+                  value={value}
+                  onChangeText={onChange}
+                  placeholder="Enter your full name"
+                  errorMessage={errors.full_name?.message}
+                  editable={!isPending}
+                />
+              )}
+            />
+          )}
 
           <Controller
             control={control}
@@ -267,6 +278,7 @@ const UpdateProfile = () => {
             render={({ field: { onChange, value } }) => (
               <AppPicker
                 label="State"
+                isState
                 items={states || []}
                 onValueChange={onChange}
                 value={value!}
@@ -301,16 +313,24 @@ const UpdateProfile = () => {
               <Controller
                 control={control}
                 name="business_name"
-                render={({ field: { onChange, value } }) => (
-                  <AppTextInput
-                    label="Business Name"
-                    value={value}
-                    onChangeText={onChange}
-                    placeholder="Enter business name"
-                    errorMessage={errors.business_name?.message}
-                    editable={!isPending}
-                  />
-                )}
+                render={({ field: { onChange, value } }) => {
+                  const handleChange = (newValue: string) => {
+                    onChange(newValue);
+                    // SYNC TO FULL_NAME AND STORE_NAME IN REAL-TIME
+                    setValue("full_name", newValue, { shouldValidate: true });
+                    setValue("store_name", newValue, { shouldValidate: true });
+                  };
+                  return (
+                    <AppTextInput
+                      label="Business Name"
+                      value={value}
+                      onChangeText={handleChange} // Use synced handler
+                      placeholder="Enter business name"
+                      errorMessage={errors.business_name?.message}
+                      editable={!isPending}
+                    />
+                  );
+                }}
               />
 
               <Controller
@@ -353,7 +373,7 @@ const UpdateProfile = () => {
                 name="business_registration_number"
                 render={({ field: { onChange, value } }) => (
                   <AppTextInput
-                    label="Business Reg. Number (Optional)"
+                    label="Business Reg. Number"
                     value={value}
                     onChangeText={onChange}
                     placeholder="CAC Number"
@@ -483,7 +503,15 @@ const UpdateProfile = () => {
           <View className="mt-5 mb-10">
             <AppButton
               text="Update Profile"
-              onPress={handleSubmit(onSubmit)}
+              // onPress={handleSubmit(onSubmit)}
+              onPress={handleSubmit(onSubmit, (errors) => {
+                console.error("❌ Validation failed:", errors);
+                // Show user-friendly error
+                const firstError =
+                  Object.values(errors)[0]?.message ||
+                  "Please fill all required fields";
+                showError("Validation Error", firstError);
+              })}
               disabled={isPending}
               icon={isPending ? <ActivityIndicator color="white" /> : undefined}
               width="100%"

@@ -60,21 +60,6 @@ const signUpSchema = z
 
 type SignUpFormValues = z.infer<typeof signUpSchema>;
 
-const mapUserTypeToRole = (userType: string): string => {
-  switch (userType) {
-    case "customer":
-      return "CUSTOMER";
-    case "restaurant_vendor":
-      return "RESTAURANT_VENDOR";
-    case "laundry_vendor":
-      return "LAUNDRY_VENDOR";
-    case "dispatch":
-      return "DISPATCH";
-    default:
-      return "CUSTOMER";
-  }
-};
-
 const SignUp = () => {
   const { showError, showInfo } = useToast();
   const {
@@ -103,7 +88,6 @@ const SignUp = () => {
       phoneNumber,
       userType,
     }: SignUpFormValues) => {
-      const mappedRole = mapUserTypeToRole(userType);
       const trimmedEmail = email.trim().toLowerCase();
       const trimmedPhone = phoneNumber.trim();
 
@@ -113,7 +97,7 @@ const SignUp = () => {
         password,
         options: {
           data: {
-            user_type: mappedRole,
+            user_type: userType,
             phone: trimmedPhone,
           },
         },

@@ -15,7 +15,7 @@ import RefreshButton from "@/components/RefreshButton";
 import { useUserStore } from "@/store/userStore";
 import { UserProfile } from "@/types/user-types";
 
-const Page = () => {
+const LaundryScreen = () => {
   const theme = useColorScheme();
   const { user } = useUserStore();
 
@@ -113,7 +113,7 @@ const Page = () => {
   );
 };
 
-export default Page;
+export default LaundryScreen;
 
 const EmptySearch = ({ searchQuery }: { searchQuery?: string }) => {
   return (

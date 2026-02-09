@@ -57,6 +57,10 @@ export interface UserProfile {
   phone_number?: string;
   email: string;
   user_type: Role;
+  state?: string;
+  bank_name?: string;
+  store_name: string;
+  bank_account_number: string;
   profile_image_url?: string;
   backdrop_image_url?: string;
   business_address?: string;

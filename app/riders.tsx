@@ -13,7 +13,12 @@ import RefreshButton from "@/components/RefreshButton";
 import Rider from "@/components/Rider";
 import { useToast } from "@/components/ToastProvider";
 import { AppButton } from "@/components/ui/app-button";
-import { HEADER_BG_DARK, HEADER_BG_LIGHT } from "@/constants/theme";
+import {
+  HEADER_BG_DARK,
+  HEADER_BG_LIGHT,
+  INPUT_BG_DARK,
+  INPUT_BG_LIGHT,
+} from "@/constants/theme";
 import { useOrderStore } from "@/store/orderStore";
 import { useRiderStore } from "@/store/rider-store";
 import { useUserStore } from "@/store/userStore";
@@ -79,7 +84,7 @@ const RidersScreen = () => {
   const HANDLE_INDICATOR_STYLE =
     theme === "dark" ? HEADER_BG_LIGHT : HEADER_BG_DARK;
   const HANDLE_STYLE = theme === "dark" ? HEADER_BG_DARK : HEADER_BG_LIGHT;
-  const BG_COLOR = theme === "dark" ? HEADER_BG_DARK : HEADER_BG_LIGHT;
+  const BG_COLOR = theme === "dark" ? INPUT_BG_DARK : INPUT_BG_LIGHT;
 
   const queryClient = useQueryClient();
   const [userLocation, setCurrentUserLocation] = useState<{
@@ -407,10 +412,6 @@ const RidersScreen = () => {
     refetch();
   }, [refetch]);
 
-  // if (!locationPermission) {
-  //   return <LocationPermission onRetry={checkLocationPermission} />;
-  // }
-
   if (isLoading) {
     return <LoadingIndicator />;
   }
@@ -421,9 +422,9 @@ const RidersScreen = () => {
   return (
     <View className="bg-background flex-1 p-2 gap-2">
       {!orderExists && isCheckingOrder && (
-        <View className="bg-blue-50 p-2 rounded-lg flex-row items-center justify-center mb-2">
-          <ActivityIndicator size="small" color="#2563EB" />
-          <Text className="ml-2 text-blue-600 text-sm font-poppins">
+        <View className="bg-background flex-1 items-center justify-center gap-2">
+          <ActivityIndicator size="large" color="white" />
+          <Text className="text-primary font-poppins-medium text-sm">
             Processing your order...
           </Text>
         </View>
@@ -451,21 +452,21 @@ const RidersScreen = () => {
 
       <BottomSheet
         ref={bottomSheetRef}
-        snapPoints={["60%"]}
+        snapPoints={[400, "55%"]}
         index={-1}
         enablePanDownToClose={true}
         handleIndicatorStyle={{ backgroundColor: HANDLE_INDICATOR_STYLE }}
-        handleStyle={{ backgroundColor: HANDLE_STYLE }}
+        handleStyle={{ backgroundColor: BG_COLOR, borderRadius: 100 }}
         backgroundStyle={{
           backgroundColor: BG_COLOR,
           shadowColor: "orange",
         }}
         onChange={(index: number) => setIsSheetOpen(index >= 0)}
       >
-        <BottomSheetView style={{ flex: 1 }} className="bg-background">
+        <BottomSheetView style={{ flex: 1 }} className="bg-input">
           {selectedRider && (
             <>
-              <View className="p-4 items-center flex-1 bg-background">
+              <View className="p-4 items-center flex-1 bg-input">
                 <View className="w-28 h-28 rounded-full overflow-hidden">
                   <Image
                     src={selectedRider?.profile_image_url}
@@ -496,39 +497,40 @@ const RidersScreen = () => {
 
               <HDivider />
 
-              <View className="flex-row my-4 justify-between w-[80%] self-center">
-                <View className="items-center">
-                  <Text className="text-xl font-poppins-bold text-primary">
-                    {selectedRider?.total_deliveries}
+              <View className="flex-row my-4 justify-between items-center">
+                <View className="items-center flex-1">
+                  <Text className="text-md font-poppins-bold text-primary">
+                    {selectedRider?.total_deliveries || 0}
                   </Text>
                   <Text className="font-poppins-light text-muted text-sm">
                     Trips
                   </Text>
                 </View>
-                <View className="items-center">
-                  <Text className="text-xl font-poppins-bold text-primary">
+                <View className="items-center flex-1">
+                  <Text className="text-md font-poppins-bold text-primary">
                     {selectedRider?.average_rating}
                   </Text>
                   <Text className="font-poppins-light text-muted text-sm">
                     Rating
                   </Text>
                 </View>
-                <View className="items-center">
-                  <Text className="text-xl font-poppins-bold text-primary">
+                <View className="items-center flex-1">
+                  <Text className="text-md font-poppins-bold text-primary">
                     {selectedRider?.bike_number?.toUpperCase()}
                   </Text>
                   <Text className="font-poppins-light text-muted text-sm">
                     Bike Number
                   </Text>
-                </View>
+                </View> 
               </View>
 
-              <View className="bg-background mb-3">
+              <View className="bg-input mb-3 items-center w-full">
                 <AppButton
                   width={"70%"}
                   borderRadius={50}
-                  color="primary"
+                  backgroundColor="bg-button-primary"
                   text="Book Rider"
+                  variant="fill"
                   onPress={handleBookRider}
                 />
               </View>

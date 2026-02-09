@@ -4,7 +4,6 @@ import {
   ActivityIndicator,
   Alert,
   Dimensions,
-  Image,
   Modal,
   StyleSheet,
   Text,
@@ -15,13 +14,14 @@ import {
 
 import {
   acceptDeliveryOrder,
+  cancelDeliveryByRider,
+  cancelDeliveryBySender,
   declineDeliveryOrder,
   getDeliveryDetailsById,
   markDeliveryCompleted,
   markDeliveryDelivered,
   pickupDeliveryOrder,
 } from "@/api/delivery";
-import { cancelDelivery } from "@/api/order";
 import {
   startDeliveryTracking,
   stopDeliveryTracking,
@@ -45,6 +45,8 @@ import * as Sentry from "@sentry/react-native";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
 
+import { blurhash } from "@/constants/state";
+import { Image } from "expo-image";
 import { Controller, useForm } from "react-hook-form";
 import z from "zod";
 
@@ -372,7 +374,24 @@ const ItemDetails = () => {
   });
 
   const cancelDeliveryMutation = useMutation({
-    mutationFn: cancelDelivery,
+    mutationFn: (formData: { orderId: string; reason?: string }) => {
+      // Use 'data' from the component scope (the order details), not the mutation argument
+      const isRider =
+        user?.user_metadata?.user_type === "RIDER" ||
+        user?.id === data?.rider_id;
+
+      if (isRider) {
+        return cancelDeliveryByRider(
+          formData.orderId,
+          formData.reason || "No reason provided",
+        );
+      } else {
+        return cancelDeliveryBySender(
+          formData.orderId,
+          formData.reason || "No reason provided",
+        );
+      }
+    },
     onSuccess: async () => {
       Sentry.addBreadcrumb({
         message: "Delivery cancelled",
@@ -402,7 +421,7 @@ const ItemDetails = () => {
 
       // Then navigate and show info
       showInfo("Delivery cancelled!");
-      // router.back();
+      router.back();
     },
     onError: (error: Error) => {
       showError("Error", error.message);
@@ -419,37 +438,52 @@ const ItemDetails = () => {
   });
 
   const openAlert = async () => {
-    const isValid = await trigger(); // Validate all fields
-    if (!isValid) {
-      showError(
-        "Validation Error",
-        "Please fill in a valid reason (10+ characters).",
-      );
-      return;
+    // Check validation if it's a rider
+    const isRider =
+      user?.user_metadata?.user_type === "RIDER" || user?.id === data?.rider_id;
+
+    if (isRider) {
+      const isValid = await trigger(); // Validate all fields
+      if (!isValid) {
+        showError(
+          "Validation Error",
+          "Please fill in a valid reason (10+ characters).",
+        );
+        return;
+      }
     }
 
     const formData = getValues();
-    console.log("Form data before confirmation:", formData);
+    const isSender = user?.id === data?.sender_id;
 
-    Alert.alert(
-      "Confirm",
-      "If this order is in transit, you'll not be refunded. Are you sure you want to cancel?",
-      [
-        { text: "No", style: "cancel" },
-        {
-          text: "Yes",
-          onPress: () => {
-            console.log("Confirmed with data:", formData);
-            cancelDeliveryMutation.mutate(formData);
-            closeSheet();
-          },
+    // Different warning messages
+    const warningMessage = isSender
+      ? "Are you sure you want to cancel this order? If it's already picked up, it will be returned."
+      : "Cancelling this order will suspend you and affect your completion rate. Are you sure?";
+
+    Alert.alert("Confirm Cancellation", warningMessage, [
+      { text: "No", style: "cancel" },
+      {
+        text: "Yes",
+        onPress: () => {
+          // Both sender and rider now pass a reason
+          cancelDeliveryMutation.mutate({
+            orderId: formData.orderId,
+            reason: formData.cancelReason,
+          });
+          closeSheet();
         },
-      ],
-    );
+      },
+    ]);
   };
 
-  const onSubmit = (data: CancelFormData) => {
-    cancelDeliveryMutation.mutate(data);
+  const onSubmit = (formData: CancelFormData) => {
+    // Direct submission logic if needed, but we essentially use openAlert which triggers mutate.
+    // However, in case this is called directly:
+    cancelDeliveryMutation.mutate({
+      orderId: formData.orderId,
+      reason: formData.cancelReason,
+    });
     closeSheet();
   };
 
@@ -470,7 +504,6 @@ const ItemDetails = () => {
         },
         (payload) => {
           if (!isMountedRef.current) return;
-          console.log("🔄 Realtime update received:", payload.new);
 
           // Update TanStack Query cache
           queryClient.setQueryData(["order", id], (oldData: any) => {
@@ -488,11 +521,6 @@ const ItemDetails = () => {
             // Ensure coordinates are [lat, lng]
             const normalized = normalizeCoords(coords);
             if (normalized) {
-              console.log(
-                "📍 Setting rider location:",
-                normalized[0],
-                normalized[1],
-              );
               useLocationStore.getState().setRiderLocation(id, normalized);
             }
           }
@@ -501,7 +529,6 @@ const ItemDetails = () => {
       .subscribe();
 
     return () => {
-      console.log("🔌 Cleaning up Realtime for order:", id);
       supabase.removeChannel(channel);
     };
   }, [id, queryClient]);
@@ -525,11 +552,6 @@ const ItemDetails = () => {
     const normalized = normalizeCoords(data.last_known_rider_coordinates);
     if (!normalized) return;
 
-    console.log(
-      "📍 Initial rider location load:",
-      normalized[0],
-      normalized[1],
-    );
     useLocationStore.getState().setRiderLocation(data.id, normalized);
   }, [data?.id, data?.last_known_rider_coordinates]);
 
@@ -537,11 +559,17 @@ const ItemDetails = () => {
     if (!data || !user) return null;
 
     const isSender = user.id === data.sender_id;
-    const isRider = user.id === data.rider_id;
+    const isAssignedRider = user.id === data.rider_id;
     const isDispatch = data.dispatch_id && user.id === data.dispatch_id;
+    const isRiderAccount = user.user_metadata?.user_type === "RIDER";
 
     // 1. Rider: Accept or Decline (pending + assigned)
-    if (data?.delivery_status === "PAID_NEEDS_RIDER" && isRider && !isSender) {
+    if (
+      (data?.delivery_status === "PAID_NEEDS_RIDER" ||
+        data?.delivery_status === "ASSIGNED") &&
+      (isAssignedRider || isRiderAccount) &&
+      !isSender
+    ) {
       return [
         {
           label: "Accept",
@@ -558,7 +586,7 @@ const ItemDetails = () => {
     }
 
     // 2. Rider: Pickup item (after accepting)
-    if (data?.delivery_status === "ACCEPTED" && isRider && !isSender) {
+    if (data?.delivery_status === "ACCEPTED" && isAssignedRider && !isSender) {
       return {
         label: "Confirm Pickup",
         onPress: () => pickupDeliveryMutation.mutate(),
@@ -570,7 +598,7 @@ const ItemDetails = () => {
     if (
       (data?.delivery_status === "PICKED_UP" ||
         data?.delivery_status === "IN_TRANSIT") &&
-      (isRider || isDispatch)
+      (isAssignedRider || isDispatch)
     ) {
       return {
         label: "Mark as Delivered",
@@ -612,9 +640,9 @@ const ItemDetails = () => {
 
   const showReview = () => {
     router.push({
-      pathname: "/review/[deliveryId]",
+      pathname: "/review/[id]",
       params: {
-        deliveryId: data?.id as string,
+        id: data?.id as string,
         revieweeId: data?.rider_id as string,
         dispatchId: data?.dispatch_id as string,
         orderId: data?.id as string,
@@ -669,7 +697,7 @@ const ItemDetails = () => {
                   </Text>
                 </View>
                 <Text className="font-poppins-semibold text-primary text-sm">
-                  #DELORDE{data?.order_number}
+                  #ORDN{data?.order_number}
                 </Text>
               </View>
               <View className="gap-3 flex-row  justify-between">
@@ -751,9 +779,9 @@ const ItemDetails = () => {
                           key={index}
                           borderRadius={50}
                           text={btn.label}
-                          backgroundColor={
-                            index === 0 ? "orange" : "transparent"
-                          }
+                          color={index === 0 ? "orange" : "#FF5C5C"}
+                          textColor={index === 0 ? "#fff" : "#FF5C5C"}
+                          variant={index === 0 ? "fill" : "outline"}
                           icon={
                             btn.loading && (
                               <ActivityIndicator
@@ -764,7 +792,6 @@ const ItemDetails = () => {
                           width={"48%"}
                           onPress={btn.onPress}
                           disabled={btn.loading}
-                          color={index === 0 ? "primary" : "red-500"}
                         />
                       ))}
                     </View>
@@ -773,6 +800,7 @@ const ItemDetails = () => {
                     <AppButton
                       borderRadius={50}
                       text={actionButton.label}
+                      variant="fill"
                       backgroundColor={
                         actionButton.disabled ||
                         data?.delivery_status === "COMPLETED"
@@ -813,13 +841,13 @@ const ItemDetails = () => {
                 data?.delivery_status === "DELIVERED") && (
                 <AppButton
                   text="Dispute"
-                  color={"orange-500"}
+                  color={"orange"}
                   borderRadius={50}
                   width="32%"
                   onPress={() => {
                     router.push({
-                      pathname: "/report/[deliveryId]",
-                      params: { deliveryId: id as string },
+                      pathname: "/report/[id]",
+                      params: { id: id as string },
                     });
                   }}
                 />
@@ -831,8 +859,9 @@ const ItemDetails = () => {
               ) : (
                 <AppButton
                   text="Receipt"
-                  color={"orange-500"}
+                  color={"orange"}
                   borderRadius={50}
+                  variant="outline"
                   disabled={
                     data?.rider_id === user?.id ||
                     data?.dispatch_id === user?.id
@@ -842,8 +871,8 @@ const ItemDetails = () => {
                   width={"32%"}
                   onPress={() => {
                     router.push({
-                      pathname: "/receipt/[deliveryId]",
-                      params: { deliveryId: id as string },
+                      pathname: "/receipt/[id]",
+                      params: { id: id as string },
                     });
                   }}
                 />
@@ -948,7 +977,10 @@ const ItemDetails = () => {
             className="self-center"
           >
             <Image
-              src={data?.package_image_url!}
+              source={data?.package_image_url!}
+              placeholder={blurhash}
+              contentFit="cover"
+              transition={100}
               style={{
                 width: "100%",
                 height: IMAGE_HEIGHT,

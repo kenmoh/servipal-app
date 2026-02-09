@@ -149,8 +149,6 @@ export const assignRiderToDeliveryOrder = async (
       throw new Error("User not authenticated");
     }
 
-    console.log("🚚 Assigning rider to order...", { txRef, riderId });
-
     // Call RPC - it will automatically get dispatch_id from rider's profile
     const { data, error } = await supabase.rpc("assign_rider_to_delivery", {
       p_tx_ref: txRef,
@@ -158,8 +156,6 @@ export const assignRiderToDeliveryOrder = async (
     });
 
     if (error) {
-      console.error("❌ Assignment failed:", error);
-
       let errorMessage = error.message || "Failed to assign rider";
 
       if (errorMessage.includes("Rider not available")) {
@@ -180,11 +176,8 @@ export const assignRiderToDeliveryOrder = async (
       throw new Error("No response from server");
     }
 
-    console.log("✅ Rider assigned:", data);
-
     return data as RiderAssignmentResponse;
   } catch (error) {
-    console.error("❌ Assign rider error:", error);
     throw error;
   }
 };
@@ -210,13 +203,11 @@ export const acceptDeliveryOrder = async (txRef: string): Promise<any> => {
     });
 
     if (error) {
-      console.error("❌ Accept delivery failed:", error);
       throw new Error(error.message || "Failed to accept delivery");
     }
 
     return data;
   } catch (error) {
-    console.error("❌ Accept delivery error:", error);
     throw error;
   }
 };
@@ -243,13 +234,11 @@ export const declineDeliveryOrder = async (txRef: string): Promise<any> => {
     });
 
     if (error) {
-      console.error("❌ Decline delivery failed:", error);
       throw new Error(error.message || "Failed to decline delivery");
     }
 
     return data;
   } catch (error) {
-    console.error("❌ Decline delivery error:", error);
     throw error;
   }
 };
@@ -276,13 +265,11 @@ export const pickupDeliveryOrder = async (txRef: string): Promise<any> => {
     });
 
     if (error) {
-      console.error("❌ Pickup delivery failed:", error);
       throw new Error(error.message || "Failed to mark pickup");
     }
 
     return data;
   } catch (error) {
-    console.error("❌ Pickup delivery error:", error);
     throw error;
   }
 };
@@ -308,13 +295,11 @@ export const markDeliveryDelivered = async (txRef: string): Promise<any> => {
     });
 
     if (error) {
-      console.error("❌ Delivered marking failed:", error);
       throw new Error(error.message || "Failed to mark as delivered");
     }
 
     return data;
   } catch (error) {
-    console.error("❌ Delivered marking error:", error);
     throw error;
   }
 };
@@ -342,13 +327,11 @@ export const markDeliveryCompleted = async (txRef: string): Promise<any> => {
     });
 
     if (error) {
-      console.error("❌ Completion failed:", error);
       throw new Error(error.message || "Failed to complete delivery");
     }
 
     return data;
   } catch (error) {
-    console.error("❌ Completion error:", error);
     throw error;
   }
 };
@@ -379,7 +362,6 @@ export const getDeliveryDetailsById = async (
       .single();
 
     if (error) {
-      console.error("❌ Fetch delivery details failed:", error);
       throw new Error(error.message || "Failed to fetch delivery details");
     }
 
@@ -387,14 +369,11 @@ export const getDeliveryDetailsById = async (
       throw new Error("Delivery order not found");
     }
 
-    console.log("SINGLE DATA:", data);
-
     return {
       ...data,
       order_number: Number(data.order_number),
     } as DeliveryOrder;
   } catch (error) {
-    console.error("❌ Fetch delivery details error:", error);
     throw error;
   }
 };
@@ -428,11 +407,9 @@ export const updateDeliveryCoords = async (
     });
 
     if (error) {
-      console.error("❌ Location update failed:", error);
       throw new Error(error.message || "Failed to update location");
     }
   } catch (error) {
-    console.error("❌ Location update error:", error);
     throw error;
   }
 };
@@ -488,7 +465,6 @@ export const sendItem = async (
 
     if (!response.ok) {
       const errorData = response.data as any;
-      console.error("❌ Send item failed:", errorData);
       throw new Error(
         errorData?.detail ||
           errorData?.message ||
@@ -498,7 +474,76 @@ export const sendItem = async (
 
     return response.data as InitiatePaymentResponse;
   } catch (error) {
-    console.error("❌ Send item error:", error);
+    throw error;
+  }
+};
+
+/**
+ * Rider cancels a delivery order
+ *
+ * @param orderId - The delivery order ID
+ * @param reason - Reason for cancellation
+ */
+export const cancelDeliveryByRider = async (
+  orderId: string,
+  reason: string,
+): Promise<any> => {
+  try {
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession();
+
+    if (sessionError || !session) {
+      throw new Error("User not authenticated");
+    }
+
+    const { data, error } = await supabase.rpc("cancel_delivery_by_rider", {
+      p_order_id: orderId,
+      p_reason: reason,
+    });
+
+    if (error) {
+      throw new Error(error.message || "Failed to cancel delivery");
+    }
+
+    return data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+/**
+ * Sender cancels a delivery order
+ *
+ * @param orderId - The delivery order ID
+ * @param reason - Reason for cancellation
+ */
+export const cancelDeliveryBySender = async (
+  orderId: string,
+  reason: string,
+): Promise<any> => {
+  try {
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession();
+
+    if (sessionError || !session) {
+      throw new Error("User not authenticated");
+    }
+
+    const { data, error } = await supabase.rpc("cancel_delivery_by_sender", {
+      p_order_id: orderId,
+      p_reason: reason,
+    });
+
+    if (error) {
+      throw new Error(error.message || "Failed to cancel delivery");
+    }
+
+    return data;
+  } catch (error) {
     throw error;
   }
 };

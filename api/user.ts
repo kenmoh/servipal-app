@@ -262,7 +262,7 @@ export const fetchServiceProviders = async (
   searchQuery?: string,
 ): Promise<UserProfile[]> => {
   try {
-    // Ensure user is authenticated (optional but recommended)
+    // Ensure user is authenticated
     const { data: session, error: sessionError } =
       await supabase.auth.getSession();
 
