@@ -70,6 +70,9 @@ export interface UserProfile {
   business_registration_number?: string;
   pickup_and_delivery_charge?: number;
   review_count?: number;
+  metadata: {
+    [key: string]: any;
+  };
   average_rating?: number;
   account_status?: AccountStatus;
   is_verified?: boolean;

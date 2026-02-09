@@ -402,9 +402,6 @@ export const updatecurrentUserLocation = async (
   coordinates: LocationCoordinates,
 ): Promise<UpdateLocationResponse> => {
   try {
-    console.log("📍 Updating user location...");
-    console.log("Coordinates:", coordinates);
-
     // Get current session
     const {
       data: { session },
@@ -465,13 +462,11 @@ export const getUserLocation =
       });
 
       if (error) {
-        console.error("❌ Error fetching location:", error);
         throw new Error(error.message || "Failed to fetch location");
       }
 
       return data;
     } catch (error) {
-      console.error("💥 Error in getUserLocation:", error);
       return null;
     }
   };

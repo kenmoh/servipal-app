@@ -172,7 +172,7 @@ const ProfileScreen = () => {
     }
     if (user?.user_metadata?.user_type === "LAUNDRY_VENDOR") {
       router.push({
-        pathname: "/laundry-store",
+        pathname: "/laundry-store/[storeId]",
         params: { storeId: user?.id },
       });
     }

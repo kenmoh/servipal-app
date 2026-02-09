@@ -29,53 +29,23 @@ const profileUpdateSchema = z.object({
   phone_number: z
     .string()
     .min(1, "Phone number is required")
-    .refine((val) => {
-      const digits = val.replace(/\D/g, "");
-      return digits.length >= 11 && digits.length <= 15;
-    }, "Invalid phone number (11-15 digits required)"),
-  state: z.string().optional(),
-  bank_name: z.string().optional(),
-  bank_account_number: z
-    .union([
-      z
-        .string()
-        .transform((val) => (val.trim() === "" ? undefined : Number(val))),
-      z.number(),
-      z.undefined(),
-      z.null(),
-    ])
     .refine(
-      (val) => val === undefined || val === null || (!isNaN(val) && val > 0),
-      {
-        message: "Invalid account number",
+      (val) => {
+        const digits = val.replace(/\D/g, "");
+        return digits.length >= 10 && digits.length <= 15;
       },
-    )
-    .optional()
-    .nullable(),
-  // Conditional fields
+      { message: "Invalid phone number (10-15 digits required)" },
+    ),
+  state: z.string().optional().nullable(),
+  bank_name: z.string().optional(),
+  bank_account_number: z.number().optional().nullable(),
   store_name: z.string().optional(),
   business_name: z.string().optional(),
   business_address: z.string().optional(),
   business_registration_number: z.string().optional(),
   opening_hours: z.string().optional(),
   closing_hours: z.string().optional(),
-  pickup_and_delivery_charge: z
-    .union([
-      z
-        .string()
-        .transform((val) => (val.trim() === "" ? undefined : Number(val))),
-      z.number(),
-      z.undefined(),
-      z.null(),
-    ])
-    .refine(
-      (val) => val === undefined || val === null || (!isNaN(val) && val >= 0),
-      {
-        message: "Invalid charge amount",
-      },
-    )
-    .optional()
-    .nullable(),
+  pickup_and_delivery_charge: z.number().optional().nullable(),
 });
 
 type ProfileUpdateFormData = z.infer<typeof profileUpdateSchema>;
@@ -187,7 +157,7 @@ const UpdateProfile = () => {
     const updateData: UserProfileUpdate = {
       full_name: data.full_name,
       phone_number: data.phone_number,
-      state: data.state,
+      state: data.state!,
       bank_name: data.bank_name,
       bank_account_number: data.bank_account_number || undefined,
     };
@@ -490,8 +460,11 @@ const UpdateProfile = () => {
             render={({ field: { onChange, value } }) => (
               <AppTextInput
                 label="Account Number"
-                value={value?.toString()}
-                onChangeText={onChange}
+                value={value?.toString() || ""}
+                onChangeText={(text) => {
+                  const parsed = text.trim() === "" ? undefined : Number(text);
+                  onChange(parsed);
+                }}
                 placeholder="10-digit account number"
                 keyboardType="numeric"
                 errorMessage={errors.bank_account_number?.message}

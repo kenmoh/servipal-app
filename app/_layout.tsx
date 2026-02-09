@@ -213,6 +213,13 @@ export default function RootLayout() {
                       }}
                     />
                     <Stack.Screen
+                      name="laundry-store/[storeId]"
+                      options={{
+                        headerShown: false,
+                        animation: "slide_from_right",
+                      }}
+                    />
+                    <Stack.Screen
                       name="cart"
                       options={{
                         title: "Review Order",
