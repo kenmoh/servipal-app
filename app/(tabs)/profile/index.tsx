@@ -291,7 +291,7 @@ const ProfileScreen = () => {
                   <HDivider />
 
                   <AppLink
-                    onPress={() => router.push("/riders")}
+                    onPress={() => router.push("/dispatch")}
                     name="Riders"
                     icon={
                       <Ionicons name="bicycle-outline" size={18} color="gray" />

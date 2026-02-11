@@ -28,10 +28,6 @@ const DrinkMenu = () => {
     enabled: !!storeId,
   });
 
-  console.log("🥤 [DrinkMenu] storeId:", storeId, "itemsCount:", data?.length);
-
-  console.log("DRINK MENU", data);
-
   const handleAddToCart = useCallback(
     (item: RestaurantMenuItemResponse) => {
       const hasOptions =
@@ -76,7 +72,7 @@ const DrinkMenu = () => {
         name: item.name,
         price: Number(item.price),
         image: item.images[0] || "",
-        selected_size: selectedSize,
+        selected_sizes: selectedSize,
         selected_sides: selectedSides,
       });
 

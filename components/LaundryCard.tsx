@@ -72,7 +72,7 @@ const LaundryCard = ({
     <TouchableOpacity
       disabled={isOwner}
       onPress={() => onPress(item)}
-      className="my-1 p-2 bg-input rounded-md w-[95%] self-center"
+      className="my-1 p-3 bg-input rounded-md w-[95%] self-center"
     >
       {/* Edit/Delete buttons for owner */}
       {isOwner && (
@@ -108,18 +108,18 @@ const LaundryCard = ({
             }}
           />
         </View>
-        <View className="w-[70%]">
-          <View className="flex-row items-center gap-2">
+        <View className="w-[75%]">
+          <View className="flex-row items-center justify-between">
             <Text className="text-primary tracking-tight font-poppins-medium text-sm">
               {item.name}
             </Text>
-            {/* {item.wash_type && (
-              <View className="bg-blue-100 px-2 py-0.5 rounded">
-                <Text className="text-blue-600 text-[10px] font-poppins-bold">
-                  {item.wash_type.replace("_", " ")}
+            {item.laundry_type && (
+              <View className="bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-full">
+                <Text className="text-slate-400 text-[10px] font-poppins">
+                  {item.laundry_type.replace("_", " ")}
                 </Text>
               </View>
-            )} */}
+            )}
           </View>
           <Text className="text-wrap mt-1 text-muted text-sm flex-wrap">
             {item.description}
@@ -130,6 +130,8 @@ const LaundryCard = ({
         </View>
       </View>
 
+
+
       <Checkbox
         style={{ borderWidth: 1, height: 18, width: 18, borderRadius: 3 }}
         className="absolute right-2 bottom-2"
@@ -139,14 +141,15 @@ const LaundryCard = ({
         disabled={isOwner}
         onValueChange={
           !isOwner
-            ? () => onPress(item)
-            : () =>
-                showError(
-                  "Not Allowed",
-                  "You cannot order from your own laundry",
-                )
-        }
-      ></Checkbox>
+          ? () => onPress(item)
+          : () =>
+            showError(
+              "Not Allowed",
+              "You cannot order from your own laundry",
+            )
+          }
+          />
+          
     </TouchableOpacity>
   );
 };

@@ -126,6 +126,7 @@ export interface UpdateLocationResponse {
 // ============================================================================
 export interface RiderResponse {
   id: string;
+  email: string;
   full_name: string;
   phone_number: string;
   profile_image_url: string;
@@ -173,26 +174,54 @@ export interface RiderAssignmentResponse {
 // ============================================================================
 // WALLET & TRANSACTION INTERFACES
 // ============================================================================
-export interface WalletTransactionResponse {
+
+export type OrderType = "DELIVERY" | "FOOD" | "LAUNDRY" | "PRODUCT";
+
+interface TransactionProfile {
+  full_name: string | null;
+  business_name: string | null;
+  store_name: string | null;
+}
+
+// Helper to resolve the best display name
+export const resolveDisplayName = (
+  profile: TransactionProfile | null,
+): string => {
+  if (!profile) return "Unknown";
+  return (
+    profile.business_name ??
+    profile.store_name ??
+    profile.full_name ??
+    "Unknown"
+  );
+};
+
+export interface Transaction {
   id: string;
   tx_ref: string;
-  amount: string;
-  from_user_id: string;
-  to_user_id: string;
-  order_id: string;
-  to_user: string;
-  from_user: string;
+  wallet_id: string;
+  amount: number;
   transaction_type: TransactionType;
-  payment_status: PaymentStatus;
-  payment_method: string;
+  payment_status: "FAILED" | "SUCCESS" | "PENDING";
+  from_user_id: string;
+  to_user_id: string | null;
+  from_user: TransactionProfile | null;
+  to_user: TransactionProfile | null;
+  order_id: string;
+  order_type: OrderType;
+  details: {
+    flw_ref: string;
+    label: "DEBIT" | "CREDIT";
+    [key: string]: any;
+  };
   created_at: string;
 }
 
-export interface WalletBalanceResponse {
+export interface WalletResponse {
   id: string;
   balance: string;
   escrow_balance: string;
-  transactions: WalletTransactionResponse[];
+  transactions: Transaction[];
 }
 
 // ============================================================================

@@ -1,5 +1,4 @@
 import { CartItem, useCartStore } from "@/store/cartStore";
-import { AntDesign } from "@expo/vector-icons";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { Image } from "expo-image";
 import { Text, TouchableOpacity, View } from "react-native";
@@ -50,28 +49,30 @@ const Item = ({ item }: CartItemProps) => {
           </View>
           {/* Bottom Right: Quantity Controls */}
           <View className="flex-row items-center gap-3 self-end">
-            <TouchableOpacity
-              onPress={() =>
-                updateItemQuantity(item.item_id, item.quantity - 1)
-              }
-            >
-              <AntDesign name="minus-circle" size={20} color="#aaa" />
-            </TouchableOpacity>
-            <Text className="text-primary font-poppins text-lg">
-              {item.quantity}
-            </Text>
-            <TouchableOpacity
-              onPress={() =>
-                updateItemQuantity(item.item_id, item.quantity + 1)
-              }
-            >
-              <AntDesign name="plus-circle" size={20} color="#aaa" />
-            </TouchableOpacity>
+            <View className="flex-row items-center rounded-full bg-gray-100 dark:bg-gray-800 px-5 py-0.5 gap-5">
+              <TouchableOpacity
+                onPress={() =>
+                  updateItemQuantity(item.item_id, item.quantity - 1)
+                }
+              >
+                <Ionicons name="remove" size={18} color="#aaa" />
+              </TouchableOpacity>
+              <Text className="text-primary font-poppins text-lg">
+                {item.quantity}
+              </Text>
+              <TouchableOpacity
+                onPress={() =>
+                  updateItemQuantity(item.item_id, item.quantity + 1)
+                }
+              >
+                <Ionicons name="add" size={18} color="#aaa" />
+              </TouchableOpacity>
+            </View>
             <TouchableOpacity
               onPress={() => removeItem(item.item_id)}
               style={{ marginLeft: 10 }}
             >
-              <Ionicons name="trash" size={20} color="#aaa" />
+              <Ionicons name="trash" size={18} color="#aaa" />
             </TouchableOpacity>
           </View>
         </View>

@@ -35,8 +35,6 @@ const FoodMenu = () => {
     enabled: !!storeId,
   });
 
-  console.log("🍴 [FoodMenu] storeId:", storeId, "itemsCount:", data?.length);
-
   const groupedData = useMemo(() => {
     if (!data) return [];
 
@@ -105,7 +103,7 @@ const FoodMenu = () => {
         name: item.name,
         price: Number(item.price),
         image: item.images[0] || "",
-        selected_size: selectedSize,
+        selected_sizes: selectedSize,
         selected_sides: selectedSides,
       });
 

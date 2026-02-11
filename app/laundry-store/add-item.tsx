@@ -1,3 +1,4 @@
+import AppPicker from "@/components/AppPicker";
 import React, { useEffect } from "react";
 import { ActivityIndicator, ScrollView, View } from "react-native";
 
@@ -27,6 +28,7 @@ const schema = z.object({
     .number({ message: "Price must be a number" })
     .positive("Price must be greater than 0"),
   description: z.string().min(1, "Description is a required field"),
+  laundry_type: z.string({ message: "Please select a wash type" }),
   images: z.array(z.any()).nonempty({
     message: "Image is required",
   }),
@@ -34,7 +36,7 @@ const schema = z.object({
 
 type LaundryFormData = z.infer<typeof schema>;
 
-const WASH_TYPE_OPTIONS = [
+const LAUNDRY_TPES_OPTIONS = [
   { id: "DRY_CLEAN", name: "DRY CLEAN" },
   { id: "WASH_FOLD", name: "WASH & FOLD" },
   { id: "IRON_ONLY", name: "IRON ONLY" },
@@ -61,6 +63,7 @@ const AddLaundryItem = () => {
       price: 0,
       description: "",
       images: [],
+      laundry_type: "",
     },
   });
 
@@ -84,6 +87,7 @@ const AddLaundryItem = () => {
         description: existingMenuItem.description || "",
         price: existingMenuItem.price || 0,
         images: (existingMenuItem.images as any[]) || [],
+        laundry_type: existingMenuItem.laundry_type || "",
       });
     }
   }, [existingMenuItem, reset, isEditing]);
@@ -100,6 +104,7 @@ const AddLaundryItem = () => {
         description: data.description,
         price: data.price,
         images: (data.images as any[]) || [],
+        laundry_type: data.laundry_type as any,
       });
     },
     onSuccess: () => {
@@ -123,6 +128,7 @@ const AddLaundryItem = () => {
         description: data.description,
         price: data.price,
         images: (data.images as any[]) || [],
+        laundry_type: data.laundry_type as any,
       };
 
       return createLaundryItem(payload);
@@ -205,7 +211,19 @@ const AddLaundryItem = () => {
               />
             )}
           />
-
+          <Controller
+            control={control}
+            name="laundry_type"
+            render={({ field: { onChange, value } }) => (
+              <AppPicker
+                label="Laundry Type"
+                placeholder="Select Wash Type"
+                items={LAUNDRY_TPES_OPTIONS}
+                onValueChange={onChange}
+                value={value}
+              />
+            )}
+          />
           <Controller
             control={control}
             name="description"

@@ -9,11 +9,7 @@ export type OrderStatus =
 
 export type OrderPaymentStatus = "pending" | "paid" | "failed" | "refunded";
 
-export type RequireDelivery =
-  | "pickup"
-  | "delivery"
-  | "vendor-pickup-and-dropoff"
-  | "rider-pickup-and-dropoff";
+export type RequireDelivery = "PICKUP" | "VENDOR_DELIVERY";
 
 export interface OrderItem {
   id?: string;

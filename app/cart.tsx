@@ -1,5 +1,6 @@
-import { createOrder } from "@/api/order";
-import { fetchRider } from "@/api/user";
+import { initiateRestaurantOrderPayment } from "@/api/food";
+import { initiateLaundryOrderPayment } from "@/api/laundry";
+import { fetchProfile } from "@/api/user";
 import AppModal from "@/components/AppModal";
 import Item from "@/components/CartItem";
 import CurrentLocationButton from "@/components/CurrentLocationButton";
@@ -12,14 +13,12 @@ import { HEADER_BG_DARK, HEADER_BG_LIGHT } from "@/constants/theme";
 import { useCartStore } from "@/store/cartStore";
 import { useLocationStore } from "@/store/locationStore";
 import { useUserStore } from "@/store/userStore";
-import { OrderFoodOLaundry, RequireDelivery } from "@/types/order-types";
-import { formatDistanceAndTime } from "@/utils/formatCurrency";
-import { getCoordinatesFromAddress } from "@/utils/geocoding";
-import { getDirections } from "@/utils/map";
+import { OrderCreate, RestaurantOrderCreate } from "@/types/item-types";
+import { RequireDelivery } from "@/types/order-types";
 import Feather from "@expo/vector-icons/Feather";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
   ActivityIndicator,
   ScrollView,
@@ -30,135 +29,151 @@ import {
 } from "react-native";
 
 const Cart = () => {
-  const [infoText, setInfoText] = useState("");
+  const [instructions, setInstructions] = useState("");
   const [modalVisible, setModalVisible] = useState(false);
   const theme = useColorScheme();
-  const { user, storeAddress } = useUserStore();
+  const { user } = useUserStore();
   const { isLaundry } = useLocalSearchParams();
   const { showError } = useToast();
 
-  const {
-    setDeliveryOption,
-    cart,
-    updateDuration,
-    updateDistance,
-    setAdditionalInfo,
-    totalCost,
-  } = useCartStore();
+  const isLaundryOrder = isLaundry === "true";
+
+  const { setDeliveryOption, cart, setAdditionalInfo, totalCost } =
+    useCartStore();
 
   const vendorId = cart.order_items[0]?.vendor_id;
+  const { delivery_option } = cart;
 
   const { data: vendorProfile } = useQuery({
-    queryKey: ["vendorProfile", vendorId],
-    queryFn: () => fetchRider(vendorId),
+    queryKey: ["vendor-profile", vendorId],
+    queryFn: () => fetchProfile(vendorId),
     enabled: !!vendorId,
   });
 
-  const {
-    require_delivery,
-    duration: storeDelivery,
-    distance: storeDistance,
-  } = useCartStore((state) => state.cart);
+  const { setDestination, destination } = useLocationStore();
 
-  const { setDestination, destination, destinationCoords, originCoords } =
-    useLocationStore();
-
+  const queryClient = useQueryClient();
   const isDark = theme === "dark";
   const bgColor = isDark ? HEADER_BG_DARK : HEADER_BG_LIGHT;
 
-  const handleDeliveryOptionChange = (option: RequireDelivery) => {
-    setDeliveryOption(option);
-    if (option === "vendor-pickup-and-dropoff" || option === "delivery") {
-      setModalVisible(true);
-    }
-  };
-
-  const handleNext = () => {
-    setAdditionalInfo(infoText);
-    setModalVisible(false);
-  };
-
-  const prepareOrderForServer = (): OrderFoodOLaundry => {
-    return {
-      order_items: cart.order_items.map((item) => ({
-        vendor_id: item.vendor_id,
-        item_id: item.item_id,
-        quantity: item.quantity,
-        ...(item.selectedSize && { size: item.selectedSize }),
-        ...(item.selectedSides && { sides: item.selectedSides }),
-      })),
-      pickup_coordinates: originCoords || [0, 0],
-      dropoff_coordinates: destinationCoords || [0, 0],
-      distance: Number(cart.distance) || 0,
-      require_delivery: cart.require_delivery,
-      is_one_way_delivery: cart.is_one_way_delivery,
-      duration: cart.duration,
-      origin: storeAddress || "",
-      destination: destination ?? undefined,
-      ...(cart.additional_info && { additional_info: cart.additional_info }),
-    };
-  };
-
-  const { mutate, isPending } = useMutation({
-    mutationKey: ["createOrder", user?.id],
-    mutationFn: () =>
-      createOrder(cart.order_items[0].vendor_id, prepareOrderForServer()),
+  // ---- Laundry mutation ----
+  const { mutate: laundryMutate, isPending: laundryIsPending } = useMutation({
+    mutationFn: (payload: OrderCreate) => initiateLaundryOrderPayment(payload),
     onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["laundry-orders", user?.id] });
       router.push({
-        pathname: "/payment/[orderId]",
+        pathname: "/payment",
         params: {
-          orderNumber: data?.order?.order_number,
-          deliveryType: data?.delivery?.delivery_type,
-          orderType: data?.order?.order_type,
-          paymentLink: data?.order?.payment_link,
-          orderId: data?.order?.id,
-          deliveryFee: data?.order?.vendor_pickup_dropoff_charge || 0,
-          orderItems: JSON.stringify(data?.order?.order_items),
+          logo: data.customization.logo,
+          email: data.customer.email,
+          phonenumber: data.customer.phone_number,
+          fullName: data.customer.full_name,
+          description: data.customization.description,
+          title: data.customization.title,
+          txRef: data.tx_ref,
+          amount: data.amount,
+          publicKey: data.public_key,
+          serviceType: "LAUNDRY",
         },
       });
     },
     onError: (error) => {
-      showError("Error", error.message);
+      showError(
+        "Error",
+        error instanceof Error ? error.message : "An unexpected error occurred",
+      );
     },
   });
 
+  // ---- Food mutation ----
+  const { mutate: foodMutate, isPending: foodIsPending } = useMutation({
+    mutationFn: (payload: RestaurantOrderCreate) =>
+      initiateRestaurantOrderPayment(payload),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["food-orders", user?.id] });
+      router.push({
+        pathname: "/payment",
+        params: {
+          logo: data.customization.logo,
+          email: data.customer.email,
+          phonenumber: data.customer.phone_number,
+          fullName: data.customer.full_name,
+          description: data.customization.description,
+          title: data.customization.title,
+          txRef: data.tx_ref,
+          amount: data.amount,
+          publicKey: data.public_key,
+          serviceType: "FOOD",
+        },
+      });
+    },
+    onError: (error) => {
+      showError(
+        "Error",
+        error instanceof Error ? error.message : "An unexpected error occurred",
+      );
+    },
+  });
+
+  const isPending = isLaundryOrder ? laundryIsPending : foodIsPending;
+
+  // ---- Delivery option handler ----
+  // Opens modal automatically when vendor delivery is selected
+  const handleDeliveryOptionChange = (option: RequireDelivery) => {
+    setDeliveryOption(option);
+    if (option === "VENDOR_DELIVERY") {
+      setModalVisible(true);
+    }
+  };
+
+  // ---- Submit ----
   const handleOrderCreate = () => {
-    if (!require_delivery) {
+    if (!delivery_option) {
       showError("Error", "Please select a delivery option");
       return;
     }
-    mutate();
-  };
 
-  useEffect(() => {
-    const fetchTravelInfo = async () => {
-      if (!storeAddress || !destinationCoords) return;
+    if (delivery_option === "VENDOR_DELIVERY" && !destination) {
+      showError("Error", "Please enter a delivery address");
+      setModalVisible(true);
+      return;
+    }
 
-      try {
-        const storeCoords = await getCoordinatesFromAddress(storeAddress);
-        if (!storeCoords) return;
-
-        const { distance, duration } = await getDirections(
-          [storeCoords.lat, storeCoords.lng],
-          destinationCoords,
-        );
-
-        if (distance && duration) {
-          const { distance: formattedDistance, duration: formattedDuration } =
-            formatDistanceAndTime(distance, duration);
-
-          updateDistance(formattedDistance);
-          updateDuration(formattedDuration);
-        }
-      } catch (error) {
-        console.error("Failed to fetch distance matrix:", error);
-      }
+    // Shared base payload for both order types
+    const basePayload: OrderCreate = {
+      vendor_id: vendorId,
+      delivery_option,
+      instructions,
+      delivery_address:
+        delivery_option === "VENDOR_DELIVERY" ? (destination ?? "") : "",
+      items: cart.order_items.map((item) => ({
+        item_id: item.item_id,
+        name: item.name ?? "",
+        price: item.price ?? 0,
+        quantity: item.quantity,
+        images: item.images ?? (item.image ? [item.image] : []),
+        sides: item.selected_sides ?? [],
+        sizes: item.selected_sizes ?? [],
+      })),
     };
 
-    fetchTravelInfo();
-  }, [destinationCoords, storeAddress]);
+    if (isLaundryOrder) {
+      laundryMutate(basePayload);
+    } else {
+      // Food extends base with sides/sizes
+      const foodPayload: RestaurantOrderCreate = {
+        ...basePayload,
+        sides: cart.order_items.flatMap((i) => i.selected_sides ?? []),
+        sizes: cart.order_items.flatMap((i) =>
+          i.selected_sizes ? [i.selected_sizes] : [],
+        ),
+      };
+      foodMutate(foodPayload);
+    }
+  };
 
-  if (cart?.order_items.length === 0) {
+  // ---- Empty cart ----
+  if (cart.order_items.length === 0) {
     return (
       <View
         style={{ backgroundColor: bgColor }}
@@ -171,7 +186,7 @@ const Cart = () => {
           Your cart is empty
         </Text>
         <Text className="text-sm font-poppins-regular text-gray-400 text-center mb-8 px-4 w-full">
-          Browse our menu and add some delicious items to your cart!
+          Browse our menu and add some items to your cart!
         </Text>
         <AppButton
           text="Go Back"
@@ -190,13 +205,13 @@ const Cart = () => {
       <ScrollView
         className="flex-1 bg-background"
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 300 }}
+        contentContainerStyle={{ paddingBottom: 400 }}
       >
         <View className="px-5 pt-4">
           {/* Cart Items */}
           <View className="mb-8">
             {cart.order_items.map((item) => (
-              <Item key={item?.item_id} item={item} />
+              <Item key={item.item_id} item={item} />
             ))}
           </View>
 
@@ -222,115 +237,88 @@ const Cart = () => {
           </View>
 
           {/* Delivery Options */}
-          <View className="mb-8">
-            <Text className="text-base font-poppins-bold text-primary mb-4">
-              Delivery Method
-            </Text>
-            <View className="bg-input rounded-2xl p-4 border border-gray-600">
-              <RadioButton
-                label={
-                  isLaundry === "true"
-                    ? "Self delivery/pickup"
-                    : "Pickup from Store"
-                }
-                selected={require_delivery === "pickup"}
-                onPress={() => handleDeliveryOptionChange("pickup")}
-              />
-              {isLaundry === "true" && (
+          {vendorProfile?.can_pickup_and_dropoff && (
+            <View className="mb-8">
+              <Text className="text-base font-poppins-bold text-primary mb-4">
+                Delivery Method
+              </Text>
+              <View className="bg-input rounded-2xl p-4 border border-gray-600">
                 <RadioButton
-                  label="Vendor Pickup & Delivery"
-                  selected={require_delivery === "vendor-pickup-and-dropoff"}
-                  onPress={() =>
-                    handleDeliveryOptionChange("vendor-pickup-and-dropoff")
+                  label={
+                    isLaundryOrder
+                      ? "Self Drop-off / Pickup"
+                      : "Pickup from Store"
                   }
+                  selected={delivery_option === "PICKUP"}
+                  onPress={() => handleDeliveryOptionChange("PICKUP")}
                 />
-              )}
-              {(isLaundry === "true" ||
-                vendorProfile?.can_pickup_and_dropoff) && (
                 <RadioButton
                   label="Vendor Delivery"
-                  selected={require_delivery === "delivery"}
-                  onPress={() => handleDeliveryOptionChange("delivery")}
+                  selected={delivery_option === "VENDOR_DELIVERY"}
+                  onPress={() => handleDeliveryOptionChange("VENDOR_DELIVERY")}
                 />
-              )}
+              </View>
             </View>
-          </View>
+          )}
 
-          {/* Delivery Details (If applicable) */}
-          {(require_delivery === "vendor-pickup-and-dropoff" ||
-            require_delivery === "delivery") &&
+          {/* Delivery address summary — shown after modal is confirmed */}
+          {delivery_option === "VENDOR_DELIVERY" &&
             destination &&
             !modalVisible && (
               <View className="mb-8">
-                <View className="flex-row justify-between items-center mb-4">
+                <View className="flex-row justify-between items-center mb-3">
                   <Text className="text-base font-poppins-bold text-primary">
-                    Delivery Details
+                    Delivery Address
                   </Text>
-                  <TouchableOpacity onPress={() => setModalVisible(true)}>
+                  <TouchableOpacity
+                    onPress={() => setModalVisible(true)}
+                    hitSlop={8}
+                  >
                     <Text className="text-sm font-poppins-medium text-button-primary">
                       Change
                     </Text>
                   </TouchableOpacity>
                 </View>
-                <View className="bg-input rounded-2xl p-5 border border-gray-600 gap-4">
-                  <View className="flex-row">
-                    <Feather
-                      name="map-pin"
-                      size={16}
-                      color="#FF8C00"
-                      style={{ marginTop: 2, marginRight: 10 }}
-                    />
-                    <View className="flex-1">
-                      <Text className="text-xs text-gray-400 font-poppins-medium mb-1 uppercase">
-                        Destination
-                      </Text>
-                      <Text className="text-sm text-primary font-poppins-regular">
-                        {destination}
-                      </Text>
-                    </View>
-                  </View>
-
-                  <View className="flex-row justify-between pt-2 border-t border-gray-600">
-                    <View>
-                      <Text className="text-xs text-gray-400 font-poppins-medium mb-1 uppercase">
-                        Distance
-                      </Text>
-                      <Text className="text-sm text-primary font-poppins-semibold">
-                        {storeDistance} Km
-                      </Text>
-                    </View>
-                    <View className="items-end">
-                      <Text className="text-xs text-gray-400 font-poppins-medium mb-1 uppercase">
-                        Estimated Time
-                      </Text>
-                      <Text className="text-sm text-primary font-poppins-semibold">
-                        {storeDelivery}
-                      </Text>
-                    </View>
-                  </View>
+                <View className="bg-input rounded-2xl p-4 border border-gray-600 flex-row">
+                  <Feather
+                    name="map-pin"
+                    size={16}
+                    color="#FF8C00"
+                    style={{ marginTop: 2, marginRight: 10 }}
+                  />
+                  <Text className="text-sm text-primary font-poppins-regular flex-1">
+                    {destination}
+                  </Text>
                 </View>
               </View>
             )}
 
-          {/* Additional Info */}
+          {/* Instructions */}
           <View className="mb-8">
             <Text className="text-base font-poppins-bold text-primary mb-4">
-              Additional Instructions
+              Instructions
             </Text>
             <AppTextInput
-              placeholder="e.g. Leave at the front desk"
+              placeholder={
+                isLaundryOrder
+                  ? "e.g. Use cold water, no bleach, handle delicates with care"
+                  : "e.g. Less spice, no onions, leave at the front desk"
+              }
               multiline
-              value={infoText}
+              disabled={isPending}
+              textAlignVertical="center"
+              value={instructions}
               onChangeText={(text) => {
-                setInfoText(text);
+                setInstructions(text);
                 setAdditionalInfo(text);
               }}
             />
           </View>
         </View>
-        {/* Footer Bottom Button */}
+
+        {/* Footer */}
         {!modalVisible && (
-          <View className=" w-full p-5 bg-background shadow-2xl">
+          <View className="w-full px-5 pb-5 bg-background">
             <AppButton
               disabled={isPending}
               text={isPending ? "" : "Place Order"}
@@ -347,37 +335,20 @@ const Cart = () => {
         )}
       </ScrollView>
 
-      {/* Location Modal */}
+      {/* Delivery Address Modal */}
       <AppModal
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
-        height="85%"
+        height="65%"
       >
         <View className="flex-1 pt-2">
           <Text className="text-xl font-poppins-bold text-primary mb-6">
-            Delivery Location
+            Delivery Address
           </Text>
 
           <View className="mb-6">
             <Text className="text-xs text-gray-400 font-poppins-medium mb-2 uppercase ml-1">
-              Pickup Point
-            </Text>
-            <View className="flex-row items-center bg-gray-600/20 p-4 rounded-xl">
-              <Feather
-                name="home"
-                size={18}
-                color="#888"
-                style={{ marginRight: 12 }}
-              />
-              <Text className="text-gray-400 font-poppins-medium flex-1">
-                {storeAddress || "Waitng for store address..."}
-              </Text>
-            </View>
-          </View>
-
-          <View className="mb-6">
-            <Text className="text-xs text-gray-400 font-poppins-medium mb-2 uppercase ml-1">
-              Dropoff Point
+              Dropoff Location
             </Text>
             <View className="flex-row items-center gap-2">
               <GoogleTextInput
@@ -397,8 +368,8 @@ const Cart = () => {
 
           <View className="mt-auto">
             <AppButton
-              text="Confirm Location"
-              onPress={handleNext}
+              text="Confirm Address"
+              onPress={() => setModalVisible(false)}
               disabled={!destination}
             />
           </View>

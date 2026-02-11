@@ -2,11 +2,15 @@ import {
   CategoryResponse,
   CreateRestaurantMenuItem,
   RestaurantMenuItemResponse,
+  RestaurantOrderCreate,
   UpdateRestaurantMenuItem,
 } from "@/types/item-types";
+import { InitiatePaymentResponse } from "@/types/payment-types";
+import { apiClient } from "@/utils/client";
 import { supabase } from "@/utils/supabase";
 
 const FOOD_TABLE = "food_items";
+const BASE_URL = "/food";
 
 const MENU_IMAGES_BUCKET = "menu-images";
 
@@ -251,5 +255,32 @@ export const fetchVendorMenuItems = async (
       throw error;
     }
     throw new Error("An unexpected error occurred while fetching menu items");
+  }
+};
+
+/**
+ * Initiates a food request.
+ *
+ * @param item - The food details (OrderCreate)
+ * @returns Promise<InitiatePaymentResponse>
+ */
+export const initiateRestaurantOrderPayment = async (
+  item: RestaurantOrderCreate,
+): Promise<InitiatePaymentResponse> => {
+  try {
+    const response = await apiClient.post(`${BASE_URL}/initiate-payment`, item);
+
+    if (!response.ok) {
+      const errorData = response.data as any;
+      throw new Error(
+        errorData?.detail ||
+          errorData?.message ||
+          "Failed to initiate food request",
+      );
+    }
+
+    return response.data as InitiatePaymentResponse;
+  } catch (error) {
+    throw error;
   }
 };

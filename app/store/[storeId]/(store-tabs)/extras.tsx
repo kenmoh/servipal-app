@@ -72,7 +72,7 @@ const ExtrasMenu = () => {
         name: item.name,
         price: Number(item.price),
         image: item.images[0] || "",
-        selected_size: selectedSize,
+        selected_sizes: selectedSize,
         selected_sides: selectedSides,
       });
 

@@ -29,6 +29,7 @@ export interface CreateLaundryItem {
   name: string;
   description?: string;
   price: number;
+  laundry_type: LaundryType;
   images: string[];
 }
 
@@ -49,4 +50,24 @@ export interface CategoryResponse {
 export interface CreateCategory {
   name: string;
   category_type: string;
+}
+
+export interface OrderItem {
+  price: number;
+  item_id: string;
+  quantity: number;
+  images: string[];
+}
+
+export interface OrderCreate {
+  vendor_id: string;
+  items: OrderItem[];
+  delivery_option: "PICKUP" | "VENDOR_DELIVERY";
+  instructions: string;
+  delivery_address: string;
+}
+
+export interface RestaurantOrderCreate extends OrderCreate {
+  sides?: string[];
+  sizes?: string[];
 }

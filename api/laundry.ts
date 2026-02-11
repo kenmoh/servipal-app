@@ -1,9 +1,16 @@
-import { CreateLaundryItem, LaundryItemResponse } from "@/types/item-types";
+import {
+  CreateLaundryItem,
+  LaundryItemResponse,
+  OrderCreate,
+} from "@/types/item-types";
+import { InitiatePaymentResponse } from "@/types/payment-types";
+import { apiClient } from "@/utils/client";
 import { supabase } from "@/utils/supabase";
 import { normalizeMenuImages } from "./food";
 
 const LAUNDRY_TABLE = "laundry_items";
 const MENU_IMAGES_BUCKET = "menu-images";
+const BASE_URL = "/laundry";
 
 export const createLaundryItem = async (
   item: CreateLaundryItem,
@@ -168,5 +175,32 @@ export const fetchVendorLaundryItems = async (
     throw new Error(
       "An unexpected error occurred while fetching laundry items",
     );
+  }
+};
+
+/**
+ * Initiates a laundry request.
+ *
+ * @param item - The laundry details (OrderCreate)
+ * @returns Promise<InitiatePaymentResponse>
+ */
+export const initiateLaundryOrderPayment = async (
+  item: OrderCreate,
+): Promise<InitiatePaymentResponse> => {
+  try {
+    const response = await apiClient.post(`${BASE_URL}/initiate-payment`, item);
+
+    if (!response.ok) {
+      const errorData = response.data as any;
+      throw new Error(
+        errorData?.detail ||
+          errorData?.message ||
+          "Failed to initiate laundry request",
+      );
+    }
+
+    return response.data as InitiatePaymentResponse;
+  } catch (error) {
+    throw error;
   }
 };

@@ -1,26 +1,31 @@
 import { AppButton } from "@/components/ui/app-button";
-import { router } from "expo-router";
+import { AppTextInput } from "@/components/ui/app-text-input";
+import { AntDesign } from "@expo/vector-icons";
+import { router, Stack } from "expo-router";
 import React from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, useColorScheme, View } from "react-native";
 
 const FundWalletScreen = () => {
+  const theme = useColorScheme();
   return (
-    <View className="flex-1 bg-background px-5 py-6">
-      <Text className="text-primary text-xl font-poppins-semibold">
-        Fund Wallet
-      </Text>
-      <Text className="text-secondary mt-2">
-        Add funds to your ServiPal wallet.
-      </Text>
-      <View className="mt-6 rounded-2xl bg-profile-card p-4 gap-3">
-        <Text className="text-foreground">Funding options coming soon.</Text>
-        <AppButton
-          text="Back to Wallet"
-          variant="outline"
-          color="#FF8C00"
-          onPress={() => router.back()}
-        />
-      </View>
+    <View className="flex-1 bg-background px-5 pt-11">
+      <Stack.Screen
+        options={{
+          headerShown: true,
+          headerShadowVisible: false,
+          headerTintColor: theme === "dark" ? "#fff" : "#aaa",
+          title: "Fund Wallet",
+        }}
+      />
+
+      <AppTextInput />
+      <AppButton
+        text="Subit"
+        variant="fill"
+        borderRadius={50}
+        icon={<AntDesign name="credit-card" color={"#ccc"} />}
+        onPress={() => router.back()}
+      />
     </View>
   );
 };

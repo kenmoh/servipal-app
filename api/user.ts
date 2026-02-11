@@ -6,6 +6,7 @@ import {
   UpdateRiderData,
   UserProfile,
   UserProfileUpdate,
+  WalletResponse,
 } from "@/types/user-types";
 import { apiClient } from "@/utils/client";
 
@@ -287,6 +288,33 @@ export const fetchServiceProviders = async (
   }
 };
 
+export const fetchUserWallet = async (
+  userId: string,
+): Promise<WalletResponse> => {
+  try {
+    // Ensure user is authenticated
+    const { data: session, error: sessionError } =
+      await supabase.auth.getSession();
+
+    if (sessionError || !session) {
+      throw new Error("User not authenticated");
+    }
+
+    // Get user wallet via rpc
+    const { data, error } = await supabase.rpc("get_wallet_with_transactions", {
+      p_user_id: userId,
+    });
+
+    if (error) {
+      throw new Error(error.message || "Failed to fetch user wallet");
+    }
+
+    return data as WalletResponse;
+  } catch (error) {
+    throw error;
+  }
+};
+
 export const createRiderByDispatcher = async (
   riderData: CreateRiderData,
 ): Promise<RiderResponse> => {
@@ -326,6 +354,33 @@ export const createRiderByDispatcher = async (
     return response.data;
   } catch (error) {
     throw error;
+  }
+};
+
+export const deleteRider = async (riderId: string): Promise<null> => {
+  try {
+    const response: ApiResponse<null | ErrorResponse> = await apiClient.delete(
+      `${BASE_URL}/${riderId}/delete`,
+      {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      },
+    );
+
+    if (!response.ok || !response.data || "detail" in response.data) {
+      const errorMessage =
+        response.data && "detail" in response.data
+          ? response.data.detail
+          : "Error deleting rider.";
+      throw new Error(errorMessage);
+    }
+    return response.data;
+  } catch (error) {
+    if (error instanceof Error) {
+      throw new Error(error.message);
+    }
+    throw new Error("An unexpected error occurred");
   }
 };
 
@@ -441,7 +496,7 @@ export const updatecurrentUserLocation = async (
   }
 };
 
-// Optional: Get user location from profile
+// Get user location from profile
 export const getUserLocation =
   async (): Promise<LocationCoordinates | null> => {
     try {

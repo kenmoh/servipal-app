@@ -24,7 +24,6 @@ const UserOrders = () => {
   const {
     data: allData,
     isLoading,
-    error,
     refetch,
     isFetching,
     isPending,

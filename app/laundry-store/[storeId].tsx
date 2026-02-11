@@ -50,6 +50,7 @@ const LaundryStore = () => {
           name: item.name,
           price: item.price,
           image: item.images[0] || "",
+          laundry_type: item.laundry_type,
         });
 
         const next = new Set(checkedItems);
