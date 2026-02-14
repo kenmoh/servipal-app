@@ -94,7 +94,7 @@ const UserOrders = () => {
 
   const renderItem = useCallback(
     ({ item }: { item: UnifiedOrderResponse }) => (
-      <FoodLaundryOrderCard order={item} />
+      <FoodLaundryOrderCard order={item} orderType="FOOD" />
     ),
     [],
   );

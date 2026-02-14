@@ -7,7 +7,11 @@ export type OrderStatus =
   | "DELIVERED"
   | "CANCELLED";
 
-export type OrderPaymentStatus = "pending" | "paid" | "failed" | "refunded";
+export type OrderPaymentStatus =
+  | "SUCCESS"
+  | "FAILED"
+  | "CANCELLED"
+  | "REFUNDED";
 
 export type RequireDelivery = "PICKUP" | "VENDOR_DELIVERY";
 
@@ -29,7 +33,6 @@ export interface UnifiedOrderResponse {
   id: string;
   tx_ref: string | null;
   order_number: number;
-  order_type: "food" | "laundry" | "package";
   customer_id: string;
   vendor_id: string;
   total_price: number;
@@ -40,11 +43,11 @@ export interface UnifiedOrderResponse {
   pickup_coordinates: [number, number] | any;
   dropoff_coordinates: [number, number] | any;
   distance: number;
+  order_type: "FOOD" | "PRODUCT" | "LAUNDRY" | "DELIVERY";
   order_status: OrderStatus;
+  delivery_option: string;
   order_payment_status: OrderPaymentStatus;
   require_delivery: boolean | string;
-  payment_link?: string;
-  escrow_status?: string;
   cancel_reason?: string;
   cooking_instructions?: string;
   washing_instructions?: string;
@@ -87,7 +90,7 @@ export interface OrderFoodOLaundry {
     item_id: string;
     quantity: number;
     size?: string;
-    sides?: string[];
+    sides?: string;
   }[];
   pickup_coordinates: [number, number];
   dropoff_coordinates: [number, number];

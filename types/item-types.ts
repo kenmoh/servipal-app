@@ -68,6 +68,6 @@ export interface OrderCreate {
 }
 
 export interface RestaurantOrderCreate extends OrderCreate {
-  sides?: string[];
-  sizes?: string[];
+  sides?: string;
+  sizes?: string;
 }

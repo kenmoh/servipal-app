@@ -1,4 +1,5 @@
 import { fetchUserWallet } from "@/api/user";
+import HDivider from "@/components/HDivider";
 import Transactioncard from "@/components/Transactioncard";
 import { AppButton } from "@/components/ui/app-button";
 import { useUserStore } from "@/store/userStore";
@@ -156,6 +157,7 @@ const WalletScreen = () => {
         <FlatList
           data={data?.transactions || []}
           keyExtractor={(item) => item.id}
+          ItemSeparatorComponent={() => <HDivider />}
           contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 24 }}
           showsVerticalScrollIndicator={false}
           renderItem={({ item }) => <Transactioncard data={item} />}

@@ -1,12 +1,18 @@
 import { DeliveryOrderStatus, PaymentStatus } from "@/types/delivey-types";
+import { OrderStatus } from "@/types/order-types";
 import React from "react";
 import { Text, View } from "react-native";
 
-
 // Memoize the Status component
 export const Status = React.memo(
-  ({ status, label }: { label?: string; status?: DeliveryOrderStatus }) => {
-    const getStatusColors = (status?: DeliveryOrderStatus) => {
+  ({
+    status,
+    label,
+  }: {
+    label?: string;
+    status?: DeliveryOrderStatus | OrderStatus;
+  }) => {
+    const getStatusColors = (status?: DeliveryOrderStatus | OrderStatus) => {
       switch (status) {
         case "PENDING":
           return { bg: "rgba(255, 193, 7, 0.12)", color: "gold" };

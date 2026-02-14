@@ -21,7 +21,7 @@ interface ItemCustomizationSheetProps {
   onAdd: (
     item: RestaurantMenuItemResponse,
     selectedSize: string,
-    selectedSides: string[],
+    selectedSide: string,
   ) => void;
 }
 
@@ -30,19 +30,16 @@ const ItemCustomizationSheet = forwardRef<
   ItemCustomizationSheetProps
 >(({ item, onAdd }, ref) => {
   const [selectedSize, setSelectedSize] = useState<string>("");
-  const [selectedSides, setSelectedSides] = useState<string[]>([]);
+  const [selectedSide, setSelectedSide] = useState<string>("");
   const theme = useColorScheme();
 
-  const snapPoints = useMemo(() => ["60%", "85%"], []);
-
-  // Reset state when item changes or sheet opens (handled via useEffect in practice,
-  // but for simplicity here we'll assume the parent manages it or we reset on close)
+  const snapPoints = useMemo(() => ["65%", "85%"], []);
 
   const handleAdd = () => {
     if (item) {
-      onAdd(item, selectedSize, selectedSides);
+      onAdd(item, selectedSize, selectedSide);
       setSelectedSize("");
-      setSelectedSides([]);
+      setSelectedSide("");
     }
   };
 
@@ -109,6 +106,7 @@ const ItemCustomizationSheet = forwardRef<
               <View className="flex-row flex-wrap gap-2">
                 {item?.sizes?.map((size) => {
                   const isSelected = selectedSize === size;
+
                   return (
                     <TouchableOpacity
                       key={size}
@@ -152,19 +150,12 @@ const ItemCustomizationSheet = forwardRef<
               </Text>
               <View className="flex-row flex-wrap gap-2">
                 {item?.sides?.map((side) => {
-                  const isSelected = selectedSides.includes(side);
-                  const toggleSide = () => {
-                    setSelectedSides((prev) =>
-                      prev.includes(side)
-                        ? prev.filter((s) => s !== side)
-                        : [...prev, side],
-                    );
-                  };
+                  const isSelected = selectedSide === side;
 
                   return (
                     <TouchableOpacity
                       key={side}
-                      onPress={toggleSide}
+                      onPress={() => setSelectedSide(side)}
                       className={`px-5 py-2 rounded-full flex-row items-center ${
                         isSelected
                           ? "bg-button-primary/10 border border-button-primary"
@@ -172,14 +163,14 @@ const ItemCustomizationSheet = forwardRef<
                       }`}
                     >
                       <View
-                        className={`w-4 h-4 rounded-md border items-center justify-center mr-2 ${
+                        className={`w-4 h-4 rounded-full border items-center justify-center mr-2 ${
                           isSelected
                             ? "border-button-primary bg-button-primary"
                             : "border-gray-300"
                         }`}
                       >
                         {isSelected && (
-                          <View className="w-2 h-2 bg-white rounded-sm" />
+                          <View className="w-2 h-2 bg-white rounded-full" />
                         )}
                       </View>
                       <Text
@@ -203,23 +194,19 @@ const ItemCustomizationSheet = forwardRef<
             onPress={handleAdd}
             width="100%"
             disabled={
-              (hasSizes && !selectedSize) ||
-              (hasSides && selectedSides.length === 0)
+              (hasSizes && !selectedSize) || (hasSides && !selectedSide)
             }
           />
-          {((hasSizes && !selectedSize) ||
-            (hasSides && selectedSides.length === 0)) && (
+          {((hasSizes && !selectedSize) || (hasSides && !selectedSide)) && (
             <Text className="text-center text-xs text-status-error font-poppins mt-2">
               Please select {hasSizes && !selectedSize ? "a size" : ""}
               {hasSizes &&
               !selectedSize &&
               hasSides &&
-              selectedSides.length === 0
+              selectedSide.length === 0
                 ? " and "
                 : ""}
-              {hasSides && selectedSides.length === 0
-                ? "at least one side"
-                : ""}{" "}
+              {hasSides && selectedSide.length === 0 ? "at least one side" : ""}{" "}
               to continue
             </Text>
           )}

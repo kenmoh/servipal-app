@@ -97,14 +97,14 @@ const FoodMenu = () => {
     (
       item: RestaurantMenuItemResponse,
       selectedSize: string,
-      selectedSides: string[],
+      selectedSide: string,
     ) => {
       addItem(storeId as string, item.id, 1, {
         name: item.name,
         price: Number(item.price),
         image: item.images[0] || "",
-        selected_sizes: selectedSize,
-        selected_sides: selectedSides,
+        selected_size: selectedSize,
+        selected_side: selectedSide,
       });
 
       setCheckedItems((prev) => {
@@ -161,8 +161,7 @@ const FoodMenu = () => {
         />
       </View>
       <CartInfoBtn
-        label="View Cart"
-        totalCost={totalCost || 0}
+        orderType="FOOD"
         totalItem={cart.order_items.length}
         onPress={() => router.push("/cart")}
       />

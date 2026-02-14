@@ -77,7 +77,7 @@ export default function RootLayout() {
   }, [hydrate, initialize]);
 
   return (
-    <View className="bg-background flex-1">
+    <View className="bg-background flex-1 w-full">
       <GestureHandlerRootView style={{ flex: 1 }}>
         <KeyboardProvider>
           <QueryClientProvider client={queryClient}>
@@ -89,6 +89,9 @@ export default function RootLayout() {
                       colorScheme === "dark" ? HEADER_BG_DARK : HEADER_BG_LIGHT,
                     headerShadowVisible: false,
                     headerStyle: {
+                      backgroundColor: BG_COLOR,
+                    },
+                    contentStyle: {
                       backgroundColor: BG_COLOR,
                     },
                   }}
@@ -124,6 +127,13 @@ export default function RootLayout() {
                       }}
                     />
                     <Stack.Screen
+                      name="wallet/transaction"
+                      options={{
+                        headerShown: false,
+                        animation: "fade_from_bottom",
+                      }}
+                    />
+                    <Stack.Screen
                       name="wallet/fund"
                       options={{
                         title: "",
@@ -152,6 +162,12 @@ export default function RootLayout() {
                         headerTransparent: true,
                         headerShadowVisible: false,
                         animation: "fade_from_bottom",
+                      }}
+                    />
+                    <Stack.Screen
+                      name="receipt"
+                      options={{
+                        headerShown: false,
                       }}
                     />
                     <Stack.Screen

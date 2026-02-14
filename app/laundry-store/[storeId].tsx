@@ -27,13 +27,6 @@ const LaundryStore = () => {
     enabled: !!storeId,
   });
 
-  console.log(
-    "🧺 [LaundryStore] storeId:",
-    storeId,
-    "itemsCount:",
-    data?.length,
-  );
-
   const handleAddToCart = useCallback(
     (item: LaundryItemResponse) => {
       const isChecked = cart.order_items.some(
@@ -97,9 +90,8 @@ const LaundryStore = () => {
 
       {totalCost > 0 && (
         <CartInfoBtn
+          orderType="LAUNDRY"
           totalItem={cart.order_items.length}
-          totalCost={totalCost}
-          label="View Cart"
           onPress={() => router.push("/cart")}
         />
       )}

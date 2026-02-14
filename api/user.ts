@@ -301,10 +301,11 @@ export const fetchUserWallet = async (
     }
 
     // Get user wallet via rpc
-    const { data, error } = await supabase.rpc("get_wallet_with_transactions", {
+    const { data, error } = await supabase.rpc("get_user_wallet_details", {
       p_user_id: userId,
     });
 
+    console.log("Wallet Error:", error);
     if (error) {
       throw new Error(error.message || "Failed to fetch user wallet");
     }

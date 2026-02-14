@@ -35,12 +35,12 @@ const Item = ({ item }: CartItemProps) => {
                 Size: {item.selected_size}
               </Text>
             )}
-            {item.selected_sides && item.selected_sides.length > 0 && (
+            {item.selected_side && (
               <Text
                 className="text-gray-400 font-poppins text-xs"
                 numberOfLines={1}
               >
-                Sides: {item.selected_sides.join(", ")}
+                Sides: {item.selected_side}
               </Text>
             )}
             <Text className="text-primary mt-1 font-poppins">

@@ -20,18 +20,12 @@ const AnimatedTouchableOpacity =
   Animated.createAnimatedComponent(TouchableOpacity);
 
 interface ViewCartBtnProps {
-  totalCost: string | number;
-  label: string;
+  orderType: "FOOD" | "LAUNDRY";
   totalItem: number;
   onPress: () => void;
 }
 
-const CartInfoBtn = ({
-  totalCost,
-  totalItem,
-  onPress,
-  label,
-}: ViewCartBtnProps) => {
+const CartInfoBtn = ({ orderType, totalItem, onPress }: ViewCartBtnProps) => {
   const theme = useColorScheme();
 
   const opacity = useSharedValue(0);
@@ -64,7 +58,11 @@ const CartInfoBtn = ({
     <AnimatedTouchableOpacity
       onPress={onPress}
       activeOpacity={0.9}
-      style={[styles.container, animatedStyle]}
+      style={[
+        styles.container,
+        { top: orderType === "FOOD" ? "20%" : "20%" },
+        animatedStyle,
+      ]}
     >
       <LinearGradient
         colors={["#FF8C00", "#FF4500"]}
@@ -73,11 +71,6 @@ const CartInfoBtn = ({
         style={styles.gradient}
       >
         <View style={styles.content}>
-          <View style={styles.textContainer}>
-            <Text style={styles.label}>{label}</Text>
-            <Text style={styles.cost}>₦{totalCost}</Text>
-          </View>
-
           <View style={styles.badge}>
             <Text style={styles.badgeText}>{totalItem}</Text>
           </View>
@@ -90,10 +83,13 @@ const CartInfoBtn = ({
 const styles = StyleSheet.create({
   container: {
     position: "absolute",
-    width: "92%",
-    bottom: Platform.OS === "ios" ? 40 : 50,
+    right: 10,
+    width: 50,
+    height: 50,
+    alignItems: "center",
+    justifyContent: "center",
     zIndex: 9991,
-    alignSelf: "center",
+    alignSelf: "flex-end",
     borderRadius: 50,
     overflow: "hidden",
     ...Platform.select({

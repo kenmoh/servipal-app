@@ -211,7 +211,7 @@ export interface Transaction {
   order_type: OrderType;
   details: {
     flw_ref: string;
-    label: "DEBIT" | "CREDIT";
+    label: "DEBIT" | "CREDIT" | "ESCROW_HOLD";
     [key: string]: any;
   };
   created_at: string;

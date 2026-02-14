@@ -1,5 +1,6 @@
 import HDivider from "@/components/HDivider";
 import { useToast } from "@/components/ToastProvider";
+import { useCartStore } from "@/store/cartStore";
 import { router, useLocalSearchParams } from "expo-router";
 import { PayWithFlutterwave } from "flutterwave-react-native";
 import { RedirectParams } from "flutterwave-react-native/dist/PayWithFlutterwave";
@@ -42,7 +43,11 @@ const payment = () => {
     serviceType?: string;
   }>();
 
+  const { clearCart } = useCartStore();
+
   const handleOnRedirect = (data: RedirectParams) => {
+    clearCart();
+
     showSuccess(
       "Payment Successful",
       "Your payment was successful. Please select a rider.",

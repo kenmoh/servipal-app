@@ -21,7 +21,12 @@ const DispatchLayout = () => {
         }}
       >
         <Stack.Screen name="index" options={{ title: "Riders" }} />
-        <Stack.Screen name="add-rider" options={{ title: "Add Rider" }} />
+        <Stack.Screen
+          name="add-rider"
+          options={{
+            title: "Add Rider",
+          }}
+        />
       </Stack>
     </View>
   );

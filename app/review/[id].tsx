@@ -102,7 +102,7 @@ const ReviewPage = () => {
   return (
     <ScrollView className="bg-background flex-1 p-5">
       <View className="gap-6">
-        <View className="items-center w-full mb-4">
+        <View className="w-full mb-4">
           <Controller
             control={control}
             name="rating"

@@ -1,30 +1,41 @@
-import React from "react";
+import React, { useState } from "react";
 import {
+  ActivityIndicator,
   Dimensions,
+  Pressable,
   ScrollView,
   Text,
-  TouchableOpacity,
   useColorScheme,
   View,
 } from "react-native";
 
-import { fetchOrderDetails } from "@/api/order";
+import {
+  fetchOrderDetails,
+  updateFoodOrderStatus,
+  updateLaundryOrderStatus,
+} from "@/api/order";
 import LoadingIndicator from "@/components/LoadingIndicator";
 import { useToast } from "@/components/ToastProvider";
+import { AppButton } from "@/components/ui/app-button";
 import { HEADER_BG_DARK, HEADER_BG_LIGHT } from "@/constants/theme";
+import { useUserStore } from "@/store/userStore";
 import { DetailResponse, OrderItem } from "@/types/order-types";
+import { getButtonConfig } from "@/utils/button-config";
+import { AntDesign } from "@expo/vector-icons";
 import Feather from "@expo/vector-icons/Feather";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { File, Paths } from "expo-file-system";
+import { Directory, File, Paths } from "expo-file-system";
 import * as Print from "expo-print";
-import { useLocalSearchParams } from "expo-router";
+import { router, Stack, useLocalSearchParams } from "expo-router";
 import * as Sharing from "expo-sharing";
 
 const ReceiptPage = () => {
   const screenWidth = Dimensions.get("window").width;
   const theme = useColorScheme();
+  const { user } = useUserStore();
   const { showError, showSuccess } = useToast();
+  const queryClient = useQueryClient();
 
   const isDark = theme === "dark";
   const BG_COLOR = isDark ? HEADER_BG_DARK : HEADER_BG_LIGHT;
@@ -33,16 +44,25 @@ const ReceiptPage = () => {
   const TEXT_SECONDARY = isDark ? "text-gray-400" : "text-gray-600";
   const BORDER_COLOR = isDark ? "border-gray-700" : "border-gray-200";
 
+  const [cancelSheetVisible, setCancelSheetVisible] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
+
   const { id, orderType } = useLocalSearchParams<{
     id: string;
     orderType: "FOOD" | "LAUNDRY";
   }>();
 
-  const { data, isLoading } = useQuery<DetailResponse>({
+  const { data, isLoading, refetch } = useQuery<DetailResponse>({
     queryKey: ["order", id, orderType],
     queryFn: () => fetchOrderDetails(id, orderType),
     enabled: !!id && !!orderType,
+    refetchOnWindowFocus: true,
   });
+
+  const buttonConfig = getButtonConfig(
+    data?.order?.order_status!,
+    data?.order?.delivery_option as "PICKUP" | "DELIVERY",
+  );
 
   const generateReceiptHTML = () => {
     if (!data) return "";
@@ -210,7 +230,7 @@ const ReceiptPage = () => {
                             </div>
                             <div class="line-item">
                                 <span class="label">Payment Status</span>
-                                <span class="status status-${data.order?.order_payment_status === "paid" ? "paid" : "unpaid"}">
+                                <span class="status status-${data.order?.order_payment_status === "SUCCESS" ? "PAID" : "UNPAID"}">
                                     ${data.order?.order_payment_status?.toUpperCase()}
                                 </span>
                             </div>
@@ -284,9 +304,60 @@ const ReceiptPage = () => {
         `;
   };
 
+  const isVendor = user?.id === data?.order.vendor_id;
+  const isCustomer = user?.id === data?.order.customer_id;
+
+  // Vendor can update: PENDING → DELIVERED
+  const vendorStatuses = ["PENDING", "PREPARING", "READY", "IN_TRANSIT"];
+  const showVendorButton =
+    isVendor && vendorStatuses.includes(data?.order?.order_status!);
+
+  // Customer can update: DELIVERED → COMPLETED
+  const showCustomerButton =
+    isCustomer && data?.order.order_status === "DELIVERED";
+
+  const foodOrderMutation = useMutation({
+    mutationFn: () =>
+      updateFoodOrderStatus(data?.order.id!, {
+        new_status: buttonConfig.nextStatus!,
+      }),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["user-orders", user?.id] });
+      refetch();
+      showSuccess(`${data.status}`, `Order status updated to ${data.status}`);
+    },
+    onError: (error) => {
+      showError("Error", `${error.message} `);
+    },
+  });
+
+  const laundryOrderMutation = useMutation({
+    mutationFn: () =>
+      updateLaundryOrderStatus(data?.order.id!, {
+        new_status: buttonConfig.nextStatus!,
+      }),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["user-orders", user?.id] });
+      refetch();
+      showSuccess(`${data.status}`, `Order status updated to ${data.status}`);
+    },
+    onError: (error) => {
+      showError("Error", `${error.message}`);
+    },
+  });
+
+  const handleOrderStatusUpdate = () => {
+    if (orderType === "FOOD") {
+      foodOrderMutation.mutate();
+    } else if (orderType === "LAUNDRY") {
+      laundryOrderMutation.mutate();
+    }
+  };
+
   const handleDownload = async () => {
     try {
       const html = generateReceiptHTML();
+
       const { uri } = await Print.printToFileAsync({
         html,
         width: screenWidth,
@@ -294,26 +365,26 @@ const ReceiptPage = () => {
         base64: false,
       });
 
-      const fileName = `Receipt_${data?.order?.order_number || "unknown"}.pdf`;
-
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(uri, {
-          UTI: ".pdf",
-          mimeType: "application/pdf",
-          dialogTitle: "Share Receipt",
-        });
-        showSuccess("Success", "Receipt ready to share or save");
-      } else {
-        const sourceFile = new File(uri);
-        const destinationFile = new File(Paths.document, fileName);
-        sourceFile.copy(destinationFile);
-        showSuccess("Success", `Receipt saved to Documents`);
+      const receiptsDir = new Directory(Paths.document, "servipal-receipts");
+      if (receiptsDir.exists) {
+        receiptsDir.create({ intermediates: true });
       }
+
+      const fileName = `SERVIPAL-${order?.order_number}-${Date.now()}.pdf`;
+
+      const sourceFile = new File(uri);
+      const destinationFile = new File(receiptsDir, fileName);
+
+      sourceFile.copy(destinationFile);
+
+      console.log("Saved to:", destinationFile.uri);
+
+      showSuccess("Success", "Receipt downloaded");
     } catch (error) {
+      console.error(error);
       showError("Error", "Failed to download receipt");
     }
   };
-
   const handleShare = async () => {
     try {
       const html = generateReceiptHTML();
@@ -346,10 +417,42 @@ const ReceiptPage = () => {
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: BG_COLOR }}
-      contentContainerStyle={{ paddingVertical: 40, paddingHorizontal: 20 }}
+      contentContainerStyle={{ paddingVertical: 40, paddingHorizontal: 10 }}
     >
+      <Stack.Screen
+        options={{
+          title: "Receipt",
+          headerTintColor: theme === "dark" ? "#eee" : "#000",
+          headerShadowVisible: false,
+          headerTitleStyle: { fontFamily: "Poppins-Medium" },
+          headerRight: () => (
+            <View className="flex-row items-center gap-5">
+              <Pressable
+                onPress={handleShare}
+                className="bg-slate-600/10 p-2.5 rounded-full active:opacity-50"
+              >
+                <Feather
+                  name="share-2"
+                  size={20}
+                  color={theme === "dark" ? "#eee" : "black"}
+                />
+              </Pressable>
+              <Pressable
+                onPress={handleDownload}
+                className="bg-slate-600/10 p-2.5 rounded-full active:opacity-50"
+              >
+                <Feather
+                  name="download"
+                  size={20}
+                  color={theme === "dark" ? "#eee" : "black"}
+                />
+              </Pressable>
+            </View>
+          ),
+        }}
+      />
       <View
-        className={`${CARD_BG} rounded-[32px] p-8 ${BORDER_COLOR} border shadow-sm`}
+        className={`${CARD_BG} rounded-xl p-4 ${BORDER_COLOR} border shadow-sm`}
       >
         {/* Header */}
         <View className="items-center mb-8">
@@ -377,10 +480,10 @@ const ReceiptPage = () => {
               Payment Status
             </Text>
             <View
-              className={`${order?.order_payment_status === "paid" ? "bg-green-500/10" : "bg-red-500/10"} px-4 py-1.5 rounded-full`}
+              className={`${order?.order_payment_status === "SUCCESS" ? "bg-green-500/10" : "bg-red-500/10"} px-4 py-1.5 rounded-full`}
             >
               <Text
-                className={`${order?.order_payment_status === "paid" ? "text-green-600" : "text-red-600"} text-xs font-poppins-semibold uppercase`}
+                className={`${order?.order_payment_status === "FAILED" || order?.order_payment_status === "CANCELLED" ? "text-red-600" : "text-green-600"} text-xs font-poppins-semibold uppercase`}
               >
                 {order?.order_payment_status || "Pending"}
               </Text>
@@ -412,7 +515,7 @@ const ReceiptPage = () => {
                     {item.quantity}x {item.name}
                   </Text>
                   {(item.size || (item.sides && item.sides.length > 0)) && (
-                    <Text className="text-[10px] text-gray-400 mt-0.5">
+                    <Text className="text-[10px] text-gray-400 mt-0.5 uppercase">
                       {item.size} {item.sides?.join(", ")}
                     </Text>
                   )}
@@ -498,22 +601,71 @@ const ReceiptPage = () => {
       </View>
 
       {/* Action Buttons */}
-      <View className="flex-row items-center justify-center mt-10 gap-6">
-        <TouchableOpacity
-          onPress={handleDownload}
-          activeOpacity={0.7}
-          className={`${isDark ? "bg-white" : "bg-gray-900"} w-14 h-14 rounded-full items-center justify-center shadow-lg`}
-        >
-          <Feather name="download" size={20} color={isDark ? "#111" : "#fff"} />
-        </TouchableOpacity>
+      <View className="items-center mt-5 gap-2">
+        {showVendorButton && (
+          <AppButton
+            text={buttonConfig.text}
+            onPress={handleOrderStatusUpdate}
+            icon={
+              foodOrderMutation.isPending || laundryOrderMutation.isPending ? (
+                <ActivityIndicator color="white" />
+              ) : (
+                buttonConfig.icon
+              )
+            }
+            variant="fill"
+            borderRadius={50}
+            width={"90%"}
+            // color={buttonConfig.color}
+            disabled={
+              buttonConfig.disabled ||
+              foodOrderMutation.isPending ||
+              laundryOrderMutation.isPending
+            }
+          />
+        )}
 
-        <TouchableOpacity
-          onPress={handleShare}
-          activeOpacity={0.7}
-          className="bg-orange-500 w-14 h-14 rounded-full items-center justify-center shadow-lg"
-        >
-          <Feather name="share-2" size={20} color="white" />
-        </TouchableOpacity>
+        {showCustomerButton && (
+          <AppButton
+            text={buttonConfig.text}
+            onPress={handleOrderStatusUpdate}
+            icon={
+              foodOrderMutation.isPending || laundryOrderMutation.isPending ? (
+                <ActivityIndicator color="white" />
+              ) : (
+                buttonConfig.icon
+              )
+            }
+            variant="fill"
+            borderRadius={50}
+            width={"90%"}
+            // color={buttonConfig.color}
+            disabled={
+              buttonConfig.disabled ||
+              foodOrderMutation.isPending ||
+              laundryOrderMutation.isPending
+            }
+          />
+        )}
+
+        {order.order_status !== "COMPLETED" &&
+          order.order_status !== "DELIVERED" &&
+          order.order_status !== "CANCELLED" && (
+            <AppButton
+              text={"Cancel Order"}
+              onPress={() =>
+                router.push({
+                  pathname: "/receipt/cancel-sheet",
+                  params: { id: order.id, orderType: orderType },
+                })
+              }
+              icon={<AntDesign name="close" size={24} color="red" />}
+              variant="outline"
+              borderRadius={50}
+              width={"90%"}
+              color={"red"}
+            />
+          )}
       </View>
 
       <Text className="text-center text-[10px] text-gray-500 mt-10 font-poppins tracking-widest uppercase">

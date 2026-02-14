@@ -42,7 +42,7 @@ const DeliveryCard = ({ order }: { order: DeliveryOrder }) => {
       style={({ pressed }) => [{ height: 200, opacity: pressed ? 0.6 : 1 }]}
       android_ripple={{ color: "#00000020" }}
       disabled={!canViewOrderDetail}
-      className="bg-input rounded-2xl h-[200px] border border-collapse-transparent border-border-subtle p-4 mb-2 shadow-sm w-[95%] self-center my-1"
+      className="bg-input rounded-2xl h-[200px] border active:opacity-50 border-collapse-transparent border-border-subtle p-4 mb-2 shadow-sm w-[95%] self-center my-1"
     >
       {/* Header */}
       <View className="flex-row items-center justify-between mb-4">

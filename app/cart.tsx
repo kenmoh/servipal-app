@@ -87,10 +87,10 @@ const Cart = () => {
 
   // ---- Food mutation ----
   const { mutate: foodMutate, isPending: foodIsPending } = useMutation({
-    mutationFn: (payload: RestaurantOrderCreate) =>
-      initiateRestaurantOrderPayment(payload),
+    mutationFn: (payload: RestaurantOrderCreate) => {
+      return initiateRestaurantOrderPayment(payload);
+    },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["food-orders", user?.id] });
       router.push({
         pathname: "/payment",
         params: {
@@ -106,6 +106,7 @@ const Cart = () => {
           serviceType: "FOOD",
         },
       });
+      queryClient.invalidateQueries({ queryKey: ["food-orders", user?.id] });
     },
     onError: (error) => {
       showError(
@@ -118,10 +119,14 @@ const Cart = () => {
   const isPending = isLaundryOrder ? laundryIsPending : foodIsPending;
 
   // ---- Delivery option handler ----
-  // Opens modal automatically when vendor delivery is selected
+  // Opens modal automatically when vendor delivery is selected or when pickup-only vendor
   const handleDeliveryOptionChange = (option: RequireDelivery) => {
     setDeliveryOption(option);
     if (option === "VENDOR_DELIVERY") {
+      setModalVisible(true);
+    }
+    // For pickup-only vendors, open modal to select address
+    if (option === "PICKUP" && !vendorProfile?.can_pickup_and_dropoff) {
       setModalVisible(true);
     }
   };
@@ -139,36 +144,37 @@ const Cart = () => {
       return;
     }
 
+    // For pickup-only vendors, also require address
+    if (delivery_option === "PICKUP" && !vendorProfile?.can_pickup_and_dropoff && !destination) {
+      showError("Error", "Please select a delivery address");
+      setModalVisible(true);
+      return;
+    }
+
     // Shared base payload for both order types
     const basePayload: OrderCreate = {
       vendor_id: vendorId,
       delivery_option,
       instructions,
       delivery_address:
-        delivery_option === "VENDOR_DELIVERY" ? (destination ?? "") : "",
+        delivery_option === "VENDOR_DELIVERY" || !vendorProfile?.can_pickup_and_dropoff
+          ? (destination ?? "")
+          : "",
       items: cart.order_items.map((item) => ({
         item_id: item.item_id,
         name: item.name ?? "",
         price: item.price ?? 0,
         quantity: item.quantity,
         images: item.images ?? (item.image ? [item.image] : []),
-        sides: item.selected_sides ?? [],
-        sizes: item.selected_sizes ?? [],
+        sides: item.selected_side ? [item.selected_side] : [],
+        sizes: item.selected_size ? [item.selected_size] : [],
       })),
     };
 
     if (isLaundryOrder) {
       laundryMutate(basePayload);
     } else {
-      // Food extends base with sides/sizes
-      const foodPayload: RestaurantOrderCreate = {
-        ...basePayload,
-        sides: cart.order_items.flatMap((i) => i.selected_sides ?? []),
-        sizes: cart.order_items.flatMap((i) =>
-          i.selected_sizes ? [i.selected_sizes] : [],
-        ),
-      };
-      foodMutate(foodPayload);
+      foodMutate(basePayload);
     }
   };
 
@@ -237,32 +243,41 @@ const Cart = () => {
           </View>
 
           {/* Delivery Options */}
-          {vendorProfile?.can_pickup_and_dropoff && (
-            <View className="mb-8">
-              <Text className="text-base font-poppins-bold text-primary mb-4">
-                Delivery Method
-              </Text>
-              <View className="bg-input rounded-2xl p-4 border border-gray-600">
+          <View className="mb-8">
+            <Text className="text-base font-poppins-bold text-primary mb-4">
+              Delivery Method
+            </Text>
+            <View className="bg-input rounded-2xl p-4 border border-gray-600">
+              {vendorProfile?.can_pickup_and_dropoff ? (
+                <>
+                  <RadioButton
+                    label={
+                      isLaundryOrder
+                        ? "Self Drop-off / Pickup"
+                        : "Pickup from Store"
+                    }
+                    selected={delivery_option === "PICKUP"}
+                    onPress={() => handleDeliveryOptionChange("PICKUP")}
+                  />
+                  <RadioButton
+                    label="Vendor Delivery"
+                    selected={delivery_option === "VENDOR_DELIVERY"}
+                    onPress={() => handleDeliveryOptionChange("VENDOR_DELIVERY")}
+                  />
+                </>
+              ) : (
                 <RadioButton
-                  label={
-                    isLaundryOrder
-                      ? "Self Drop-off / Pickup"
-                      : "Pickup from Store"
-                  }
+                  label="Select delivery address"
                   selected={delivery_option === "PICKUP"}
                   onPress={() => handleDeliveryOptionChange("PICKUP")}
                 />
-                <RadioButton
-                  label="Vendor Delivery"
-                  selected={delivery_option === "VENDOR_DELIVERY"}
-                  onPress={() => handleDeliveryOptionChange("VENDOR_DELIVERY")}
-                />
-              </View>
+              )}
             </View>
-          )}
+          </View>
 
           {/* Delivery address summary — shown after modal is confirmed */}
-          {delivery_option === "VENDOR_DELIVERY" &&
+          {((delivery_option === "VENDOR_DELIVERY") ||
+            (delivery_option === "PICKUP" && !vendorProfile?.can_pickup_and_dropoff)) &&
             destination &&
             !modalVisible && (
               <View className="mb-8">

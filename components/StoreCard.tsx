@@ -1,5 +1,5 @@
 import { UserProfile } from "@/types/user-types";
-import { AntDesign } from "@expo/vector-icons";
+import AntDesign from "@expo/vector-icons/AntDesign";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { RelativePathString, router, type Href } from "expo-router";

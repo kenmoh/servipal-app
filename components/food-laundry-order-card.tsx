@@ -1,40 +1,38 @@
-import { useUserStore } from "@/store/userStore";
+import AntDesign from "@expo/vector-icons/AntDesign";
 import Feather from "@expo/vector-icons/Feather";
+import FontAwesome6 from "@expo/vector-icons/FontAwesome6";
+import Fontisto from "@expo/vector-icons/Fontisto";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import { router, useLocalSearchParams } from "expo-router";
+import { router } from "expo-router";
 import React from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import HDivider from "./HDivider";
 
 import { UnifiedOrderResponse } from "@/types/order-types";
+import { Status } from "./Status";
 
 interface OrderProps {
   order: UnifiedOrderResponse;
+  orderType: "FOOD" | "LAUNDRY";
 }
 
-const FoodLaundryOrderCard = ({ order }: OrderProps) => {
-  const { user } = useUserStore();
-  const { orderType } = useLocalSearchParams<{
-    orderType: "FOOD" | "LAUNDRY";
-  }>();
-  const hamdlePress = () => {
+const FoodLaundryOrderCard = ({ order, orderType }: OrderProps) => {
+  const handlePress = () => {
     router.push({
       pathname: "/receipt/[id]",
-      params: {
-        id: order.id,
-      },
+      params: { id: order.id, orderType },
     });
   };
 
   return (
     <Pressable
-      onPress={hamdlePress}
-      style={({ pressed }) => [{ height: 200, opacity: pressed ? 0.6 : 1 }]}
+      onPress={handlePress}
+      style={({ pressed }) => [{ opacity: pressed ? 0.6 : 1 }]}
       android_ripple={{ color: "#00000020" }}
-      className="bg-input rounded-2xl h-[200px] border border-collapse-transparent border-border-subtle p-4 mb-2 shadow-sm w-[95%] self-center my-1"
+      className="bg-input rounded-2xl border border-border-subtle p-4 mb-2 shadow-sm w-[95%] self-center my-1"
     >
-      {/* Header */}
+      {/* Header Row — unchanged */}
       <View className="flex-row items-center justify-between mb-4">
         <View className="flex-row items-center gap-2">
           {orderType === "FOOD" ? (
@@ -59,59 +57,81 @@ const FoodLaundryOrderCard = ({ order }: OrderProps) => {
 
       <HDivider />
 
-      <View className="my-4">
-        <View className="flex-row items-center mb-2 gap-2">
-          <MaterialCommunityIcons name="circle" color="gray" size={12} />
-
-          <Text
-            className="flex-1 text-secondary font-poppins-light text-xs"
-            numberOfLines={2}
-          >
-            {order?.pickup_location}
-          </Text>
+      {/* Body — two columns */}
+      <View className="flex-row my-4 gap-3">
+        {/* Left column */}
+        <View className="flex-1 gap-3">
+          <View className="flex-row items-center gap-2">
+            <FontAwesome6 name="landmark" color="gray" size={12} />
+            <Text
+              className="flex-1 text-secondary font-poppins-medium text-xs"
+              numberOfLines={1}
+            >
+              {order?.vendor_name}
+            </Text>
+          </View>
+          <View className="flex-row items-center gap-2">
+            <AntDesign name="user" color="gray" size={12} />
+            <Text
+              className="flex-1 text-secondary font-poppins-light text-xs"
+              numberOfLines={1}
+            >
+              {order?.customer_name}
+            </Text>
+          </View>
         </View>
-        <View className="flex-row items-center mb-2 gap-2">
-          <Feather
-            name="map-pin"
-            color={"gray"}
-            size={12}
-            style={styles.iconStyle}
-          />
-          <Text
-            className="flex-1 text-secondary font-poppins-light text-xs"
-            numberOfLines={2}
-          >
-            {order?.destination}
-          </Text>
+
+        {/* Vertical divider */}
+        <View className="w-[1px] bg-border-subtle" />
+
+        {/* Right column */}
+        <View className="flex-1 gap-3">
+          <View className="flex-row items-center gap-2">
+            <Fontisto name="motorcycle" color="gray" size={12} />
+            <Text
+              className="flex-1 text-secondary font-poppins-light text-xs"
+              numberOfLines={2}
+            >
+              {order?.delivery_option}
+            </Text>
+          </View>
+          <View className="flex-row items-center gap-2">
+            {orderType === "FOOD" ? (
+              <MaterialIcons name={"restaurant"} color="gray" size={12} />
+            ) : (
+              <MaterialCommunityIcons
+                name={"washing-machine"}
+                color="gray"
+                size={12}
+              />
+            )}
+            <Text className="text-secondary font-poppins-light text-xs">
+              {orderType === "FOOD" ? "Food Order" : "Laundry Order"}
+            </Text>
+          </View>
         </View>
       </View>
 
       <HDivider />
 
-      {/* <View className="mt-2 flex-row justify-between">
-        <View className="">
-          <Status
-            label={
-              order?.delivery_status === "IN_TRANSIT"
-                ? "In Transit"
-                : order?.delivery_status === "PICKED_UP"
-                  ? "Picked Up"
-                  : order?.delivery_status === "PAID_NEEDS_RIDER"
-                    ? "ASSIGN RIDER"
-                    : undefined
-            }
-            status={order?.delivery_status}
-          />
-        </View>
-      </View> */}
+      {/* Footer */}
+      <View className="mt-3 flex-row items-center justify-between">
+        <Status
+          label={
+            order?.order_status === "PENDING"
+              ? "Pending"
+              : order?.order_status === "PREPARING"
+                ? "Preparing"
+                : order?.order_status === "READY"
+                  ? "Ready"
+                  : undefined
+          }
+          status={order?.order_status}
+        />
+        <Feather name="chevron-right" size={16} color="gray" />
+      </View>
     </Pressable>
   );
 };
 
 export default React.memo(FoodLaundryOrderCard);
-
-const styles = StyleSheet.create({
-  iconStyle: {
-    // marginTop: 2
-  },
-});

@@ -12,8 +12,8 @@ export type CartItem = {
   image?: string;
 
   // Food customization fields
-  selected_sides?: string[];
-  selected_sizes?: string;
+  selected_side?: string;
+  selected_size?: string;
 
   // Laundry fields
   images?: string[]; // laundry items have multiple images
@@ -24,8 +24,8 @@ type ItemDetails = {
   name: string;
   price: number;
   image?: string;
-  selected_sides?: string[];
-  selected_sizes?: string;
+  selected_side?: string;
+  selected_size?: string;
   images?: string[];
   laundry_type?: string;
 };
@@ -118,9 +118,8 @@ export const useCartStore = create<CartState>((set, get) => ({
         (item) =>
           item.item_id === itemId &&
           item.vendor_id === vendorId &&
-          JSON.stringify(item.selected_sides) ===
-            JSON.stringify(itemDetails.selected_sides) &&
-          item.selected_sizes === itemDetails.selected_sizes,
+          item.selected_side === itemDetails.selected_side &&
+          item.selected_size === itemDetails.selected_size,
       );
 
       let updatedItems;
@@ -141,8 +140,8 @@ export const useCartStore = create<CartState>((set, get) => ({
             price: itemDetails.price,
             name: itemDetails.name,
             image: itemDetails.image,
-            selected_sides: itemDetails.selected_sides,
-            selected_size: itemDetails.selected_sizes,
+            selected_side: itemDetails.selected_side,
+            selected_size: itemDetails.selected_size,
             images: itemDetails.images,
             laundry_type: itemDetails.laundry_type,
           },
@@ -276,8 +275,8 @@ export const useCartStore = create<CartState>((set, get) => ({
         price: item.price ?? 0,
         quantity: item.quantity,
         images: item.images ?? (item.image ? [item.image] : []),
-        sides: item.selected_sides ?? [],
-        sizes: item.selected_sizes ?? [],
+        sides: item.selected_side ?? "",
+        sizes: item.selected_size ?? "",
       })),
     };
   },
