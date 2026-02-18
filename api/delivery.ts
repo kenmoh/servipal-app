@@ -481,6 +481,84 @@ export const sendItem = async (
 /**
  * Rider cancels a delivery order
  *
+ * @param deliveryId - The delivery order ID
+ *  @param newStatus - The delivery order status
+ * @param reason - Reason for cancellation
+ */
+
+export const updateDeliveryStatus = async (
+  txRef: string,
+  newStatus: string,
+  riderId?: string,
+  cancellationReason?: string,
+) => {
+  const {
+    data: { session },
+    error: sessionError,
+  } = await supabase.auth.getSession();
+
+  if (sessionError || !session) {
+    throw new Error("User not authenticated");
+  }
+  const payload: any = {
+    new_status: newStatus,
+    rider_id: riderId,
+  };
+
+  if (cancellationReason) {
+    payload.cancellation_reason = cancellationReason;
+  }
+
+  const response = await apiClient.put(
+    `${BASE_URL}/${txRef}/update-delivery-status`,
+    payload,
+  );
+
+  if (!response.ok) {
+    const errorData = response.data as any;
+    throw new Error(
+      errorData?.detail ||
+        errorData?.message ||
+        "Failed to update delivery status",
+    );
+  }
+
+  return response.data;
+};
+
+/**
+ * Assign Rider to a delivery order
+ *
+ * @param txRef - The delivery order txRef
+ * @param riderId - The rider ID
+ */
+
+export const assignRiderToDelivery = async (
+  txRef: string,
+  riderId: string,
+): Promise<RiderAssignmentResponse> => {
+  const {
+    data: { session },
+    error: sessionError,
+  } = await supabase.auth.getSession();
+
+  if (sessionError || !session) {
+    throw new Error("User not authenticated");
+  }
+
+  try {
+    const response = await apiClient.post(
+      `/${BASE_URL}/${riderId}/assign-rider?tx_ref=${txRef}`,
+    );
+    return response.data as RiderAssignmentResponse;
+  } catch (error) {
+    throw error;
+  }
+};
+
+/**
+ * Rider cancels a delivery order
+ *
  * @param orderId - The delivery order ID
  * @param reason - Reason for cancellation
  */

@@ -1,10 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 
-import {
-  assignRiderToDeliveryOrder,
-  getDeliveryOrderByTxRef,
-} from "@/api/delivery";
+import { getDeliveryOrderByTxRef, updateDeliveryStatus } from "@/api/delivery";
 import { getNearbyRiders } from "@/api/user";
 import HDivider from "@/components/HDivider";
 import LoadingIndicator from "@/components/LoadingIndicator";
@@ -22,6 +19,7 @@ import { useOrderStore } from "@/store/orderStore";
 import { useRiderStore } from "@/store/rider-store";
 import { useUserStore } from "@/store/userStore";
 import { RiderResponse } from "@/types/user-types";
+import { getDeliveryButtonConfig } from "@/utils/deliveryButtonConfig";
 import { supabase } from "@/utils/supabase";
 import Feather from "@expo/vector-icons/Feather";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
@@ -99,18 +97,18 @@ const RidersScreen = () => {
   );
 
   // Poll for order existence
-  const { data: orderExists, isLoading: isCheckingOrder } = useQuery({
+  const { data: order, isLoading: isCheckingOrder } = useQuery({
     queryKey: ["check-order", txRef],
     queryFn: async () => {
-      if (!txRef) return false;
+      if (!txRef) return;
       const order = await getDeliveryOrderByTxRef(txRef);
-      return !!order;
+      return order;
     },
     enabled:
       !!txRef && (paymentStatus === "successful" || paymentStatus === "PAID"),
     refetchInterval: (query) => {
-      if (query.state.data) return false; // Stop polling once found
-      return 1000; // Poll every second
+      if (query.state.data) return false;
+      return 1000;
     },
     refetchIntervalInBackground: true,
   });
@@ -127,12 +125,12 @@ const RidersScreen = () => {
         return;
       }
 
-      if (!orderExists && isCheckingOrder) {
+      if (!order && isCheckingOrder) {
         showInfo("Processing", "Please wait while we confirm your order...");
         return;
       }
 
-      if (!orderExists && !isCheckingOrder) {
+      if (!order && !isCheckingOrder) {
         showError("Error", "Order not found. Please contact support.");
         return;
       }
@@ -140,7 +138,7 @@ const RidersScreen = () => {
       setSelectedRider(rider);
       bottomSheetRef.current?.snapToIndex(0);
     },
-    [txRef, paymentStatus, orderExists, isCheckingOrder],
+    [txRef, paymentStatus, order, isCheckingOrder],
   );
 
   const handleScrollToHide = useCallback(() => {
@@ -150,20 +148,25 @@ const RidersScreen = () => {
     }
   }, []);
 
+  const transactionRef = txRef ? txRef : order?.tx_ref;
+
   const assignRiderMutation = useMutation({
-    mutationFn: () => assignRiderToDeliveryOrder(txRef, selectedRider?.id!),
+    mutationFn: () =>
+      updateDeliveryStatus(
+        transactionRef!,
+        "ASSIGNED",
+        selectedRider?.id!,
+        undefined,
+      ),
     onError: (error) => {
       showError("Error", error.message || "An unexpected error occurred!");
       refetch();
     },
-    onSuccess: async (data) => {
-      showSuccess("Success", data?.message);
+    onSuccess: async () => {
+      showSuccess("Success", "Rider assigned successfully!");
       refetch();
       await queryClient.invalidateQueries({
-        queryKey: ["user-orders", user?.id],
-      });
-      await queryClient.invalidateQueries({
-        queryKey: ["orders", user?.id],
+        queryKey: ["delivery-orders", user?.id],
       });
       // Navigate to tracking or home
       router.replace("/(tabs)/delivery/(top-tabs)");
@@ -289,7 +292,7 @@ const RidersScreen = () => {
   }
   return (
     <View className="bg-background flex-1 p-2 gap-2">
-      {!orderExists && isCheckingOrder && (
+      {!order && isCheckingOrder && (
         <View className="bg-background flex-1 items-center justify-center gap-2">
           <ActivityIndicator size="large" color="white" />
           <Text className="text-primary font-poppins-medium text-sm">
@@ -392,12 +395,18 @@ const RidersScreen = () => {
                 </View>
               </View>
 
-              <View className="bg-input mb-3 items-center w-full">
+              <View className="bg-input mb-3 items-center w-[80%] mx-auto">
                 <AppButton
                   width={"70%"}
                   borderRadius={50}
-                  backgroundColor="bg-button-primary"
-                  text="Book Rider"
+                  backgroundColor={
+                    getDeliveryButtonConfig("PENDING", "SENDER")?.primary
+                      ?.color || "orange"
+                  }
+                  text={
+                    getDeliveryButtonConfig("PENDING", "SENDER")?.primary
+                      ?.text || "Book Rider"
+                  }
                   variant="fill"
                   onPress={handleBookRider}
                 />

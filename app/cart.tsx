@@ -145,7 +145,11 @@ const Cart = () => {
     }
 
     // For pickup-only vendors, also require address
-    if (delivery_option === "PICKUP" && !vendorProfile?.can_pickup_and_dropoff && !destination) {
+    if (
+      delivery_option === "PICKUP" &&
+      !vendorProfile?.can_pickup_and_dropoff &&
+      !destination
+    ) {
       showError("Error", "Please select a delivery address");
       setModalVisible(true);
       return;
@@ -157,7 +161,8 @@ const Cart = () => {
       delivery_option,
       instructions,
       delivery_address:
-        delivery_option === "VENDOR_DELIVERY" || !vendorProfile?.can_pickup_and_dropoff
+        delivery_option === "VENDOR_DELIVERY" ||
+        !vendorProfile?.can_pickup_and_dropoff
           ? (destination ?? "")
           : "",
       items: cart.order_items.map((item) => ({
@@ -262,7 +267,9 @@ const Cart = () => {
                   <RadioButton
                     label="Vendor Delivery"
                     selected={delivery_option === "VENDOR_DELIVERY"}
-                    onPress={() => handleDeliveryOptionChange("VENDOR_DELIVERY")}
+                    onPress={() =>
+                      handleDeliveryOptionChange("VENDOR_DELIVERY")
+                    }
                   />
                 </>
               ) : (
@@ -276,8 +283,9 @@ const Cart = () => {
           </View>
 
           {/* Delivery address summary — shown after modal is confirmed */}
-          {((delivery_option === "VENDOR_DELIVERY") ||
-            (delivery_option === "PICKUP" && !vendorProfile?.can_pickup_and_dropoff)) &&
+          {(delivery_option === "VENDOR_DELIVERY" ||
+            (delivery_option === "PICKUP" &&
+              !vendorProfile?.can_pickup_and_dropoff)) &&
             destination &&
             !modalVisible && (
               <View className="mb-8">

@@ -23,7 +23,7 @@ const DispatchRiders = () => {
       <FlashList
         data={data || []}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 24 }}
+        contentContainerStyle={{ paddingHorizontal: 12, paddingBottom: 24 }}
         showsVerticalScrollIndicator={false}
         renderItem={({ item }: { item: RiderResponse }) => (
           <RiderCard rider={item} />

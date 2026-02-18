@@ -26,7 +26,7 @@ const TransactionDetailScreen = () => {
         <HDivider />
         <TransactionValue label="Date" value={params?.date || ""} />
         <HDivider />
-        <TransactionValue label="Status" value={params?.status || ""} />
+        {/* <TransactionValue label="Status" value={params?.status || ""} /> */}
         <HDivider />
         <TransactionValue label="From" value={params?.fromUser || ""} />
         <HDivider />

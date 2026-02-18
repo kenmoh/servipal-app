@@ -48,7 +48,12 @@ const schema = z
     description: z.string().optional(),
     restaurant_item_type: z.string({ message: "Please select a type" }),
     sides: z.array(z.string()),
-    sizes: z.array(z.string()),
+    sizes: z.array(
+      z.object({
+        size: z.string(),
+        price: z.number().positive("Price must be greater than 0"),
+      }),
+    ),
     images: z.array(z.any()).nonempty({
       message: "Image is required",
     }),
@@ -128,6 +133,26 @@ const addMenu = () => {
 
   const sides = watch("sides");
   const sizes = watch("sizes");
+
+  // Synchronize main price with the smallest size price
+  useEffect(() => {
+    if ((sizes || []).length > 0) {
+      // Normalization: Ensure we have objects even if watching raw values
+      const normalized = (sizes || []).map((s: any) =>
+        typeof s === "string" ? { size: s, price: 0 } : s,
+      );
+
+      // Find the "smallest" selected size based on SIZE_OPTIONS order
+      for (const option of SIZE_OPTIONS) {
+        const found = normalized.find((s) => s.size === option);
+        if (found) {
+          // Sync the main price field with this size's price
+          setValue("price", found.price || 0);
+          break;
+        }
+      }
+    }
+  }, [sizes, setValue]);
 
   // Fetch menu data if editing
   const { data: existingMenuItem, isLoading: isLoadingProduct } = useQuery({
@@ -391,44 +416,100 @@ const addMenu = () => {
                   render={({ field: { value, onChange } }) => (
                     <View className="mt-2 mb-4">
                       <Text className="mb-1.5 ml-1 font-poppins-medium text-sm text-muted">
-                        Sizes (select one or more)
+                        Sizes (select one or more and set prices)
                       </Text>
-                      <View className="flex-row flex-wrap gap-2">
-                        {SIZE_OPTIONS.map((size) => {
-                          const selected = (value || []).includes(size);
+
+                      {/* Size chips displayed horizontally */}
+                      <View className="flex-row flex-wrap gap-2 mb-3">
+                        {SIZE_OPTIONS.map((sizeOption) => {
+                          const normalizedValue = (value || []).map((v: any) =>
+                            typeof v === "string" ? { size: v, price: 0 } : v,
+                          );
+                          const existingSize = normalizedValue.find(
+                            (s) => s.size === sizeOption,
+                          );
+                          const isSelected = !!existingSize;
+
                           return (
                             <TouchableOpacity
-                              key={size}
-                              className={
-                                selected
-                                  ? "px-3 py-2 rounded-full bg-button-primary"
-                                  : "px-3 py-2 rounded-full bg-input"
-                              }
+                              key={`size-chip-${sizeOption}`}
                               onPress={() => {
-                                if (selected) {
+                                if (isSelected) {
                                   onChange(
-                                    (value || []).filter(
-                                      (s: string) => s !== size,
+                                    normalizedValue.filter(
+                                      (s) => s.size !== sizeOption,
                                     ),
                                   );
                                 } else {
-                                  onChange([...(value || []), size]);
+                                  onChange([
+                                    ...normalizedValue,
+                                    { size: sizeOption, price: 0 },
+                                  ]);
                                 }
                               }}
+                              className={
+                                isSelected
+                                  ? "px-3 py-2 rounded-full bg-button-primary"
+                                  : "px-3 py-2 rounded-full bg-input"
+                              }
                             >
                               <Text
                                 className={
-                                  selected
+                                  isSelected
                                     ? "text-white font-poppins text-xs"
                                     : "text-primary font-poppins text-xs"
                                 }
                               >
-                                {size}
+                                {sizeOption}
                               </Text>
                             </TouchableOpacity>
                           );
                         })}
                       </View>
+
+                      {/* Price inputs for selected sizes */}
+                      {(value || []).length > 0 && (
+                        <View className="gap-3">
+                          {(value || []).map((item: any) => {
+                            const sizeOption =
+                              typeof item === "string"
+                                ? { size: item, price: 0 }
+                                : item;
+                            return (
+                              <View key={`price-input-${sizeOption.size}`}>
+                                <AppTextInput
+                                  placeholder="Enter price"
+                                  label={`Price for ${sizeOption.size}`}
+                                  keyboardType="numeric"
+                                  value={sizeOption.price?.toString() || ""}
+                                  onChangeText={(text) => {
+                                    const newPrice = Number(text) || 0;
+                                    const normalizedValue = (value || []).map(
+                                      (v: any) =>
+                                        typeof v === "string"
+                                          ? { size: v, price: 0 }
+                                          : v,
+                                    );
+                                    onChange(
+                                      normalizedValue.map((s) =>
+                                        s.size === sizeOption.size
+                                          ? { ...s, price: newPrice }
+                                          : s,
+                                      ),
+                                    );
+                                  }}
+                                />
+                              </View>
+                            );
+                          })}
+                        </View>
+                      )}
+
+                      {errors.sizes?.message && (
+                        <Text className="text-status-error text-xs mt-1 ml-1">
+                          {errors.sizes.message}
+                        </Text>
+                      )}
                     </View>
                   )}
                 />

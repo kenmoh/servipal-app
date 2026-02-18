@@ -1,11 +1,12 @@
+import { requestPasswordReset } from "@/api/auth";
+import HDivider from "@/components/HDivider";
 import { useToast } from "@/components/ToastProvider";
 import { AppButton } from "@/components/ui/app-button";
 import { AppTextInput } from "@/components/ui/app-text-input";
 import { HEADER_BG_DARK, HEADER_BG_LIGHT } from "@/constants/theme";
-import { supabase } from "@/utils/supabase";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
-import { router } from "expo-router";
+import { router, Stack } from "expo-router";
 import { useMemo } from "react";
 import { Controller, useForm } from "react-hook-form";
 import {
@@ -24,14 +25,6 @@ const schema = z.object({
 
 type FormData = z.infer<typeof schema>;
 
-const recoverPassword = async (data: FormData) => {
-  const { error } = await supabase.auth.resetPasswordForEmail(data.email);
-
-  if (error) {
-    throw new Error(error.message);
-  }
-};
-
 const RecoverPassword = () => {
   const theme = useColorScheme();
   const { showSuccess, showError } = useToast();
@@ -48,7 +41,7 @@ const RecoverPassword = () => {
   });
 
   const { mutate, isPending } = useMutation({
-    mutationFn: recoverPassword,
+    mutationFn: (data: FormData) => requestPasswordReset(data.email),
     onError: (error) => {
       showError("Error", error.message);
     },
@@ -57,11 +50,15 @@ const RecoverPassword = () => {
         "Success",
         "Password reset link sent to your email. It will expire in 24 hours.",
       );
-      router.replace("/sign-in");
+      router.replace("/reset-password");
     },
   });
 
   const onSubmit = (data: FormData) => {
+    if (!data.email || !data.email.trim() || !data.email.includes("@")) {
+      showError("Error", "Invalid email");
+      return;
+    }
     mutate(data);
   };
   const bgColor = useMemo(
@@ -70,6 +67,19 @@ const RecoverPassword = () => {
   );
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: bgColor }}>
+      <Stack.Screen
+        options={{
+          headerShown: true,
+          title: "Forgot Password",
+          headerShadowVisible: false,
+          headerTitleStyle: {
+            color: theme === "dark" ? HEADER_BG_LIGHT : HEADER_BG_DARK,
+          },
+          headerTintColor: "white",
+          headerStyle: { backgroundColor: bgColor },
+        }}
+      />
+      <HDivider />
       <ScrollView
         className="flex-1 w-full bg-background"
         showsVerticalScrollIndicator={false}
@@ -78,13 +88,9 @@ const RecoverPassword = () => {
           justifyContent: "center",
         }}
       >
-        <View className="flex-1 bg-background w-full items-center content-center justify-center">
+        <View className="flex-1 bg-background w-full items-center mt-4 ">
           <View className="items-center w-[90%] mb-10">
-            <Text className="self-start text-[20px] text-primary font-poppins-bold">
-              Recover password
-            </Text>
-
-            <Text className="self-start text-primary font-poppins text-xs">
+            <Text className="self-start text-primary font-poppins text-sm">
               Enter the email you registered with.
             </Text>
           </View>
@@ -97,6 +103,7 @@ const RecoverPassword = () => {
                   label={"Email"}
                   placeholder="email@example.com"
                   onBlur={onBlur}
+                  width={"90%"}
                   onChangeText={onChange}
                   value={value}
                   keyboardType="email-address"
@@ -105,15 +112,19 @@ const RecoverPassword = () => {
                 />
               )}
             />
-            <AppButton
-              text={isPending ? "Sending" : "Send"}
-              disabled={isPending}
-              width={"90%"}
-              icon={
-                isPending && <ActivityIndicator size={"large"} color="white" />
-              }
-              onPress={handleSubmit(onSubmit)}
-            />
+            <View className="w-full items-center">
+              <AppButton
+                text={isPending ? "Sending" : "Send"}
+                disabled={isPending}
+                width={"90%"}
+                icon={
+                  isPending && (
+                    <ActivityIndicator size={"large"} color="white" />
+                  )
+                }
+                onPress={handleSubmit(onSubmit)}
+              />
+            </View>
           </View>
 
           <View className="items-center self-center mt-[25px] justify-center w-[90%] mb-[30px]">

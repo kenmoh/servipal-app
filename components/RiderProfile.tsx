@@ -17,7 +17,6 @@ import {
 import { Easing } from "react-native-reanimated";
 
 import HDivider from "./HDivider";
-import { AppButton } from "./ui/app-button";
 
 interface ProfileData {
   ref: Ref<BottomSheet>;
@@ -27,13 +26,7 @@ interface ProfileData {
   onPress?: () => void;
 }
 
-const RiderProfile = ({
-  ref,
-  riderData,
-  riderId,
-  onPress,
-  showButton = true,
-}: ProfileData) => {
+const RiderProfile = ({ ref, riderId, showButton = true }: ProfileData) => {
   const theme = useColorScheme();
 
   const HANDLE_INDICATOR_STYLE =
@@ -52,7 +45,7 @@ const RiderProfile = ({
     enabled: !!riderId,
   });
 
-  const rider = riderData || data;
+  console.log(data);
 
   return (
     <BottomSheet
@@ -98,23 +91,24 @@ const RiderProfile = ({
       ) : (
         <BottomSheetView style={{ flex: 1 }} className={"bg-background"}>
           <View className="p-4 items-center flex-1 bg-background">
-            <View className="w-28 h-28 rounded-full overflow-hidden">
+            <View className="w-[75px] h-[75px] rounded-full overflow-hidden">
               <Image
-                source={riderData?.profile_image_url}
-                className="w-28 h-28 rounded-full"
+                source={data?.profile_image_url}
+                style={{ width: 75, height: 75, borderRadius: 37.5 }}
+                contentFit="cover"
               />
             </View>
             <Text className="text-primary font-poppins-semibold text-lg mt-1">
-              {riderData?.full_name}
+              {data?.full_name}
             </Text>
             {!showButton && (
               <View className="flex-row gap-1 items-center mt-1">
                 <Feather name="phone" color="gray" size={15} />
                 <Text
-                  onPress={() => handleCallPress(riderData?.phone_number!)}
+                  onPress={() => handleCallPress(data?.phone_number!)}
                   className="text-primary font-poppins text-sm"
                 >
-                  {riderData?.phone_number}
+                  {data?.phone_number}
                 </Text>
               </View>
             )}
@@ -126,13 +120,13 @@ const RiderProfile = ({
                 size={14}
               />
               <Text className="text-muted font-poppins text-sm text-center">
-                {riderData?.business_name}
+                {data?.business_name}
               </Text>
             </View>
             <View className="flex-row gap-1">
               <Feather name="map-pin" color={"gray"} size={14} />
               <Text className="text-muted font-poppins text-sm text-center">
-                {riderData?.business_address}
+                {data?.business_address}
               </Text>
             </View>
           </View>
@@ -142,7 +136,7 @@ const RiderProfile = ({
           <View className="flex-row my-4 justify-between w-[80%] self-center">
             <View className="items-center">
               <Text className="text-xl font-poppins-bold text-primary">
-                {riderData?.total_deliveries}
+                {data?.total_delivery_count || 0}
               </Text>
               <Text className="font-poppins-light text-muted text-sm">
                 Trips
@@ -150,7 +144,7 @@ const RiderProfile = ({
             </View>
             <View className="items-center">
               <Text className="text-xl font-poppins-bold text-primary">
-                {riderData?.average_rating}
+                {data?.average_rating}
               </Text>
               <Text className="font-poppins-light text-muted text-sm">
                 Rating
@@ -158,24 +152,13 @@ const RiderProfile = ({
             </View>
             <View className="items-center">
               <Text className="text-xl font-poppins-bold text-primary">
-                {riderData?.bike_number.toUpperCase()}
+                {data?.bike_number.toUpperCase()}
               </Text>
               <Text className="font-poppins-light text-muted text-sm">
                 Bike Number
               </Text>
             </View>
           </View>
-
-          {showButton && (
-            <View className="bg-background mb-3">
-              <AppButton
-                width={"70%"}
-                borderRadius={50}
-                text="Book Rider"
-                onPress={onPress}
-              />
-            </View>
-          )}
         </BottomSheetView>
       )}
     </BottomSheet>

@@ -28,7 +28,7 @@ const UserOrders = () => {
     isFetching,
     isPending,
   } = useQuery({
-    queryKey: ["user-delivery-orders", user?.id],
+    queryKey: ["delivery-orders", user?.id],
     queryFn: () => getUserDeliveryOrders(),
     refetchOnWindowFocus: true,
     refetchOnMount: true,
@@ -157,7 +157,9 @@ const UserOrders = () => {
           onRefresh={refetch}
           showsVerticalScrollIndicator={false}
         />
-        <FAB onPress={() => router.push("/send-package")} />
+        {["CUSTOMER", "RESTAURANT_VENDOR", "LAUNDRY_VENDOR"].includes(
+          user?.user_metadata?.user_type!,
+        ) && <FAB onPress={() => router.push("/send-package")} />}
       </View>
     </ErrorBoundary>
   );

@@ -1,3 +1,4 @@
+import { apiClient } from "@/utils/client";
 
 export interface RecoverPassword {
   email: string;
@@ -41,3 +42,23 @@ export interface ErrorResponse {
 interface LoginErrorResponse {
   detail: string;
 }
+
+const AUTH_URL = "/auth";
+
+export const requestPasswordReset = async (email: string) => {
+  const response = await apiClient.post(`${AUTH_URL}/forgot-password`, {
+    email,
+  });
+  return response.data;
+};
+
+export const resetPassword = async (
+  accessToken: string,
+  newPassword: string,
+) => {
+  const response = await apiClient.post(`${AUTH_URL}/reset-password`, {
+    access_token: accessToken,
+    new_password: newPassword,
+  });
+  return response.data;
+};

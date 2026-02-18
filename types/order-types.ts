@@ -15,6 +15,8 @@ export type OrderPaymentStatus =
 
 export type RequireDelivery = "PICKUP" | "VENDOR_DELIVERY";
 
+import { SizeOption } from "./item-types";
+
 export interface OrderItem {
   id?: string;
   order_id?: string;
@@ -24,6 +26,7 @@ export interface OrderItem {
   price: number;
   quantity: number;
   size?: string;
+  sizes?: SizeOption[];
   sides?: string[];
   colors?: string[];
   created_at?: string;

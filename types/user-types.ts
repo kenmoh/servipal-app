@@ -30,7 +30,9 @@ export type TransactionType =
   | "WITHDRAWAL"
   | "TRANSFER"
   | "ESCROW_HOLD"
-  | "ESCROW_RELEASE";
+  | "ESCROW_RELEASE"
+  | "REFUNDED"
+  | "FUND";
 
 // ============================================================================
 // AUTH & USER INTERFACES
@@ -133,7 +135,7 @@ export interface RiderResponse {
   bike_number: string;
   business_name: string;
   business_address: string;
-  total_distance_travelled: number;
+  total_distance_travelled: string;
   total_deliveries: number;
   average_rating: number;
   review_count: number;
@@ -158,7 +160,7 @@ export interface CreateRiderData {
 
 export interface UpdateRiderData {
   full_name?: string;
-  phone?: string;
+  phone_number?: string;
   bike_number?: string;
 }
 
@@ -211,7 +213,7 @@ export interface Transaction {
   order_type: OrderType;
   details: {
     flw_ref: string;
-    label: "DEBIT" | "CREDIT" | "ESCROW_HOLD";
+    label: "DEBIT" | "CREDIT" | "ESCROW_HOLD" | "REFUNDED" | "FUND";
     [key: string]: any;
   };
   created_at: string;

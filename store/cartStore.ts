@@ -1,3 +1,4 @@
+import { SizeOption } from "@/types/item-types";
 import { RequireDelivery } from "@/types/order-types";
 import { create } from "zustand";
 
@@ -13,7 +14,7 @@ export type CartItem = {
 
   // Food customization fields
   selected_side?: string;
-  selected_size?: string;
+  selected_size?: SizeOption;
 
   // Laundry fields
   images?: string[]; // laundry items have multiple images
@@ -25,7 +26,7 @@ type ItemDetails = {
   price: number;
   image?: string;
   selected_side?: string;
-  selected_size?: string;
+  selected_size?: SizeOption;
   images?: string[];
   laundry_type?: string;
 };
@@ -119,7 +120,7 @@ export const useCartStore = create<CartState>((set, get) => ({
           item.item_id === itemId &&
           item.vendor_id === vendorId &&
           item.selected_side === itemDetails.selected_side &&
-          item.selected_size === itemDetails.selected_size,
+          item.selected_size?.size === itemDetails.selected_size?.size,
       );
 
       let updatedItems;
@@ -276,7 +277,7 @@ export const useCartStore = create<CartState>((set, get) => ({
         quantity: item.quantity,
         images: item.images ?? (item.image ? [item.image] : []),
         sides: item.selected_side ?? "",
-        sizes: item.selected_size ?? "",
+        sizes: item.selected_size ? [item.selected_size] : [],
       })),
     };
   },

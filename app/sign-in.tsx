@@ -52,7 +52,7 @@ const SignIn = () => {
               onChangeText={onChange}
               onBlur={onBlur}
               value={value}
-              width={'90%'}
+              width={"90%"}
               height={45}
               errorMessage={errors.identifier?.message}
               editable={!isPending}
@@ -74,12 +74,11 @@ const SignIn = () => {
               onBlur={onBlur}
               value={value}
               secureTextEntry
-              width={'90%'}
+              width={"90%"}
               height={45}
               errorMessage={errors.password?.message}
               editable={!isPending}
               autoCapitalize="none"
-              
             />
           )}
         />
@@ -87,9 +86,9 @@ const SignIn = () => {
         {/* Forgot Password */}
         <View className="w-[50%] self-end mr-2">
           <AppButton
-          text="Forgot Password"
-          variant="ghost"
-          
+            text="Forgot Password"
+            variant="ghost"
+            onPress={() => router.push("/forgot-password")}
           />
         </View>
 
@@ -108,15 +107,12 @@ const SignIn = () => {
       <View className="flex-row items-center justify-center w-[90%] mt-[25px] align-baseline">
         <Text className="text-primary font-normal text-[14px]">
           Don't have an account?{" "}
+        </Text>
+        <Pressable onPress={() => router.push("/sign-up")} disabled={isPending}>
+          <Text className="font-poppins-medium text-[14px] text-button-primary underline">
+            Register
           </Text>
-          <Pressable
-            onPress={() => router.push("/sign-up")}
-            disabled={isPending}
-          >
-            <Text className="font-poppins-medium text-[14px] text-button-primary underline">
-              Register
-            </Text>
-          </Pressable>
+        </Pressable>
       </View>
     </View>
   );

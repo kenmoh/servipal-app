@@ -14,6 +14,9 @@ import { supabase } from "@/utils/supabase";
 import { ApiResponse } from "apisauce";
 import { ErrorResponse } from "./auth";
 
+const BASE_URL = "/users";
+const AUTH_URL = "/auth";
+
 export interface ImageData {
   uri: string;
   type: string;
@@ -30,8 +33,6 @@ export const fetchProfile = async (userId: string): Promise<UserProfile> => {
   if (error) throw error;
   return data as UserProfile;
 };
-
-const BASE_URL = "/users";
 
 // Image upload
 export type ImageFieldType = "profile_image_url" | "backdrop_image_url";
@@ -402,7 +403,7 @@ export const updateRiderByDispatcher = async (
 
     const dispatcherId = session.user.id;
 
-    // Optional: Confirm current user is a dispatcher
+    // Confirm current user is a dispatcher
     const { data: profile, error: roleError } = await supabase
       .from("profiles")
       .select("user_type")
@@ -417,9 +418,11 @@ export const updateRiderByDispatcher = async (
     const { data, error } = await supabase
       .from("profiles")
       .update({
-        ...updates,
         user_type: "RIDER",
         dispatcher_id: dispatcherId,
+        full_name: updates.full_name,
+        phone_number: updates.phone_number,
+        bike_number: updates.bike_number,
       })
       .eq("id", riderId)
       .eq("dispatcher_id", dispatcherId)
@@ -556,7 +559,7 @@ export const getNearbyRiders = async (
 
 export const getRiderProfile = async (
   riderId: string,
-): Promise<RiderResponse[]> => {
+): Promise<RiderResponse> => {
   try {
     const {
       data: { session },
@@ -570,13 +573,14 @@ export const getRiderProfile = async (
     const { data, error } = await supabase
       .from("profiles")
       .select("*")
-      .eq("id", riderId);
+      .eq("id", riderId)
+      .single();
 
     if (error) {
       throw new Error(error.message || "Failed to fetch rider profile");
     }
 
-    return data as RiderResponse[];
+    return data as RiderResponse;
   } catch (error) {
     throw error;
   }
@@ -619,10 +623,10 @@ export const registerPushToken = async (
       console.error("Push token registration error:", error);
       throw new Error(error.message || "Failed to register push token");
     }
-
-    console.log("✅ Push token registered successfully");
   } catch (error) {
-    console.error("❌ Push token registration failed:", error);
+    99;
     throw error;
   }
 };
+
+// Reset password

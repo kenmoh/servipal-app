@@ -7,7 +7,8 @@ import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import * as Sentry from "@sentry/react-native";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useFonts } from "expo-font";
-import { SplashScreen, Stack } from "expo-router";
+import * as Linking from "expo-linking";
+import { router, SplashScreen, Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import { View } from "react-native";
@@ -76,6 +77,43 @@ export default function RootLayout() {
     return cleanup;
   }, [hydrate, initialize]);
 
+  useEffect(() => {
+    // Handle deep links
+    const handleDeepLink = (event: { url: string }) => {
+      const url = Linking.parse(event.url);
+
+      console.log("Deep link received:", url);
+
+      // Handle password reset link
+      // Format: servipal://reset-password?access_token=xxx&type=recovery
+      if (url.hostname === "reset-password") {
+        const accessToken = url.queryParams?.access_token as string;
+        const type = url.queryParams?.type as string;
+
+        if (accessToken && type === "recovery") {
+          router.push({
+            pathname: "/reset-password",
+            params: { accessToken },
+          });
+        }
+      }
+    };
+
+    // Listen for deep links
+    const subscription = Linking.addEventListener("url", handleDeepLink);
+
+    // Check if app was opened with a deep link
+    Linking.getInitialURL().then((url) => {
+      if (url) {
+        handleDeepLink({ url });
+      }
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, []);
+
   return (
     <View className="bg-background flex-1 w-full">
       <GestureHandlerRootView style={{ flex: 1 }}>
@@ -105,11 +143,11 @@ export default function RootLayout() {
                     <Stack.Screen name="sign-up" options={{}} />
                     <Stack.Screen
                       name="forgot-password"
-                      options={{ headerShown: false }}
+                      options={{ title: "Recover password" }}
                     />
                     <Stack.Screen
                       name="reset-password"
-                      options={{ headerShown: false }}
+                      options={{ title: "Reset password" }}
                     />
                   </Stack.Protected>
 

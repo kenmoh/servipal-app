@@ -251,7 +251,7 @@ const ReceiptPage = () => {
                                     (item) => `
                                     <div class="line-item">
                                         <span>${item.quantity}X ${item.name}</span>
-                                        <span class="value">₦${Number(item.price * item.quantity).toFixed(2)}</span>
+                                        <span class="value">₦${Number((item.sizes?.[0]?.price ?? item.price) * item.quantity).toFixed(2)}</span>
                                     </div>
                                   `,
                                   )
@@ -521,7 +521,10 @@ const ReceiptPage = () => {
                   )}
                 </View>
                 <Text className={`${TEXT_PRIMARY} font-poppins-semibold`}>
-                  ₦{Number(item.price * item.quantity).toFixed(2)}
+                  ₦
+                  {Number(
+                    (item.sizes?.[0]?.price ?? item.price) * item.quantity,
+                  ).toFixed(2)}
                 </Text>
               </View>
             ))}

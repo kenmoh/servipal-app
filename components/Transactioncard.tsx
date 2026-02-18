@@ -9,13 +9,13 @@ const Transactioncard = ({ data }: { data: Transaction }) => {
   const { user } = useUserStore();
   // Determine circle and icon color
   let circleBg =
-    data?.details.label === "CREDIT"
+    data?.details.label === "CREDIT" || data?.transaction_type === "REFUNDED"
       ? "rgba(4, 255, 130, 0.1)"
       : data?.details.label === "DEBIT"
         ? "rgba(255, 0, 0, 0.2)"
         : "rgba(214, 152, 40, 0.2)";
   let iconColor =
-    data?.details.label === "CREDIT"
+    data?.details.label === "CREDIT" || data?.transaction_type === "REFUNDED"
       ? "green"
       : data?.details.label === "DEBIT"
         ? "red"
@@ -61,7 +61,8 @@ const Transactioncard = ({ data }: { data: Transaction }) => {
             style={{ backgroundColor: circleBg }}
             className="w-8 h-8 rounded-full items-center justify-center"
           >
-            {data?.details?.label === "CREDIT" ? (
+            {data?.details?.label === "CREDIT" ||
+            data?.transaction_type === "REFUNDED" ? (
               <AntDesign name="arrow-down" color={iconColor} size={14} />
             ) : data?.details?.label === "DEBIT" ? (
               <AntDesign name="arrow-up" color={iconColor} size={12} />
@@ -71,7 +72,9 @@ const Transactioncard = ({ data }: { data: Transaction }) => {
           </View>
           <View>
             <Text className="capitalize text-xs font-normal text-primary">
-              {displayName}
+              {data?.transaction_type === "REFUNDED"
+                ? "SYSTEM REFUND | Order Cancelled"
+                : displayName}
             </Text>
             <Text className="text-muted text-[10px]">{data?.created_at}</Text>
           </View>

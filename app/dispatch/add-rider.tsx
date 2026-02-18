@@ -1,11 +1,14 @@
-import { createRiderByDispatcher, updateRiderByDispatcher } from "@/api/user";
+import {
+  createRiderByDispatcher,
+  deleteRider,
+  updateRiderByDispatcher,
+} from "@/api/user";
 import HDivider from "@/components/HDivider";
 import { useToast } from "@/components/ToastProvider";
 import { AppButton } from "@/components/ui/app-button";
 import { AppTextInput } from "@/components/ui/app-text-input";
 import { useUserStore } from "@/store/userStore";
 // import { useAuth } from '@/context/authContext';
-import { RiderResponse } from "@/types/user-types";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { router, Stack, useLocalSearchParams } from "expo-router";
@@ -42,11 +45,27 @@ type FormData = CreateFormData | UpdateFormData;
 
 const AddRider = () => {
   const { user } = useUserStore();
-  const { riderParams, isEditing } = useLocalSearchParams();
-  const rider = riderParams
-    ? (JSON.parse(riderParams as string) as RiderResponse)
-    : null;
+
+  /*
+  fullName: rider.full_name,
+            phoneNumber: rider.phone_number,
+            email: rider.email,
+            isEditing: "true",
+            bikeNumber: rider.bike_number,
+            id: rider.id,
+  */
+  const { id, isEditing, fullName, phoneNumber, bikeNumber } =
+    useLocalSearchParams<{
+      id: string;
+      isEditing: string;
+      fullName: string;
+      phoneNumber: string;
+      bikeNumber: string;
+    }>();
+
   const { showError, showSuccess } = useToast();
+
+  const editing = !!isEditing;
 
   const queryClient = useQueryClient();
 
@@ -56,13 +75,13 @@ const AddRider = () => {
     reset,
     formState: { errors },
   } = useForm<FormData>({
-    resolver: zodResolver(isEditing ? editSchema : createSchema),
+    resolver: zodResolver(editing ? editSchema : createSchema),
     mode: "onBlur",
     defaultValues: {
-      full_name: rider?.full_name || "",
+      full_name: fullName || "",
       email: "",
-      phone: rider?.phone_number || "",
-      bike_number: rider?.bike_number || "",
+      phone: phoneNumber || "",
+      bike_number: bikeNumber || "",
       password: "",
       confirm_password: "",
     },
@@ -82,6 +101,16 @@ const AddRider = () => {
     showError("Error", error.message);
   };
 
+  const deleteRiderMutation = useMutation({
+    mutationFn: () => deleteRider(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["riders", user?.id] });
+      showSuccess("Rider Deleted", "Rider deleted successfully.");
+      router.back();
+    },
+    onError: handleError,
+  });
+
   const createMutation = useMutation({
     mutationFn: createRiderByDispatcher,
     onSuccess: handleSuccess,
@@ -90,9 +119,9 @@ const AddRider = () => {
 
   const updateMutation = useMutation({
     mutationFn: (data: UpdateFormData) =>
-      updateRiderByDispatcher(rider!.id, {
+      updateRiderByDispatcher(id, {
         full_name: data.full_name,
-        phone: data.phone,
+        phone_number: data.phone,
         bike_number: data.bike_number,
       }),
     onSuccess: () => {
@@ -230,6 +259,7 @@ const AddRider = () => {
                 : "Submit"
           }
           onPress={handleSubmit(onSubmit)}
+          borderRadius={50}
           disabled={createMutation.isPending || updateMutation.isPending}
           icon={
             createMutation.isPending || updateMutation.isPending ? (
@@ -237,6 +267,24 @@ const AddRider = () => {
             ) : null
           }
         />
+
+        {editing && (
+          <AppButton
+            text="Delete Rider"
+            variant="outline"
+            backgroundColor="red"
+            borderRadius={50}
+            color="red"
+            borderColor="red"
+            onPress={() => deleteRiderMutation.mutate}
+            disabled={deleteRiderMutation.isPending}
+            icon={
+              deleteRiderMutation.isPending ? (
+                <ActivityIndicator size="small" color="white" />
+              ) : null
+            }
+          />
+        )}
       </ScrollView>
     </>
   );

@@ -1,5 +1,5 @@
 import { HEADER_BG_DARK, HEADER_BG_LIGHT } from "@/constants/theme";
-import { RestaurantMenuItemResponse } from "@/types/item-types";
+import { RestaurantMenuItemResponse, SizeOption } from "@/types/item-types";
 import {
   BottomSheetBackdrop,
   BottomSheetModal,
@@ -20,7 +20,7 @@ interface ItemCustomizationSheetProps {
   item: RestaurantMenuItemResponse | null;
   onAdd: (
     item: RestaurantMenuItemResponse,
-    selectedSize: string,
+    selectedSize: SizeOption | null,
     selectedSide: string,
   ) => void;
 }
@@ -29,7 +29,7 @@ const ItemCustomizationSheet = forwardRef<
   BottomSheetModal,
   ItemCustomizationSheetProps
 >(({ item, onAdd }, ref) => {
-  const [selectedSize, setSelectedSize] = useState<string>("");
+  const [selectedSize, setSelectedSize] = useState<SizeOption | null>(null);
   const [selectedSide, setSelectedSide] = useState<string>("");
   const theme = useColorScheme();
 
@@ -38,7 +38,7 @@ const ItemCustomizationSheet = forwardRef<
   const handleAdd = () => {
     if (item) {
       onAdd(item, selectedSize, selectedSide);
-      setSelectedSize("");
+      setSelectedSize(null);
       setSelectedSide("");
     }
   };
@@ -104,14 +104,14 @@ const ItemCustomizationSheet = forwardRef<
                 Choose Size
               </Text>
               <View className="flex-row flex-wrap gap-2">
-                {item?.sizes?.map((size) => {
-                  const isSelected = selectedSize === size;
+                {item?.sizes?.map((sizeOption) => {
+                  const isSelected = selectedSize?.size === sizeOption.size;
 
                   return (
                     <TouchableOpacity
-                      key={size}
-                      onPress={() => setSelectedSize(size)}
-                      className={`px-5 py-2 rounded-full flex-row items-center ${
+                      key={sizeOption.size}
+                      onPress={() => setSelectedSize(sizeOption)}
+                      className={`px-5 py-3 rounded-full flex-row items-center ${
                         isSelected
                           ? "bg-button-primary/10 border border-button-primary"
                           : "bg-input"
@@ -128,13 +128,22 @@ const ItemCustomizationSheet = forwardRef<
                           <View className="w-2 h-2 rounded-full bg-button-primary" />
                         )}
                       </View>
-                      <Text
-                        className={`text-sm font-poppins-medium ${
-                          isSelected ? "text-button-primary" : "text-gray-500"
-                        }`}
-                      >
-                        {size}
-                      </Text>
+                      <View>
+                        <Text
+                          className={`text-sm font-poppins-medium ${
+                            isSelected ? "text-button-primary" : "text-gray-500"
+                          }`}
+                        >
+                          {sizeOption.size}
+                        </Text>
+                        <Text
+                          className={`text-xs font-poppins ${
+                            isSelected ? "text-button-primary" : "text-muted"
+                          }`}
+                        >
+                          ₦{Number(sizeOption.price).toFixed(2)}
+                        </Text>
+                      </View>
                     </TouchableOpacity>
                   );
                 })}
@@ -190,7 +199,7 @@ const ItemCustomizationSheet = forwardRef<
 
         <View className="mt-4">
           <AppButton
-            text={`Add to Cart • ₦${Number(item.price).toFixed(2)}`}
+            text={`Add to Cart • ₦${Number(selectedSize?.price || item.price).toFixed(2)}`}
             onPress={handleAdd}
             width="100%"
             disabled={

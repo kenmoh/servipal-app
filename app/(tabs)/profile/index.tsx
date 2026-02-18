@@ -179,7 +179,10 @@ const ProfileScreen = () => {
   };
 
   return (
-    <ScrollView className="flex-1 bg-background">
+    <ScrollView
+      className="flex-1 bg-background"
+      showsVerticalScrollIndicator={false}
+    >
       <View className="w-full h-44">
         <View className="w-full">
           <ProfileImagePicker
@@ -268,11 +271,15 @@ const ProfileScreen = () => {
                   <HDivider />
                 </>
               )}
-              <AppLink
-                onPress={() => router.push("/wallet")}
-                name="Wallet"
-                icon={<Ionicons name="wallet-outline" size={18} color="gray" />}
-              />
+              {user?.user_metadata?.user_type !== "RIDER" && (
+                <AppLink
+                  onPress={() => router.push("/wallet")}
+                  name="Wallet"
+                  icon={
+                    <Ionicons name="wallet-outline" size={18} color="gray" />
+                  }
+                />
+              )}
 
               <HDivider />
               <AppLink
@@ -367,18 +374,26 @@ const ProfileScreen = () => {
               <Switch value={isOnline} onValueChange={handleToggle} />
             </View>
           </View>
-          <View className="flex-row items-center justify-between">
-            <View className="flex-row items-center gap-3">
-              <Ionicons name="cube-outline" size={20} color="gray" />
-              <Text className="text-muted">Can Pickup</Text>
+          {["RESTAURANT_VENDOR", "LAUNDRY_VENDOR"].includes(
+            user?.user_metadata?.user_type!,
+          ) && (
+            <View className="flex-row items-center justify-between">
+              <View className="flex-row items-center gap-3">
+                <Ionicons name="cube-outline" size={20} color="gray" />
+                <Text className="text-muted">
+                  {user?.user_metadata?.user_type === "RESTAURANT_VENDOR"
+                    ? "Delivery"
+                    : "Pickup/Delivery"}
+                </Text>
+              </View>
+              <View className="flex-row gap-1">
+                {togglePickupMutation.isPending && (
+                  <ActivityIndicator color={"#eee"} size={"small"} />
+                )}
+                <Switch value={canPickup} onValueChange={handlePickupToggle} />
+              </View>
             </View>
-            <View className="flex-row gap-1">
-              {togglePickupMutation.isPending && (
-                <ActivityIndicator color={"#eee"} size={"small"} />
-              )}
-              <Switch value={canPickup} onValueChange={handlePickupToggle} />
-            </View>
-          </View>
+          )}
           <View className="h-px bg-border-subtle my-2" />
           <View className="gap-3">
             <Text className="text-primary font-poppins-medium">Support</Text>

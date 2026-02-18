@@ -12,16 +12,7 @@ import {
   View,
 } from "react-native";
 
-import {
-  acceptDeliveryOrder,
-  cancelDeliveryByRider,
-  cancelDeliveryBySender,
-  declineDeliveryOrder,
-  getDeliveryDetailsById,
-  markDeliveryCompleted,
-  markDeliveryDelivered,
-  pickupDeliveryOrder,
-} from "@/api/delivery";
+import { getDeliveryDetailsById, updateDeliveryStatus } from "@/api/delivery";
 import {
   startDeliveryTracking,
   stopDeliveryTracking,
@@ -46,6 +37,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
 
 import { blurhash } from "@/constants/state";
+import { getDeliveryButtonConfig } from "@/utils/deliveryButtonConfig";
 import { Image } from "expo-image";
 import { Controller, useForm } from "react-hook-form";
 import z from "zod";
@@ -75,14 +67,13 @@ const ItemDetails = () => {
     theme === "dark" ? HEADER_BG_LIGHT : HEADER_BG_DARK;
   const HANDLE_STYLE = theme === "dark" ? HEADER_BG_DARK : HEADER_BG_LIGHT;
   const BG_COLOR = theme === "dark" ? HEADER_BG_DARK : HEADER_BG_LIGHT;
-  const TEXT = theme === "dark" ? "#fff" : "#aaa";
 
   const openSheet = () => bottomSheetRef.current?.snapToIndex(1);
   const closeSheet = () => bottomSheetRef.current?.close();
   const viewRiderProfile = () => riderProfileRef.current?.snapToIndex(0);
 
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ["order", id],
+    queryKey: ["delivery-order", id],
     queryFn: () => getDeliveryDetailsById(id as string),
     refetchOnWindowFocus: true,
     refetchOnMount: true,
@@ -135,356 +126,220 @@ const ItemDetails = () => {
     },
   });
 
-  const isPickedUp =
-    data?.delivery_status === "PICKED_UP" ||
-    data?.delivery_status === "IN_TRANSIT" ||
-    data?.delivery_status === "DELIVERED" ||
-    data?.delivery_status === "COMPLETED";
+  const isPickedUp = ["PICKED_UP", "IN_TRANSIT"].includes(
+    data?.delivery_status as string,
+  );
+
+  const showCancel =
+    (user?.id === data?.sender_id || user?.id === data?.rider_id) &&
+    (data?.delivery_status === "PENDING" ||
+      data?.delivery_status === "ASSIGNED" ||
+      data?.delivery_status === "ACCEPTED");
 
   const queryClient = useQueryClient();
 
-  const confirmReceivedMutation = useMutation({
-    mutationFn: () => markDeliveryCompleted(data?.tx_ref!),
+  // ============================================================
+  // NEW: UNIFIED STATUS UPDATE MUTATION
+  // ============================================================
+  const updateDeliveryMutation = useMutation({
+    mutationFn: ({
+      txRef,
+      newStatus,
+      reason,
+      riderId,
+    }: {
+      txRef: string;
+      newStatus: string;
+      reason?: string;
+      riderId?: string;
+    }) => updateDeliveryStatus(txRef, newStatus, riderId, reason),
     onSuccess: async () => {
-      // Invalidate queries first
-      await queryClient.invalidateQueries({
-        queryKey: ["order", data?.id],
-      });
-      await queryClient.invalidateQueries({
+      // Invalidate and refetch
+      (refetch(),
+        queryClient.invalidateQueries({ queryKey: ["delivery-order", id] }));
+      queryClient.invalidateQueries({
         queryKey: ["user-orders", user?.id],
       });
-      await queryClient.invalidateQueries({
-        queryKey: ["user-orders", data?.sender_id],
+      queryClient.invalidateQueries({ queryKey: ["riders", user?.id] });
+      queryClient.invalidateQueries({
+        queryKey: ["user-delivery-orders", user?.id],
       });
-      await queryClient.invalidateQueries({ queryKey: ["riders", user?.id] });
 
-      // Wait for refetch to complete
       await Promise.all([
-        queryClient.refetchQueries({ queryKey: ["order", id] }),
-        queryClient.refetchQueries({ queryKey: ["user-orders", user?.id] }),
+        queryClient.refetchQueries({ queryKey: ["delivery-order", id] }),
+        queryClient.refetchQueries({
+          queryKey: ["user-delivery-orders", user?.id],
+        }),
       ]);
-      refetch();
-
-      // Then navigate and show success
-      showSuccess("Success", "Delivery confirmed and received.");
-      refetch();
-    },
-    onError: (error: Error) => {
-      showError("Error", error.message);
-    },
-  });
-
-  const acceptDeliveryMutation = useMutation({
-    mutationFn: () => acceptDeliveryOrder(data?.tx_ref!),
-    onSuccess: async (_, deliveryId) => {
       Sentry.addBreadcrumb({
-        message: "Delivery accepted successfully",
+        message: "Delivery status updated",
         category: "delivery",
         level: "info",
-        data: { orderId: data?.id },
+        data: { orderId: data?.id, newStatus: data?.delivery_status },
       });
 
-      // Invalidate queries first
-      await queryClient.invalidateQueries({
-        queryKey: ["order", data?.id],
-      });
-      await queryClient.invalidateQueries({
-        queryKey: ["user-orders", user?.id],
-      });
-      await queryClient.invalidateQueries({
-        queryKey: ["user-orders", data?.sender_id],
-      });
+      // Handle tracking
+      if (
+        data?.delivery_status === "PICKED_UP" ||
+        data?.delivery_status === "ACCEPTED"
+      ) {
+        startDeliveryTracking(data?.id!, user?.id!);
+      } else if (
+        data?.delivery_status === "DELIVERED" ||
+        data?.delivery_status === "COMPLETED"
+      ) {
+        stopDeliveryTracking();
+        useLocationStore.getState().clearRiderLocation();
+      }
 
-      // Wait for refetch to complete
-      await Promise.all([
-        queryClient.refetchQueries({ queryKey: ["order", id] }),
-        queryClient.refetchQueries({ queryKey: ["user-orders", user?.id] }),
-        queryClient.refetchQueries({ queryKey: ["riders", user?.id] }),
-      ]);
-      refetch();
+      // Success message
+      const messages: Record<string, string> = {
+        ACCEPTED: "Delivery accepted successfully!",
+        PICKED_UP: "Package picked up successfully!",
+        IN_TRANSIT: "Marked as in transit",
+        DELIVERED: "Marked as delivered",
+        COMPLETED: "Delivery completed and payment released",
+        CANCELLED: data?.requires_return
+          ? "Delivery cancelled - rider will return the package"
+          : "Delivery cancelled successfully",
+      };
 
-      // Start tracking
-      await startDeliveryTracking(data?.id!, user?.id!);
-
-      // Then navigate and show success
       showSuccess(
         "Success",
-        "This order has been assigned to you. Drive carefully!",
+        messages[data?.delivery_status as string] ||
+          "Status updated successfully",
       );
-      // router.back();
-    },
-    onError: (error: Error) => {
-      showError("Error", error.message);
-      Sentry.captureException(error, {
-        extra: {
-          orderId: data?.id,
-          action: "accept_delivery",
-        },
-        tags: {
-          feature: "delivery-management",
-        },
-      });
-    },
-  });
 
-  const pickupDeliveryMutation = useMutation({
-    mutationFn: () => pickupDeliveryOrder(data?.tx_ref!),
-    onSuccess: async (_, deliveryId) => {
-      Sentry.addBreadcrumb({
-        message: "Delivery pickup confirmed",
-        category: "delivery",
-        level: "info",
-        data: { orderId: data?.id },
-      });
-
-      // Invalidate queries first
-      await queryClient.invalidateQueries({
-        queryKey: ["order", data?.id],
-      });
-      await queryClient.invalidateQueries({
-        queryKey: ["user-orders", user?.id],
-      });
-      await queryClient.invalidateQueries({
-        queryKey: ["user-orders", data?.sender_id],
-      });
-
-      // Wait for refetch to complete
-      await Promise.all([
-        queryClient.refetchQueries({ queryKey: ["order", id] }),
-        queryClient.refetchQueries({ queryKey: ["user-orders", user?.id] }),
-      ]);
-
-      refetch();
-      // Start tracking
-      await startDeliveryTracking(data?.id!, user?.id!);
-
-      // router.back();
-    },
-    onError: (error: Error) => {
-      showError("Error", error.message);
-      Sentry.captureException(error, {
-        extra: {
-          orderId: data?.id,
-          action: "pickup_delivery",
-        },
-        tags: {
-          feature: "delivery-management",
-        },
-      });
-    },
-  });
-
-  const declineBookingMutation = useMutation({
-    mutationFn: () => declineDeliveryOrder(data?.tx_ref!),
-    onSuccess: async (_, orderId) => {
-      Sentry.addBreadcrumb({
-        message: "Booking declined",
-        category: "delivery",
-        level: "info",
-        data: { orderId: data?.id },
-      });
-
-      // Invalidate queries first
-      await queryClient.invalidateQueries({
-        queryKey: ["order", id],
-      });
-      await queryClient.invalidateQueries({
-        queryKey: ["user-orders", user?.id],
-      });
-      await queryClient.invalidateQueries({
-        queryKey: ["user-orders", data?.sender_id],
-      });
-      await queryClient.invalidateQueries({ queryKey: ["riders", user?.id] });
-
-      // Wait for refetch to complete
-      await Promise.all([
-        queryClient.refetchQueries({ queryKey: ["order", id] }),
-        queryClient.refetchQueries({ queryKey: ["user-orders", user?.id] }),
-        queryClient.refetchQueries({ queryKey: ["riders", user?.id] }),
-      ]);
-
-      refetch();
-
-      // Then navigate and show warning
-      showWarning("Decline", "Booking declined!");
-      // router.back();
-    },
-    onError: (error: Error) => {
-      showError("Error", error.message);
-      Sentry.captureException(error, {
-        extra: {
-          orderId: data?.id,
-          action: "decline_booking",
-        },
-        tags: {
-          feature: "delivery-management",
-        },
-      });
-    },
-  });
-
-  const markDeliveredMutation = useMutation({
-    mutationFn: () => markDeliveryDelivered(data?.tx_ref!),
-    onSuccess: async (_, deliveryId) => {
-      Sentry.addBreadcrumb({
-        message: "Delivery marked as delivered",
-        category: "delivery",
-        level: "info",
-        data: { orderId: data?.id },
-      });
-
-      // Invalidate queries first
-      await queryClient.invalidateQueries({
-        queryKey: ["order", id],
-      });
-      await queryClient.invalidateQueries({
-        queryKey: ["user-orders", user?.id],
-      });
-      await queryClient.invalidateQueries({
-        queryKey: ["user-orders", data?.sender_id],
-      });
-
-      // Wait for refetch to complete
-      await Promise.all([
-        queryClient.refetchQueries({ queryKey: ["order", id] }),
-        queryClient.refetchQueries({ queryKey: ["user-orders", user?.id] }),
-      ]);
-      refetch();
-
-      // Stop tracking and clear location
-      stopDeliveryTracking();
-      useLocationStore.getState().clearRiderLocation();
-
-      // Then navigate and show success
-      showSuccess("Success", "Item delivered.");
-      // router.back();
-    },
-    onError: (error: Error) => {
-      showError("Error", error.message);
-      Sentry.captureException(error, {
-        extra: {
-          orderId: data?.id,
-          action: "mark_delivered",
-        },
-        tags: {
-          feature: "delivery-management",
-        },
-      });
-    },
-  });
-
-  const cancelDeliveryMutation = useMutation({
-    mutationFn: (formData: { orderId: string; reason?: string }) => {
-      // Use 'data' from the component scope (the order details), not the mutation argument
-      const isRider =
-        user?.user_metadata?.user_type === "RIDER" ||
-        user?.id === data?.rider_id;
-
-      if (isRider) {
-        return cancelDeliveryByRider(
-          formData.orderId,
-          formData.reason || "No reason provided",
-        );
-      } else {
-        return cancelDeliveryBySender(
-          formData.orderId,
-          formData.reason || "No reason provided",
-        );
+      // Navigate back on completion
+      if (data?.delivery_status === "COMPLETED") {
+        setTimeout(() => router.back(), 1500);
       }
     },
-    onSuccess: async () => {
-      Sentry.addBreadcrumb({
-        message: "Delivery cancelled",
-        category: "delivery",
-        level: "info",
-        data: { orderId: data?.id },
-      });
-
-      // Invalidate queries first
-      await queryClient.invalidateQueries({
-        queryKey: ["order", id],
-      });
-      await queryClient.invalidateQueries({
-        queryKey: ["user-orders", user?.id],
-      });
-      await queryClient.invalidateQueries({
-        queryKey: ["user-orders", data?.sender_id],
-      });
-
-      // Wait for refetch to complete
-      await Promise.all([
-        queryClient.refetchQueries({ queryKey: ["order", id] }),
-        queryClient.refetchQueries({ queryKey: ["user-orders", user?.id] }),
-      ]);
-
-      refetch();
-
-      // Then navigate and show info
-      showInfo("Delivery cancelled!");
-      router.back();
-    },
     onError: (error: Error) => {
       showError("Error", error.message);
       Sentry.captureException(error, {
-        extra: {
-          orderId: data?.id,
-          action: "cancel_delivery",
-        },
-        tags: {
-          feature: "delivery-management",
-        },
+        extra: { orderId: data?.id, action: "update_delivery_status" },
+        tags: { feature: "delivery-management" },
       });
     },
   });
 
-  const openAlert = async () => {
-    // Check validation if it's a rider
-    const isRider =
-      user?.user_metadata?.user_type === "RIDER" || user?.id === data?.rider_id;
+  // ============================================================
+  // STATUS UPDATE HANDLER
+  // ============================================================
+  const handleStatusUpdate = (newStatus: string, reason?: string) => {
+    if (!data?.id) return;
 
-    if (isRider) {
-      const isValid = await trigger(); // Validate all fields
-      if (!isValid) {
-        showError(
-          "Validation Error",
-          "Please fill in a valid reason (10+ characters).",
-        );
+    updateDeliveryMutation.mutate({
+      txRef: data.tx_ref!,
+      newStatus,
+      riderId: data.rider_id!,
+      reason,
+    });
+  };
+
+  // ============================================================
+  // BUTTON CONFIGURATION
+  // ============================================================
+  const getSmartActionButton = () => {
+    if (!data || !user) return null;
+
+    const isSender = user.id === data.sender_id;
+    const isRider = user.id === data.rider_id;
+
+    const userRole = isSender ? "SENDER" : isRider ? "RIDER" : null;
+    if (!userRole) return null;
+
+    const config = getDeliveryButtonConfig(
+      data.delivery_status as any,
+      userRole,
+    );
+    if (!config) return null;
+
+    const handleAction = (btnConfig: any) => {
+      // NAVIGATION LOGIC FOR "Assign Rider"
+      if (
+        btnConfig.text === "Assign Rider" &&
+        btnConfig.nextStatus === "ASSIGNED"
+      ) {
+        // Redirect to riders screen
+        router.push({
+          pathname: "/(tabs)/delivery/riders",
+          params: {
+            txRef: data.tx_ref,
+            paymentStatus: "PAID",
+          },
+        });
         return;
       }
+
+      if (btnConfig.requiresReason) {
+        // Show cancellation sheet
+        openSheet();
+      } else {
+        // Show confirmation dialog for other actions
+        Alert.alert(
+          "Confirm Action",
+          `${btnConfig.text}?${btnConfig.warningMessage ? "\n\n" + btnConfig.warningMessage : ""}`,
+          [
+            { text: "Cancel", style: "cancel" },
+            {
+              text: "Confirm",
+              onPress: () => handleStatusUpdate(btnConfig.nextStatus!),
+            },
+          ],
+        );
+      }
+    };
+
+    return {
+      primary: config.primary,
+      secondary: config.secondary,
+      handleAction,
+      isPrimaryLoading:
+        updateDeliveryMutation.isPending &&
+        updateDeliveryMutation.variables?.newStatus ===
+          config.primary?.nextStatus,
+      isSecondaryLoading:
+        updateDeliveryMutation.isPending &&
+        updateDeliveryMutation.variables?.newStatus ===
+          config.secondary?.nextStatus,
+    };
+  };
+
+  // ============================================================
+  // CANCEL DIALOG HANDLER
+  // ============================================================
+  const openAlert = async () => {
+    const isValid = await trigger();
+    if (!isValid) {
+      showError(
+        "Validation Error",
+        "Please provide a reason (10+ characters).",
+      );
+      return;
     }
 
     const formData = getValues();
     const isSender = user?.id === data?.sender_id;
 
-    // Different warning messages
-    const warningMessage = isSender
-      ? "Are you sure you want to cancel this order? If it's already picked up, it will be returned."
-      : "Cancelling this order will suspend you and affect your completion rate. Are you sure?";
+    const warningMessage =
+      isPickedUp && isSender
+        ? "⚠️ Package is in transit. Rider will return it and still be paid for the trip."
+        : isSender
+          ? "Are you sure you want to cancel this delivery?"
+          : "Cancelling will affect your completion rate. Continue?";
 
     Alert.alert("Confirm Cancellation", warningMessage, [
       { text: "No", style: "cancel" },
       {
         text: "Yes",
         onPress: () => {
-          // Both sender and rider now pass a reason
-          cancelDeliveryMutation.mutate({
-            orderId: formData.orderId,
-            reason: formData.cancelReason,
-          });
+          handleStatusUpdate("CANCELLED", formData.cancelReason);
           closeSheet();
         },
       },
     ]);
-  };
-
-  const onSubmit = (formData: CancelFormData) => {
-    // Direct submission logic if needed, but we essentially use openAlert which triggers mutate.
-    // However, in case this is called directly:
-    cancelDeliveryMutation.mutate({
-      orderId: formData.orderId,
-      reason: formData.cancelReason,
-    });
-    closeSheet();
   };
 
   // Supabase Realtime subscription
@@ -505,7 +360,6 @@ const ItemDetails = () => {
         (payload) => {
           if (!isMountedRef.current) return;
 
-          // Update TanStack Query cache
           queryClient.setQueryData(["order", id], (oldData: any) => {
             const updated = {
               ...oldData,
@@ -515,10 +369,8 @@ const ItemDetails = () => {
             return updated;
           });
 
-          // Handle location tracking
           const coords = payload.new.last_known_rider_coordinates;
           if (coords) {
-            // Ensure coordinates are [lat, lng]
             const normalized = normalizeCoords(coords);
             if (normalized) {
               useLocationStore.getState().setRiderLocation(id, normalized);
@@ -533,7 +385,6 @@ const ItemDetails = () => {
     };
   }, [id, queryClient]);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       isMountedRef.current = false;
@@ -555,84 +406,8 @@ const ItemDetails = () => {
     useLocationStore.getState().setRiderLocation(data.id, normalized);
   }, [data?.id, data?.last_known_rider_coordinates]);
 
-  const getActionButton = () => {
-    if (!data || !user) return null;
-
-    const isSender = user.id === data.sender_id;
-    const isAssignedRider = user.id === data.rider_id;
-    const isDispatch = data.dispatch_id && user.id === data.dispatch_id;
-    const isRiderAccount = user.user_metadata?.user_type === "RIDER";
-
-    // 1. Rider: Accept or Decline (pending + assigned)
-    if (
-      (data?.delivery_status === "PAID_NEEDS_RIDER" ||
-        data?.delivery_status === "ASSIGNED") &&
-      (isAssignedRider || isRiderAccount) &&
-      !isSender
-    ) {
-      return [
-        {
-          label: "Accept",
-          onPress: () => acceptDeliveryMutation.mutate(),
-          loading: acceptDeliveryMutation.isPending,
-        },
-        {
-          label: "Decline",
-          onPress: () => declineBookingMutation.mutate(),
-          loading: declineBookingMutation.isPending,
-          variant: "outline" as const,
-        },
-      ];
-    }
-
-    // 2. Rider: Pickup item (after accepting)
-    if (data?.delivery_status === "ACCEPTED" && isAssignedRider && !isSender) {
-      return {
-        label: "Confirm Pickup",
-        onPress: () => pickupDeliveryMutation.mutate(),
-        loading: pickupDeliveryMutation.isPending,
-      };
-    }
-
-    // 3. Rider: Mark as Delivered (after pickup)
-    if (
-      (data?.delivery_status === "PICKED_UP" ||
-        data?.delivery_status === "IN_TRANSIT") &&
-      (isAssignedRider || isDispatch)
-    ) {
-      return {
-        label: "Mark as Delivered",
-        onPress: () => markDeliveredMutation.mutate(),
-        loading: markDeliveredMutation.isPending,
-      };
-    }
-
-    // 4. Sender: Confirm Received (when rider marks delivered)
-    if (data?.delivery_status === "DELIVERED" && isSender) {
-      return {
-        label: "Confirm Received",
-        onPress: () => confirmReceivedMutation.mutate(),
-        loading: confirmReceivedMutation.isPending,
-      };
-    }
-
-    // 5. Final state: Order completed
-    if (data?.delivery_status === "COMPLETED") {
-      return {
-        label: "Order Completed",
-        disabled: true,
-      };
-    }
-
-    return null;
-  };
-
-  const actionButton = getActionButton();
-  const showCancel =
-    (user?.id === data?.sender_id || user?.id === data?.rider_id) &&
-    ["ACCEPTED", "PAID_NEEDS_RIDER", "ASSIGNED"].includes(
-      data?.delivery_status as string,
-    );
+  const smartButton = getSmartActionButton();
+  // const specialButtons = getSpecialButtons(); // Removed in favor of config
 
   if (isLoading) {
     return <LoadingIndicator />;
@@ -645,9 +420,6 @@ const ItemDetails = () => {
         id: data?.id as string,
         revieweeId: data?.rider_id as string,
         dispatchId: data?.dispatch_id as string,
-        orderId: data?.id as string,
-        orderType: data?.delivery_type as string,
-        reviewType: "rider",
       },
     });
   };
@@ -658,12 +430,13 @@ const ItemDetails = () => {
         <DeliveryWrapper id={data?.id!} isPickedUp={isPickedUp}>
           {user?.id === data.sender_id &&
             data?.rider_id &&
-            data?.delivery_status !== "PAID_NEEDS_RIDER" &&
+            data?.delivery_status !== "PENDING" &&
             data?.delivery_status !== "COMPLETED" && (
               <View className="self-center w-full justify-center items-center">
                 <AppButton
-                  icon={<Feather name="user" color="orange" />}
+                  icon={<Feather name="user" color="orange" size={22} />}
                   width={"50%"}
+                  variant="outline"
                   borderRadius={50}
                   text="Contact Rider"
                   onPress={viewRiderProfile}
@@ -697,7 +470,7 @@ const ItemDetails = () => {
                   </Text>
                 </View>
                 <Text className="font-poppins-semibold text-primary text-sm">
-                  #ORDN{data?.order_number}
+                  #ORDN-{data?.order_number}
                 </Text>
               </View>
               <View className="gap-3 flex-row  justify-between">
@@ -758,7 +531,7 @@ const ItemDetails = () => {
                 <Feather name="alert-triangle" color="orange" size={15} />
                 <Text className="font-poppins-light text-wrap text-xs text-yellow-500">
                   Before leaving, both the sender and rider should confirm the
-                  item’s content and condition together.
+                  item's content and condition together.
                 </Text>
               </View>
               <Text
@@ -768,115 +541,154 @@ const ItemDetails = () => {
                 View Image
               </Text>
             </View>
+
+            {/* ============================================================ */}
+            {/* ACTION BUTTONS */}
+            {/* ============================================================ */}
             <View className="justify-center w-full items-center gap-3 self-center mt-4">
-              {actionButton && (
-                <>
-                  {Array.isArray(actionButton) ? (
-                    // Accept + Decline buttons
-                    <View className="flex-row gap-3 w-full px-5">
-                      {actionButton.map((btn, index) => (
-                        <AppButton
-                          key={index}
-                          borderRadius={50}
-                          text={btn.label}
-                          color={index === 0 ? "orange" : "#FF5C5C"}
-                          textColor={index === 0 ? "#fff" : "#FF5C5C"}
-                          variant={index === 0 ? "fill" : "outline"}
-                          icon={
-                            btn.loading && (
-                              <ActivityIndicator
-                                color={index === 0 ? "#fff" : "orange"}
-                              />
-                            )
-                          }
-                          width={"48%"}
-                          onPress={btn.onPress}
-                          disabled={btn.loading}
-                        />
-                      ))}
-                    </View>
-                  ) : (
-                    // Single action button
+              {smartButton ? (
+                <View
+                  className={`w-full items-center ${
+                    smartButton.primary && smartButton.secondary
+                      ? "flex-row justify-between"
+                      : "gap-3"
+                  }`}
+                >
+                  {/* Primary Button */}
+                  {smartButton.primary && (
                     <AppButton
                       borderRadius={50}
-                      text={actionButton.label}
+                      text={smartButton.primary.text}
                       variant="fill"
-                      backgroundColor={
-                        actionButton.disabled ||
-                        data?.delivery_status === "COMPLETED"
+                      color={
+                        smartButton.primary.disabled
                           ? "rgba(0,0,0,0.3)"
-                          : "orange"
+                          : smartButton.primary.color
                       }
+                      textColor={smartButton.primary.textColor}
                       icon={
-                        actionButton.loading && (
-                          <ActivityIndicator color="#fff" />
+                        smartButton.isPrimaryLoading ? (
+                          <ActivityIndicator
+                            color={smartButton.primary.textColor || "#fff"}
+                          />
+                        ) : (
+                          smartButton.primary.icon
                         )
                       }
-                      width={"90%"}
-                      onPress={actionButton.onPress}
-                      disabled={actionButton.disabled || actionButton.loading}
+                      width={
+                        smartButton.primary && smartButton.secondary
+                          ? "48%"
+                          : "100%"
+                      }
+                      onPress={() =>
+                        smartButton.handleAction(smartButton.primary!)
+                      }
+                      disabled={
+                        smartButton.primary.disabled ||
+                        smartButton.isPrimaryLoading
+                      }
                     />
                   )}
-                </>
-              )}
+
+                  {/* Secondary Button */}
+                  {smartButton.secondary && (
+                    <AppButton
+                      borderRadius={50}
+                      text={smartButton.secondary.text}
+                      variant={smartButton.secondary.variant || "outline"}
+                      backgroundColor="transparent"
+                      textColor={smartButton.secondary.color}
+                      color={smartButton.secondary.color}
+                      icon={
+                        smartButton.isSecondaryLoading ? (
+                          <ActivityIndicator
+                            color={smartButton.secondary.color}
+                          />
+                        ) : (
+                          smartButton.secondary.icon
+                        )
+                      }
+                      width={
+                        smartButton.primary && smartButton.secondary
+                          ? "48%"
+                          : "100%"
+                      }
+                      onPress={() =>
+                        smartButton.handleAction(smartButton.secondary!)
+                      }
+                      disabled={
+                        smartButton.secondary.disabled ||
+                        smartButton.isSecondaryLoading
+                      }
+                    />
+                  )}
+                </View>
+              ) : null}
             </View>
 
             {/* Additional Action Buttons */}
             <View className="flex-row w-[90%] self-center justify-between mt-4 mb-8 gap-2">
-              {/* Review Button - Hide for package deliveries */}
-              {data?.delivery_status === "COMPLETED" &&
-                (data?.rider_id !== user?.id ||
-                  data?.dispatch_id !== user?.id) && (
+              {data?.rider_id !== user?.id && (
+                <AppButton
+                  text="Review"
+                  borderRadius={50}
+                  color="orange"
+                  width="32%"
+                  onPress={showReview}
+                  disabled={data?.delivery_status !== "COMPLETED"}
+                  variant={
+                    data?.delivery_status !== "COMPLETED" ? "outline" : "fill"
+                  }
+                />
+              )}
+
+              <AppButton
+                text="Dispute"
+                color={"orange"}
+                borderRadius={50}
+                width="32%"
+                onPress={() => {
+                  router.push({
+                    pathname: "/report/[id]",
+                    params: {
+                      id: id as string,
+                      orderType: "DELIVERY",
+                      respondentId: data?.rider_id,
+                    },
+                  });
+                }}
+                disabled={
+                  !(
+                    data?.delivery_status === "COMPLETED" ||
+                    data?.delivery_status === "DELIVERED"
+                  )
+                }
+                variant={
+                  !(
+                    data?.delivery_status === "COMPLETED" ||
+                    data?.delivery_status === "DELIVERED"
+                  )
+                    ? "outline"
+                    : "fill"
+                }
+              />
+
+              {user?.user_metadata?.user_type !== "RIDER" &&
+                user?.user_metadata?.user_type !== "DISPATCH" && (
                   <AppButton
-                    text="Review"
+                    text="Receipt"
+                    color={"orange"}
                     borderRadius={50}
-                    color={"orange-500"}
-                    width="32%"
-                    onPress={showReview}
+                    variant="outline"
+                    width={"32%"}
+                    onPress={() => {
+                      router.push({
+                        pathname: "/receipt/[id]",
+                        params: { id: id as string },
+                      });
+                    }}
                   />
                 )}
-
-              {/* Report Button - Show for all delivery types */}
-              {(data?.delivery_status === "COMPLETED" ||
-                data?.delivery_status === "DELIVERED") && (
-                <AppButton
-                  text="Dispute"
-                  color={"orange"}
-                  borderRadius={50}
-                  width="32%"
-                  onPress={() => {
-                    router.push({
-                      pathname: "/report/[id]",
-                      params: { id: id as string },
-                    });
-                  }}
-                />
-              )}
-
-              {user?.user_metadata?.user_type === "RIDER" ||
-              user?.user_metadata?.user_type === "DISPATCH" ? (
-                ""
-              ) : (
-                <AppButton
-                  text="Receipt"
-                  color={"orange"}
-                  borderRadius={50}
-                  variant="outline"
-                  disabled={
-                    data?.rider_id === user?.id ||
-                    data?.dispatch_id === user?.id
-                      ? true
-                      : false
-                  }
-                  width={"32%"}
-                  onPress={() => {
-                    router.push({
-                      pathname: "/receipt/[id]",
-                      params: { id: id as string },
-                    });
-                  }}
-                />
-              )}
             </View>
           </View>
         </DeliveryWrapper>
@@ -886,6 +698,9 @@ const ItemDetails = () => {
         </View>
       )}
 
+      {/* ============================================================ */}
+      {/* CANCELLATION BOTTOM SHEET */}
+      {/* ============================================================ */}
       <BottomSheet
         index={-1}
         snapPoints={["60%"]}
@@ -899,10 +714,7 @@ const ItemDetails = () => {
           borderTopRightRadius: 40,
           backgroundColor: BG_COLOR,
           shadowColor: "orange",
-          shadowOffset: {
-            width: 0,
-            height: -4,
-          },
+          shadowOffset: { width: 0, height: -4 },
           shadowOpacity: 0.5,
           shadowRadius: 20,
           elevation: 20,
@@ -927,9 +739,9 @@ const ItemDetails = () => {
               render={({ field: { onChange, value } }) => (
                 <View className="w-[90%] self-center">
                   <AppTextInput
-                    value={data?.id || value}
+                    value={value}
                     onChange={onChange}
-                    placeholder="Please describe the issue in detail..."
+                    placeholder="Please describe the reason for cancellation..."
                     className="bg-input"
                     multiline
                     style={{
@@ -946,18 +758,26 @@ const ItemDetails = () => {
           </View>
 
           <AppButton
-            text="Cancel Booking"
+            text="Cancel Delivery"
             width={"90%"}
             onPress={openAlert}
             color="primary"
+            icon={
+              updateDeliveryMutation.isPending && (
+                <ActivityIndicator color="#fff" />
+              )
+            }
+            disabled={updateDeliveryMutation.isPending}
           />
         </BottomSheetView>
       </BottomSheet>
+
       <RiderProfile
         ref={riderProfileRef}
         riderId={data?.rider_id!}
         showButton={false}
       />
+
       <Modal
         visible={modalVisible}
         animationType="slide"
@@ -999,5 +819,6 @@ const ItemDetails = () => {
     </>
   );
 };
+
 const IMAGE_HEIGHT = Dimensions.get("window").height * 0.4;
 export default ItemDetails;

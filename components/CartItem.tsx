@@ -32,7 +32,7 @@ const Item = ({ item }: CartItemProps) => {
             </Text>
             {item.selected_size && (
               <Text className="text-gray-400 font-poppins text-xs">
-                Size: {item.selected_size}
+                Size: {item.selected_size.size}
               </Text>
             )}
             {item.selected_side && (

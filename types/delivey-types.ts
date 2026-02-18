@@ -7,7 +7,8 @@ export type DeliveryOrderStatus =
   | "IN_TRANSIT"
   | "DELIVERED"
   | "COMPLETED"
-  | "CANCELLED";
+  | "CANCELLED"
+  | "DECLINED";
 
 export type PaymentStatus = "PENDING" | "PAID" | "FAILED" | "REFUNDED" | null;
 export type EscrowStatus = "PENDING" | "HELD" | "RELEASED" | "REFUNDED" | null;
@@ -37,6 +38,7 @@ export interface DeliveryOrder {
   additional_info: string | null;
   delivery_fee: number;
   total_price: number | null;
+  requires_return: boolean;
   amount_due_dispatch: number;
   rider_id: string | null;
   dispatch_id: string | null;

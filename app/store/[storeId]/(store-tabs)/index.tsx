@@ -5,7 +5,7 @@ import FoodCard from "@/components/FoodCard";
 import ItemCustomizationSheet from "@/components/ItemCustomizationSheet";
 import { useCartStore } from "@/store/cartStore";
 import { useUserStore } from "@/store/userStore";
-import { RestaurantMenuItemResponse } from "@/types/item-types";
+import { RestaurantMenuItemResponse, SizeOption } from "@/types/item-types";
 import { BottomSheetModal } from "@gorhom/bottom-sheet";
 import { FlashList } from "@shopify/flash-list";
 import { useQuery } from "@tanstack/react-query";
@@ -96,14 +96,17 @@ const FoodMenu = () => {
   const handleCustomAdd = useCallback(
     (
       item: RestaurantMenuItemResponse,
-      selectedSize: string,
+      selectedSize: SizeOption | null,
       selectedSide: string,
     ) => {
+      // Use the selected size's price if available, otherwise use base price
+      const finalPrice = selectedSize?.price ?? Number(item.price);
+
       addItem(storeId as string, item.id, 1, {
         name: item.name,
-        price: Number(item.price),
+        price: finalPrice,
         image: item.images[0] || "",
-        selected_size: selectedSize,
+        selected_size: selectedSize || undefined,
         selected_side: selectedSide,
       });
 

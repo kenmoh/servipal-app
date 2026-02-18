@@ -1,11 +1,17 @@
 type RestaurantItemType = "FOOD" | "DRINK";
+
+export interface SizeOption {
+  size: string;
+  price: number;
+}
+
 export interface CreateRestaurantMenuItem {
   // vendor_id is derived from Supabase auth session on the server side
   vendor_id?: string;
   name: string;
   description?: string;
   price: number;
-  sizes?: string[];
+  sizes?: SizeOption[];
   sides?: string[];
   images: string[];
   restaurant_item_type: RestaurantItemType;
@@ -69,5 +75,5 @@ export interface OrderCreate {
 
 export interface RestaurantOrderCreate extends OrderCreate {
   sides?: string;
-  sizes?: string;
+  sizes?: SizeOption;
 }

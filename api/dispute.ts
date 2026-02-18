@@ -23,7 +23,7 @@ export const createDispute = async (
       throw new Error("User not authenticated");
     }
 
-    console.log("📋 Creating dispute...", request);
+    console.log("📋 Creating dispute...", request.order_type);
 
     const { data, error } = await supabase.rpc("create_dispute", {
       p_order_id: request.order_id,
