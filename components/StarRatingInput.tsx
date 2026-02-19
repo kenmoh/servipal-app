@@ -18,7 +18,7 @@ const StarRatingInput = ({
   return (
     <View className="mb-2">
       {label && (
-        <Text className="text-sm text-primary font-poppins-bold mb-2">
+        <Text className="text-sm text-muted font-poppins-medium mb-2">
           {label}
         </Text>
       )}

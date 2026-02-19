@@ -228,7 +228,7 @@ const RidersScreen = () => {
     isFetching,
   } = useQuery({
     queryKey: ["riders", user?.id],
-    queryFn: async () => getNearbyRiders(user?.id!),
+    queryFn: async () => getNearbyRiders(),
     enabled: !!user?.id,
     staleTime: 1000 * 30, // 30 seconds
     gcTime: 1000 * 60 * 5, // 5 minutes
@@ -290,6 +290,8 @@ const RidersScreen = () => {
   if (error) {
     return <RefreshButton onPress={refetch} label="Error loading riders" />;
   }
+
+  console.log(riders);
   return (
     <View className="bg-background flex-1 p-2 gap-2">
       {!order && isCheckingOrder && (
@@ -304,7 +306,7 @@ const RidersScreen = () => {
 
       <FlatList
         ref={listRef}
-        data={riders || []}
+        data={riders?.riders || []}
         keyExtractor={keyExtractor}
         renderItem={renderItem}
         ItemSeparatorComponent={renderSeparator}
@@ -379,7 +381,7 @@ const RidersScreen = () => {
                 </View>
                 <View className="items-center flex-1">
                   <Text className="text-md font-poppins-bold text-primary">
-                    {selectedRider?.average_rating}
+                    {selectedRider?.reviews.stats.average_rating}
                   </Text>
                   <Text className="font-poppins-light text-muted text-sm">
                     Rating

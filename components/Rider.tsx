@@ -4,7 +4,7 @@ import { RiderResponse } from "@/types/user-types";
 import Feather from "@expo/vector-icons/Feather";
 import { Image } from "expo-image";
 import { memo } from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import HDivider from "./HDivider";
 
 const Rider = memo(
@@ -15,13 +15,14 @@ const Rider = memo(
       user?.user_metadata.user_type === "RIDER" ||
       user?.user_metadata.user_type === "DISPATCH";
 
+    console.log(rider.reviews);
+
     return (
       <>
-        <TouchableOpacity
+        <Pressable
           disabled={isDisabled}
-          activeOpacity={0.6}
           onPress={onPress}
-          className="overflow-hidden  bg-input rounded-2xl h-[138px] border border-collapse-transparent border-border-subtle p-4 mb-2 shadow-sm w-[95%] self-center my-1"
+          className="overflow-hidden active:opacity-80  bg-input rounded-2xl h-[138px] border border-collapse-transparent border-border-subtle p-4 mb-2 shadow-sm w-[95%] self-center my-1"
         >
           <View className="flex-row gap-2">
             <View className="w-16 h-16 rounded-full overflow-hidden">
@@ -58,7 +59,7 @@ const Rider = memo(
                 </View>
                 <View>
                   <Text className="text-center font-poppins text-xs text-muted">
-                    {rider.review_count}
+                    {rider.reviews.stats.total_reviews}
                   </Text>
                   <Text className="text-center font-poppins text-xs text-muted">
                     Reviews
@@ -83,17 +84,17 @@ const Rider = memo(
               </View>
             </View>
           </View>
-          {rider.average_rating > 1 && (
+          {rider.reviews.stats.average_rating > 1 && (
             <View className="absolute w-16 h-10 bg-background justify-center right-0 top-0 rounded-2xl items-center ">
               <View className="flex-row gap-1 items-center">
                 <Feather name="star" size={12} color="orange" />
                 <Text className="text-center font-poppins-bold text-sm text-muted">
-                  {rider.average_rating}
+                  {rider.reviews.stats.average_rating}
                 </Text>
               </View>
             </View>
           )}
-        </TouchableOpacity>
+        </Pressable>
       </>
     );
   },

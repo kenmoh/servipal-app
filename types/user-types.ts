@@ -1,5 +1,6 @@
 // @/types/user-types.ts
 import { User } from "@supabase/supabase-js";
+import { Review, UserReview } from "./review-types";
 
 // ============================================================================
 // REGULAR EXPRESSIONS
@@ -71,11 +72,11 @@ export interface UserProfile {
   can_pickup_and_dropoff?: boolean;
   business_registration_number?: string;
   pickup_and_delivery_charge?: number;
-  review_count?: number;
+  review: Review;
+
   metadata: {
     [key: string]: any;
   };
-  average_rating?: number;
   account_status?: AccountStatus;
   is_verified?: boolean;
   is_online?: boolean;
@@ -137,17 +138,10 @@ export interface RiderResponse {
   business_address: string;
   total_distance_travelled: string;
   total_deliveries: number;
-  average_rating: number;
-  review_count: number;
   dispatch_id: string;
-  dispatch_business_name: string;
-  rider_average_rating: number;
-  dispatch_average_rating: number;
-  dispatch_total_reviews: number;
-  dispatch_rider_count: number;
   distance_km: number;
-  daily_delivery_count: number;
-  total_delivery_count: number;
+  dispatch_business_name: string;
+  reviews: UserReview;
 }
 
 export interface CreateRiderData {
@@ -156,6 +150,20 @@ export interface CreateRiderData {
   full_name: string;
   phone: string;
   bike_number: string;
+}
+
+export interface NearbyRidersResponse {
+  riders: RiderResponse[];
+  pagination: {
+    page_size: number;
+    page_offset: number;
+    total_count: number;
+    has_more: boolean;
+  };
+  search_params: {
+    max_distance_km: number;
+    user_location: string;
+  };
 }
 
 export interface UpdateRiderData {

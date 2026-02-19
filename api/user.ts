@@ -1,6 +1,7 @@
 import {
   CreateRiderData,
   LocationCoordinates,
+  NearbyRidersResponse,
   RiderResponse,
   UpdateLocationResponse,
   UpdateRiderData,
@@ -131,12 +132,11 @@ export const fetchRider = async (riderId: string): Promise<RiderResponse> => {
       throw new Error("User not authenticated");
     }
 
-    // Fetch profile from profiles table
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", riderId)
-      .single();
+    // Fetch rider using rpc
+    const { data, error } = await await supabase.rpc("get_rider_with_reviews", {
+      rider_id: riderId,
+      review_limit: 25,
+    });
 
     if (error) {
       throw new Error(error.message || "Failed to fetch profile");
@@ -151,6 +151,39 @@ export const fetchRider = async (riderId: string): Promise<RiderResponse> => {
     throw error;
   }
 };
+
+// export const fetchRider = async (riderId: string): Promise<RiderResponse> => {
+//   try {
+//     // Get current session
+//     const {
+//       data: { session },
+//       error: sessionError,
+//     } = await supabase.auth.getSession();
+
+//     if (sessionError || !session) {
+//       throw new Error("User not authenticated");
+//     }
+
+//     // Fetch profile from profiles table
+//     const { data, error } = await supabase
+//       .from("profiles")
+//       .select("*")
+//       .eq("id", riderId)
+//       .single();
+
+//     if (error) {
+//       throw new Error(error.message || "Failed to fetch profile");
+//     }
+
+//     if (!data) {
+//       throw new Error("Profile not found");
+//     }
+
+//     return data as RiderResponse;
+//   } catch (error) {
+//     throw error;
+//   }
+// };
 
 export const getCurrentUserProfile = async (): Promise<UserProfile> => {
   try {
@@ -530,9 +563,16 @@ export const getUserLocation =
     }
   };
 
+interface GetNearbyRidersOptions {
+  maxDistanceKm?: number;
+  page?: number;
+  pageSize?: number;
+}
+
 export const getNearbyRiders = async (
-  userId: string,
-): Promise<RiderResponse[]> => {
+  options: GetNearbyRidersOptions = {},
+): Promise<NearbyRidersResponse> => {
+  const { maxDistanceKm = 100, page = 0, pageSize = 20 } = options;
   try {
     const {
       data: { session },
@@ -543,19 +583,52 @@ export const getNearbyRiders = async (
       throw new Error("User not authenticated");
     }
     // Call RPC function
-    const { data, error } = await supabase.rpc("get_nearby_riders", {
-      p_user_id: userId,
+    const { data, error } = await supabase.rpc("get_nearby_riders_new", {
+      max_distance_km: maxDistanceKm,
+      page_size: pageSize,
+      page_offset: page * pageSize,
     });
 
     if (error) {
+      console.log(error);
       throw new Error(error.message || "Failed to fetch nearby riders");
     }
 
-    return data as RiderResponse[];
+    return data as NearbyRidersResponse;
   } catch (error) {
     throw error;
   }
 };
+
+/*
+LEGACY
+*/
+// export const getNearbyRiders = async (
+//   userId: string,
+// ): Promise<RiderResponse[]> => {
+//   try {
+//     const {
+//       data: { session },
+//       error: sessionError,
+//     } = await supabase.auth.getSession();
+
+//     if (sessionError || !session) {
+//       throw new Error("User not authenticated");
+//     }
+//     // Call RPC function
+//     const { data, error } = await supabase.rpc("get_nearby_riders", {
+//       p_user_id: userId,
+//     });
+
+//     if (error) {
+//       throw new Error(error.message || "Failed to fetch nearby riders");
+//     }
+
+//     return data as RiderResponse[];
+//   } catch (error) {
+//     throw error;
+//   }
+// };
 
 export const getRiderProfile = async (
   riderId: string,

@@ -58,6 +58,19 @@ export interface ReportStatusUpdate {
   issue_status: IssueStatus;
 }
 
+export interface ReviewSummaryStats {
+  average_rating: number;
+  total_reviews: number;
+  rating_distribution: Record<"1" | "2" | "3" | "4" | "5", number>;
+}
+
+export interface Reviewer {
+  full_name?: string;
+  business_name?: string;
+  store_name?: string;
+  profile_image_url: string;
+}
+
 // Supabase Review Types
 
 export interface Review {
@@ -66,46 +79,25 @@ export interface Review {
   order_id?: string;
   order_type?: string;
   item_id?: string;
-  item_type?: string; // e.g., 'food', 'product', 'laundry'
   reviewee_id?: string;
   dispatch_id?: string;
   rating: number;
-  review_type: string; // 'order', 'product', 'rider'
   comment: string;
+  reviewer?: Reviewer;
   created_at: string;
-  updated_at?: string;
-  reviewee_type?: string;
+}
 
-  // Joined fields
-  reviewer?: {
-    full_name: string;
-    business_name?: string;
-    store_name?: string;
-    profile_image_url: string;
-  };
+export interface UserReview {
+  stats: ReviewSummaryStats;
+  reviews: Review[];
 }
 
 export interface ReviewInsert {
   order_id?: string;
-  order_type?: string;
+  order_type?: "DELIVERY" | "FOOD" | "LAUNDRY" | "PRODUCT";
   item_id?: string;
-  item_type?: string;
   reviewee_id?: string;
   dispatch_id?: string;
   rating: number;
-  review_type: string;
   comment: string;
-  reviewee_type?: string;
-}
-
-export interface ReviewSummaryStats {
-  average_rating: number;
-  total_reviews: number;
-  rating_distribution: {
-    1: number;
-    2: number;
-    3: number;
-    4: number;
-    5: number;
-  };
 }

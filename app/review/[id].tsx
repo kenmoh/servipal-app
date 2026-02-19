@@ -1,4 +1,5 @@
 import { ReviewsService } from "@/api/review";
+import HDivider from "@/components/HDivider";
 import StarRatingInput from "@/components/StarRatingInput";
 import { useToast } from "@/components/ToastProvider";
 import { AppButton } from "@/components/ui/app-button";
@@ -7,7 +8,7 @@ import { useUserStore } from "@/store/userStore";
 import { ReviewInsert } from "@/types/review-types";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { router, useLocalSearchParams } from "expo-router";
+import { router, Stack, useLocalSearchParams } from "expo-router";
 import React from "react";
 import { Controller, useForm } from "react-hook-form";
 import {
@@ -20,11 +21,6 @@ import {
 import { z } from "zod";
 
 const reviewSchema = z.object({
-  orderId: z.string().optional(),
-  itemId: z.string().optional(),
-  dispatchId: z.string().optional(),
-  revieweeId: z.string().min(1, "Reviewee ID is required"),
-  reviewType: z.string().min(1, "Please select review type"),
   rating: z
     .number()
     .min(1, "Please select a rating")
@@ -46,8 +42,14 @@ const RATINGS = [
 ];
 
 const ReviewPage = () => {
-  const { revieweeId, orderId, dispatchId, itemId, reviewType } =
-    useLocalSearchParams();
+  const { revieweeId, id, dispatchId, itemId, orderType } =
+    useLocalSearchParams<{
+      revieweeId: string;
+      id: string;
+      dispatchId: string;
+      itemId: string;
+      orderType: "DELIVERY" | "FOOD" | "LAUNDRY" | "PRODUCT";
+    }>();
   const queryClient = useQueryClient();
   const { user } = useUserStore();
   const theme = useColorScheme();
@@ -61,12 +63,7 @@ const ReviewPage = () => {
     resolver: zodResolver(reviewSchema),
     mode: "onChange",
     defaultValues: {
-      revieweeId: revieweeId as string,
-      orderId: orderId as string,
-      itemId: itemId as string,
-      reviewType: reviewType as string,
-      dispatchId: dispatchId as string,
-      rating: 5,
+      rating: 3,
       description: "",
     },
   });
@@ -88,21 +85,29 @@ const ReviewPage = () => {
 
   const onSubmit = (data: ReviewFormData) => {
     const reviewData: ReviewInsert = {
-      order_id: data.orderId || undefined,
-      item_id: data.itemId || undefined,
-      reviewee_id: data.revieweeId,
-      dispatch_id: data.dispatchId || undefined,
+      order_id: id || undefined,
+      item_id: itemId || undefined,
+      reviewee_id: revieweeId,
+      dispatch_id: dispatchId || undefined,
       rating: data.rating,
       comment: data.description,
-      review_type: data.reviewType,
+      order_type: orderType,
     };
+    console.log(reviewData);
     mutate(reviewData);
   };
 
   return (
-    <ScrollView className="bg-background flex-1 p-5">
-      <View className="gap-6">
-        <View className="w-full mb-4">
+    <ScrollView className="bg-background flex-1">
+      <Stack.Screen
+        options={{
+          headerTitle: "Write a Review",
+          headerTintColor: theme === "dark" ? "white" : "black",
+        }}
+      />
+      <HDivider />
+      <View className="gap-6 px-5 mt-4">
+        <View className="w-full my-4">
           <Controller
             control={control}
             name="rating"
@@ -125,12 +130,11 @@ const ReviewPage = () => {
             control={control}
             name="description"
             render={({ field: { onChange, value } }) => (
-              <View className="gap-2 w-[95%] self-center ">
-                <Text className="text-sm text-primary font-poppins-bold">
-                  Comment
-                </Text>
+              <View className="gap-2 self-center ">
                 <AppTextInput
+                  label="Comment"
                   multiline
+                  width="100%"
                   placeholder="Write your review..."
                   value={value}
                   onChangeText={onChange}
