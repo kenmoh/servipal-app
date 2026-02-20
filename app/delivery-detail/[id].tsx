@@ -684,7 +684,7 @@ const ItemDetails = () => {
                     width={"32%"}
                     onPress={() => {
                       router.push({
-                        pathname: "/receipt/[id]",
+                        pathname: "/receipt/delivery-receipt/[id]",
                         params: { id: id as string },
                       });
                     }}

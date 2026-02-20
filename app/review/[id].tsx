@@ -93,7 +93,7 @@ const ReviewPage = () => {
       comment: data.description,
       order_type: orderType,
     };
-    console.log(reviewData);
+
     mutate(reviewData);
   };
 
@@ -101,7 +101,7 @@ const ReviewPage = () => {
     <ScrollView className="bg-background flex-1">
       <Stack.Screen
         options={{
-          headerTitle: "Write a Review",
+          headerTitle: "Leave a Review",
           headerTintColor: theme === "dark" ? "white" : "black",
         }}
       />

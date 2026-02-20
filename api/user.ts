@@ -2,6 +2,7 @@ import {
   CreateRiderData,
   LocationCoordinates,
   NearbyRidersResponse,
+  NearbyVendorsResponse,
   RiderResponse,
   UpdateLocationResponse,
   UpdateRiderData,
@@ -24,6 +25,22 @@ export interface ImageData {
   name: string;
 }
 
+export async function fetchProfileWithReviews(
+  userId: string,
+  reviewLimit: number = 50,
+): Promise<UserProfile> {
+  const { data, error } = await supabase.rpc("get_user_profile_with_reviews", {
+    target_user_id: userId,
+    review_limit: reviewLimit,
+  });
+
+  if (error) {
+    console.error("Failed to fetch user profile:", error);
+  }
+
+  return data as UserProfile;
+}
+
 export const fetchProfile = async (userId: string): Promise<UserProfile> => {
   const { data, error } = await supabase
     .from("profiles")
@@ -43,8 +60,6 @@ export const uploadImage = async (
   fieldType: ImageFieldType,
 ): Promise<{ publicUrl: string }> => {
   try {
-    console.log(`🔍 Starting ${fieldType} upload process...`);
-
     // Check session
     const {
       data: { session },
@@ -62,10 +77,7 @@ export const uploadImage = async (
     const fileName = fieldType === "profile_image_url" ? "profile" : "backdrop";
     const filePath = `${userId}/${fileName}.${fileExtension}`;
 
-    console.log("📁 Upload path:", filePath);
-
     // Fetch image as ArrayBuffer
-    console.log("📥 Fetching image from URI:", imageData.uri);
     const response = await fetch(imageData.uri);
 
     if (!response.ok) {
@@ -86,7 +98,6 @@ export const uploadImage = async (
       });
 
     if (uploadError) {
-      console.error("❌ Supabase upload error:", uploadError);
       throw new Error(uploadError.message || "Failed to upload image");
     }
 
@@ -104,10 +115,9 @@ export const uploadImage = async (
       .eq("id", userId);
 
     if (updateError) {
-      console.warn(`⚠️ Failed to update ${fieldType}:`, updateError);
-      // Non-fatal - image is still uploaded
+      console.warn(`Failed to update ${fieldType}:`, updateError);
     } else {
-      console.log(`✅ ${fieldType} updated successfully`);
+      console.log(`${fieldType} updated successfully`);
     }
 
     return { publicUrl };
@@ -151,39 +161,6 @@ export const fetchRider = async (riderId: string): Promise<RiderResponse> => {
     throw error;
   }
 };
-
-// export const fetchRider = async (riderId: string): Promise<RiderResponse> => {
-//   try {
-//     // Get current session
-//     const {
-//       data: { session },
-//       error: sessionError,
-//     } = await supabase.auth.getSession();
-
-//     if (sessionError || !session) {
-//       throw new Error("User not authenticated");
-//     }
-
-//     // Fetch profile from profiles table
-//     const { data, error } = await supabase
-//       .from("profiles")
-//       .select("*")
-//       .eq("id", riderId)
-//       .single();
-
-//     if (error) {
-//       throw new Error(error.message || "Failed to fetch profile");
-//     }
-
-//     if (!data) {
-//       throw new Error("Profile not found");
-//     }
-
-//     return data as RiderResponse;
-//   } catch (error) {
-//     throw error;
-//   }
-// };
 
 export const getCurrentUserProfile = async (): Promise<UserProfile> => {
   try {
@@ -291,6 +268,66 @@ export const fetchDispatchRiders = async (): Promise<RiderResponse[]> => {
   }
 };
 
+// vendors.ts
+
+interface GetNearbyVendorsOptions {
+  userType: "RESTAURANT_VENDOR" | "LAUNDRY_VENDOR";
+  maxDistanceKm?: number;
+  page?: number;
+  pageSize?: number;
+  minRating?: number;
+  searchQuery?: string;
+}
+
+export async function getNearbyVendors(
+  options: GetNearbyVendorsOptions,
+): Promise<NearbyVendorsResponse | null> {
+  const {
+    userType,
+    maxDistanceKm = 100,
+    page = 0,
+    pageSize = 20,
+    minRating,
+    searchQuery,
+  } = options;
+
+  const { data, error } = await supabase.rpc("get_nearby_vendors", {
+    p_user_type: userType,
+    max_distance_km: maxDistanceKm,
+    page_size: pageSize,
+    page_offset: page * pageSize,
+    min_rating: minRating ?? null,
+    p_search_query: searchQuery ?? null,
+  });
+
+  if (error) {
+    console.error("Failed to fetch nearby vendors:", error);
+    return null;
+  }
+
+  return data as NearbyVendorsResponse;
+}
+
+export const searchNearbyRestaurants = (
+  query: string,
+  options?: Omit<GetNearbyVendorsOptions, "userType" | "searchQuery">,
+) =>
+  getNearbyVendors({
+    ...options,
+    userType: "RESTAURANT_VENDOR",
+    searchQuery: query,
+  });
+
+export const searchNearbyLaundry = (
+  query: string,
+  options?: Omit<GetNearbyVendorsOptions, "userType" | "searchQuery">,
+) =>
+  getNearbyVendors({
+    ...options,
+    userType: "LAUNDRY_VENDOR",
+    searchQuery: query,
+  });
+
 export const fetchServiceProviders = async (
   userId: string,
   userType: string,
@@ -339,7 +376,6 @@ export const fetchUserWallet = async (
       p_user_id: userId,
     });
 
-    console.log("Wallet Error:", error);
     if (error) {
       throw new Error(error.message || "Failed to fetch user wallet");
     }
@@ -464,7 +500,6 @@ export const updateRiderByDispatcher = async (
       .single();
 
     if (error) {
-      console.log("Error", error);
       throw new Error(error.message || "Failed to update rider");
     }
 
@@ -590,7 +625,6 @@ export const getNearbyRiders = async (
     });
 
     if (error) {
-      console.log(error);
       throw new Error(error.message || "Failed to fetch nearby riders");
     }
 

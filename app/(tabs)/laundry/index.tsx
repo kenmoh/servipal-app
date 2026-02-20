@@ -3,7 +3,7 @@ import { FlashList } from "@shopify/flash-list";
 import React, { useCallback, useEffect, useState } from "react";
 import { StyleSheet, Text, useColorScheme, View } from "react-native";
 
-import { fetchServiceProviders } from "@/api/user";
+import { searchNearbyLaundry } from "@/api/user";
 import LoadingIndicator from "@/components/LoadingIndicator";
 import StoreCard from "@/components/StoreCard";
 import { AppTextInput } from "@/components/ui/app-text-input";
@@ -29,10 +29,11 @@ const LaundryScreen = () => {
 
   const { data, isFetching, error, refetch } = useQuery({
     queryKey: ["laundry", searchQuery],
-    queryFn: () =>
-      fetchServiceProviders(user?.id!, "LAUNDRY_VENDOR", searchQuery),
+    queryFn: () => searchNearbyLaundry(searchQuery),
     enabled: !!user?.id,
   });
+
+  console.log("data", data);
 
   const handleRefresh = useCallback(() => {
     refetch();
@@ -81,7 +82,7 @@ const LaundryScreen = () => {
       <HDivider />
 
       <FlashList
-        data={data || []}
+        data={data?.vendors || []}
         ListHeaderComponent={() => (
           <>
             <View className="px-4 py-2">

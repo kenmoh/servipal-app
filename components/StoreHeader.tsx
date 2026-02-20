@@ -5,9 +5,9 @@ import Fontisto from "@expo/vector-icons/Fontisto";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router } from "expo-router";
 import React from "react";
-import { Image, Text, TouchableOpacity, View } from "react-native";
+import { Image, Pressable, Text, View } from "react-native";
 
-import { fetchProfile } from "@/api/user";
+import { fetchProfileWithReviews } from "@/api/user";
 import BackButton from "@/components/BackButton";
 import LoadingIndicator from "@/components/LoadingIndicator";
 import { useUserStore } from "@/store/userStore";
@@ -26,7 +26,7 @@ const StoreHeader = ({ storeId }: StoreHeaderProps) => {
 
   const { data: vendorProfile, isLoading } = useQuery({
     queryKey: ["vendorProfile", storeId],
-    queryFn: () => fetchProfile(storeId!),
+    queryFn: () => fetchProfileWithReviews(storeId!),
     enabled: !!storeId && !isOwnStore,
   });
 
@@ -86,24 +86,25 @@ const StoreHeader = ({ storeId }: StoreHeaderProps) => {
                 </Text>
               </View>
               <View className="flex-row justify-between items-center mt-2">
-                <TouchableOpacity
+                <Pressable
                   onPress={() =>
                     router.push({
-                      pathname: "/review/[id]",
+                      pathname: "/review/user-reviews/[id]",
                       params: { id: storeId },
                     })
                   }
-                  activeOpacity={0.7}
-                  className="flex-row items-center bg-gray-100 dark:bg-gray-800 px-3 py-1.5 rounded-full"
+                  className="flex-row active:opacity-80 items-center bg-gray-100 dark:bg-gray-800 px-3 py-1.5 rounded-full"
                 >
                   <View className="flex-row items-center gap-1.5 pr-2 border-r border-gray-300 dark:border-gray-600">
                     <Ionicons name="star" size={14} color="#FFB800" />
                     <Text className="text-primary font-poppins-bold text-sm">
-                      {Number(displayProfile?.average_rating).toFixed(1)}
+                      {Number(
+                        displayProfile?.reviews?.stats?.average_rating || 0,
+                      ).toFixed(1)}
                     </Text>
                   </View>
                   <Text className="text-secondary font-poppins text-xs ml-2">
-                    {displayProfile?.review_count || 0} reviews
+                    {displayProfile?.reviews?.stats?.total_reviews || 0} reviews
                   </Text>
                   <Ionicons
                     name="chevron-forward"
@@ -111,7 +112,7 @@ const StoreHeader = ({ storeId }: StoreHeaderProps) => {
                     color="gray"
                     className="ml-1"
                   />
-                </TouchableOpacity>
+                </Pressable>
 
                 {displayProfile?.can_pickup_and_dropoff && (
                   <Fontisto name="motorcycle" color={"orange"} size={20} />

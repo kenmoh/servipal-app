@@ -22,7 +22,7 @@ const StarRatingInput = ({
           {label}
         </Text>
       )}
-      <View className="flex-row gap-2">
+      <View className="flex-row gap-5">
         {Array.from({ length: maxStars }).map((_, index) => {
           const starValue = index + 1;
           return (
@@ -33,7 +33,7 @@ const StarRatingInput = ({
             >
               <FontAwesome
                 name={starValue <= rating ? "star" : "star-o"}
-                size={32}
+                size={18}
                 color={starValue <= rating ? "#FFB800" : "#D3D3D3"}
               />
             </TouchableOpacity>

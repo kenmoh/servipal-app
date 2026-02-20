@@ -9,6 +9,7 @@ import { AppTextInput } from "@/components/ui/app-text-input";
 import { states } from "@/constants/state";
 import { useUserStore } from "@/store/userStore";
 import { UserProfileUpdate } from "@/types/user-types";
+import Feather from "@expo/vector-icons/Feather";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { router, Stack } from "expo-router";
@@ -16,6 +17,7 @@ import React, { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import {
   ActivityIndicator,
+  Alert,
   Pressable,
   ScrollView,
   Text,
@@ -38,14 +40,14 @@ const profileUpdateSchema = z.object({
     ),
   state: z.string().optional().nullable(),
   bank_name: z.string().optional(),
-  bank_account_number: z.number().optional().nullable(),
+  bank_account_number: z.string().optional().nullable(),
   store_name: z.string().optional(),
   business_name: z.string().optional(),
   business_address: z.string().optional(),
   business_registration_number: z.string().optional(),
   opening_hours: z.string().optional(),
   closing_hours: z.string().optional(),
-  pickup_and_delivery_charge: z.number().optional().nullable(),
+  pickup_and_delivery_charge: z.string().optional().nullable(),
 });
 
 type ProfileUpdateFormData = z.infer<typeof profileUpdateSchema>;
@@ -73,14 +75,14 @@ const UpdateProfile = () => {
       phone_number: "",
       state: "",
       bank_name: "",
-      bank_account_number: 0,
+      bank_account_number: "",
       store_name: "",
       business_name: "",
       business_address: "",
       business_registration_number: "",
       opening_hours: "",
       closing_hours: "",
-      pickup_and_delivery_charge: 0,
+      pickup_and_delivery_charge: "",
     },
   });
 
@@ -96,9 +98,7 @@ const UpdateProfile = () => {
         phone_number: sanitizedPhone, // Critical fix
         state: profile?.state || "",
         bank_name: profile.bank_name || "",
-        bank_account_number: profile.bank_account_number
-          ? Number(profile.bank_account_number)
-          : undefined,
+
         store_name: profile.store_name || profile.business_name || "",
         business_name: profile.business_name || "",
         business_address: profile.business_address || "",
@@ -106,9 +106,9 @@ const UpdateProfile = () => {
           profile.business_registration_number || "",
         opening_hours: profile.opening_hour || "",
         closing_hours: profile.closing_hour || "",
-        pickup_and_delivery_charge: profile.pickup_and_delivery_charge
-          ? Number(profile.pickup_and_delivery_charge)
-          : undefined,
+        pickup_and_delivery_charge: profile?.pickup_and_delivery_charge
+          ? String(profile.pickup_and_delivery_charge)
+          : "",
       });
     }
   }, [profile, reset]);
@@ -181,7 +181,7 @@ const UpdateProfile = () => {
       updateData.opening_hour = data.opening_hours;
       updateData.closing_hour = data.closing_hours;
       updateData.pickup_and_delivery_charge =
-        data.pickup_and_delivery_charge || undefined;
+        data.pickup_and_delivery_charge ?? undefined;
     }
 
     updateMutation.mutate(updateData);
@@ -418,15 +418,31 @@ const UpdateProfile = () => {
                 control={control}
                 name="pickup_and_delivery_charge"
                 render={({ field: { onChange, value } }) => (
-                  <AppTextInput
-                    label="Base Delivery Charge (₦)"
-                    value={value?.toString()}
-                    onChangeText={onChange}
-                    placeholder="0"
-                    keyboardType="numeric"
-                    errorMessage={errors.pickup_and_delivery_charge?.message}
-                    editable={!isPending}
-                  />
+                  <View>
+                    <View className="flex-row items-center gap-2 mb-1.5 ml-1">
+                      <Text className="text-muted font-poppins-medium text-sm">
+                        Delivery Charge (₦)
+                      </Text>
+                      <Pressable
+                        onPress={() =>
+                          Alert.alert(
+                            "Delivery Charge",
+                            "If you offer delivery, this is where you add your delivery charge. This amount will be added to the customer's total. Enable pickup/delivery to use this feature",
+                          )
+                        }
+                      >
+                        <Feather name="info" size={16} color="#64748b" />
+                      </Pressable>
+                    </View>
+                    <AppTextInput
+                      value={value?.toString()}
+                      onChangeText={onChange}
+                      placeholder="0"
+                      keyboardType="numeric"
+                      errorMessage={errors.pickup_and_delivery_charge?.message}
+                      editable={!isPending}
+                    />
+                  </View>
                 )}
               />
             </View>
@@ -460,11 +476,8 @@ const UpdateProfile = () => {
             render={({ field: { onChange, value } }) => (
               <AppTextInput
                 label="Account Number"
-                value={value?.toString() || ""}
-                onChangeText={(text) => {
-                  const parsed = text.trim() === "" ? undefined : Number(text);
-                  onChange(parsed);
-                }}
+                value={value || ""}
+                onChangeText={onChange}
                 placeholder="10-digit account number"
                 keyboardType="numeric"
                 errorMessage={errors.bank_account_number?.message}

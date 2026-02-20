@@ -49,14 +49,16 @@ const Rider = memo(
               <HDivider />
 
               <View className="flex-row items-center self-center gap-8 mt-2">
-                <View>
-                  <Text className="text-center font-poppins text-xs text-muted">
-                    {rider.total_deliveries}
-                  </Text>
-                  <Text className="text-center font-poppins text-xs text-muted">
-                    Trips
-                  </Text>
-                </View>
+                {rider?.total_deliveries && (
+                  <View>
+                    <Text className="text-center font-poppins text-xs text-muted">
+                      {rider.total_deliveries || 0}
+                    </Text>
+                    <Text className="text-center font-poppins text-xs text-muted">
+                      Trips
+                    </Text>
+                  </View>
+                )}
                 <View>
                   <Text className="text-center font-poppins text-xs text-muted">
                     {rider.reviews.stats.total_reviews}

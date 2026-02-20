@@ -3,7 +3,7 @@ import { FlashList } from "@shopify/flash-list";
 import React, { useCallback, useEffect, useState } from "react";
 import { StyleSheet, Text, useColorScheme, View } from "react-native";
 
-import { fetchServiceProviders } from "@/api/user";
+import { searchNearbyRestaurants } from "@/api/user";
 import LoadingIndicator from "@/components/LoadingIndicator";
 import StoreCard from "@/components/StoreCard";
 import { AppTextInput } from "@/components/ui/app-text-input";
@@ -29,8 +29,7 @@ const RestaurantScreen = () => {
 
   const { data, isFetching, error, refetch } = useQuery({
     queryKey: ["restaurants", searchQuery],
-    queryFn: () =>
-      fetchServiceProviders(user?.id!, "RESTAURANT_VENDOR", searchQuery),
+    queryFn: () => searchNearbyRestaurants(searchQuery),
     enabled: !!user?.id,
   });
 
@@ -81,7 +80,7 @@ const RestaurantScreen = () => {
       <HDivider />
 
       <FlashList
-        data={data || []}
+        data={data?.vendors || []}
         ListHeaderComponent={() => (
           <>
             <View className="px-4 py-2">

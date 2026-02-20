@@ -25,6 +25,7 @@ import Feather from "@expo/vector-icons/Feather";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
 import * as Sentry from "@sentry/react-native";
+import { FlashList } from "@shopify/flash-list";
 import { router, useLocalSearchParams } from "expo-router";
 import {
   ActivityIndicator,
@@ -272,8 +273,6 @@ const RidersScreen = () => {
     [handleRiderPress],
   );
 
-  const renderSeparator = useCallback(() => <HDivider />, []);
-
   const keyExtractor = useCallback(
     (item: RiderResponse) => item.id.toString(),
     [],
@@ -291,7 +290,6 @@ const RidersScreen = () => {
     return <RefreshButton onPress={refetch} label="Error loading riders" />;
   }
 
-  console.log(riders);
   return (
     <View className="bg-background flex-1 p-2 gap-2">
       {!order && isCheckingOrder && (
@@ -304,12 +302,11 @@ const RidersScreen = () => {
       )}
       <HDivider />
 
-      <FlatList
-        ref={listRef}
+      <FlashList
+        // ref={listRef}
         data={riders?.riders || []}
         keyExtractor={keyExtractor}
         renderItem={renderItem}
-        ItemSeparatorComponent={renderSeparator}
         refreshing={isFetching}
         onRefresh={handleRefresh}
         onLayout={handleLayoutComplete}
@@ -317,10 +314,6 @@ const RidersScreen = () => {
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
         removeClippedSubviews={true}
-        maxToRenderPerBatch={10}
-        windowSize={21}
-        initialNumToRender={10}
-        getItemLayout={getItemLayout}
       />
 
       <BottomSheet

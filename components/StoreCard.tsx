@@ -58,10 +58,10 @@ const StoreCard = ({
         />
 
         {/* Rating Badge */}
-        {Number(item?.average_rating) > 0 && (
+        {Number(item?.reviews?.stats.average_rating) > 0 && (
           <View style={styles.ratingBadge}>
             <Text className="text-primary font-poppins-bold">
-              {Number(item?.average_rating).toFixed(1)}
+              {Number(item?.reviews?.stats.average_rating).toFixed(1)}
             </Text>
             <AntDesign name="star" size={14} color={"orange"} />
           </View>
@@ -74,10 +74,10 @@ const StoreCard = ({
             className="self-start px-2 py-1"
           >
             <Text
-              className="text-[16px]"
+              className="text-[12px]"
               numberOfLines={1}
               style={{
-                fontFamily: "Poppins-Bold",
+                fontFamily: "Poppins-Medium",
                 color: theme === "dark" ? "#fff" : "#fff",
               }}
             >
@@ -87,7 +87,10 @@ const StoreCard = ({
 
           <View className="items-center flex-row gap-2">
             <Text className="text-sm text-white opacity-90" numberOfLines={1}>
-              {item?.business_address}
+              {item?.business_address} |
+            </Text>
+            <Text className="text-xs text-white opacity-90" numberOfLines={1}>
+              {item?.distance_km} km Away
             </Text>
           </View>
         </View>

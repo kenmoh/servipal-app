@@ -1,6 +1,6 @@
 // @/types/user-types.ts
 import { User } from "@supabase/supabase-js";
-import { Review, UserReview } from "./review-types";
+import { UserReview } from "./review-types";
 
 // ============================================================================
 // REGULAR EXPRESSIONS
@@ -72,8 +72,8 @@ export interface UserProfile {
   can_pickup_and_dropoff?: boolean;
   business_registration_number?: string;
   pickup_and_delivery_charge?: number;
-  review: Review;
-
+  reviews: UserReview;
+  distance_km: number;
   metadata: {
     [key: string]: any;
   };
@@ -92,16 +92,34 @@ export interface UserProfileUpdate {
   opening_hour?: string; // FOR RESTAURANT_VENDOR AND LAUNDRY_VENDOR
   closing_hour?: string; // FOR RESTAURANT_VENDOR AND LAUNDRY_VENDOR
   state?: string;
-  bank_account_number?: number;
+  bank_account_number?: string;
   bank_name?: string;
   business_registration_number?: string; // FOR RESTAURANT_VENDOR, DISPATCH AND LAUNDRY_VENDOR
-  pickup_and_delivery_charge?: number; // FOR RESTAURANT_VENDOR AND LAUNDRY_VENDOR
+  pickup_and_delivery_charge?: number | string; // FOR RESTAURANT_VENDOR AND LAUNDRY_VENDOR
   store_name?: string; // CUSTOMER
 }
 
 export interface ImageUrl {
   profile_image_url?: string;
   backdrop_image_url?: string;
+}
+
+export interface NearbyVendorsResponse {
+  vendors: UserProfile[];
+  pagination: {
+    page_size: number;
+    page_offset: number;
+    total_count: number;
+    has_more: boolean;
+  };
+  filters: {
+    user_type: Role;
+    max_distance_km: number;
+    min_rating: number | null;
+    search_query: string | null;
+    user_location: string | null;
+  };
+  error?: string;
 }
 
 // ============================================================================
