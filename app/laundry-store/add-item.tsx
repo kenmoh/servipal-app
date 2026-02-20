@@ -1,6 +1,11 @@
 import AppPicker from "@/components/AppPicker";
 import React, { useEffect } from "react";
-import { ActivityIndicator, ScrollView, View } from "react-native";
+import {
+  ActivityIndicator,
+  ScrollView,
+  useColorScheme,
+  View,
+} from "react-native";
 
 import { fetchCategories } from "@/api/food";
 import {
@@ -14,6 +19,7 @@ import LoadingIndicator from "@/components/LoadingIndicator";
 import { useToast } from "@/components/ToastProvider";
 import { AppButton } from "@/components/ui/app-button";
 import { AppTextInput } from "@/components/ui/app-text-input";
+import { HEADER_BG_DARK, HEADER_BG_LIGHT } from "@/constants/theme";
 import { useUserStore } from "@/store/userStore";
 import { CreateLaundryItem } from "@/types/item-types";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -49,6 +55,7 @@ const AddLaundryItem = () => {
   const { showError, showSuccess } = useToast();
   const { user } = useUserStore();
   const queryClient = useQueryClient();
+  const theme = useColorScheme();
 
   const {
     control,
@@ -172,10 +179,16 @@ const AddLaundryItem = () => {
       <ScrollView
         className="bg-background flex-1"
         contentContainerStyle={{ paddingBottom: 300 }}
+        showsVerticalScrollIndicator={false}
       >
         <Stack.Screen
           options={{
             title: isEditing ? "Update Service" : "Add Service",
+            headerStyle: {
+              backgroundColor:
+                theme === "dark" ? HEADER_BG_DARK : HEADER_BG_LIGHT,
+            },
+            headerTintColor: theme === "dark" ? "white" : "black",
           }}
         />
         <View className="mt-3 mb-8 gap-3">
@@ -184,8 +197,8 @@ const AddLaundryItem = () => {
             name="name"
             render={({ field: { onChange, onBlur, value } }) => (
               <AppTextInput
-                placeholder="Service Name"
-                label="Service Name"
+                placeholder="Item Name"
+                label="Item Name"
                 width={"90%"}
                 onBlur={onBlur}
                 onChangeText={onChange}
@@ -211,19 +224,21 @@ const AddLaundryItem = () => {
               />
             )}
           />
-          <Controller
-            control={control}
-            name="laundry_type"
-            render={({ field: { onChange, value } }) => (
-              <AppPicker
-                label="Laundry Type"
-                placeholder="Select Wash Type"
-                items={LAUNDRY_TPES_OPTIONS}
-                onValueChange={onChange}
-                value={value}
-              />
-            )}
-          />
+          <View className="items-center">
+            <Controller
+              control={control}
+              name="laundry_type"
+              render={({ field: { onChange, value } }) => (
+                <AppPicker
+                  label="Laundry Type"
+                  placeholder="Select Wash Type"
+                  items={LAUNDRY_TPES_OPTIONS}
+                  onValueChange={onChange}
+                  value={value}
+                />
+              )}
+            />
+          </View>
           <Controller
             control={control}
             name="description"
