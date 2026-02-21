@@ -142,25 +142,26 @@ const ItemCustomizationSheet = forwardRef<
                         }`}
                       >
                         {isSelected && (
-                          <Text className="text-white text-[10px] font-bold">✓</Text>
+                          <Text className="text-white text-[10px] font-bold">
+                            ✓
+                          </Text>
                         )}
                       </View>
-                      <View>
-                        <Text
-                          className={`text-sm font-poppins-medium ${
-                            isSelected ? "text-button-primary" : "text-gray-500"
-                          }`}
-                        >
-                          {sizeOption.size}
-                        </Text>
-                        <Text
-                          className={`text-xs font-poppins ${
-                            isSelected ? "text-button-primary" : "text-muted"
-                          }`}
-                        >
-                          ₦{Number(sizeOption.price).toFixed(2)}
-                        </Text>
-                      </View>
+
+                      <Text
+                        className={`text-sm font-poppins-medium ${
+                          isSelected ? "text-button-primary" : "text-gray-500"
+                        }`}
+                      >
+                        {sizeOption.size} {" | "}
+                      </Text>
+                      <Text
+                        className={`text-xs font-poppins ${
+                          isSelected ? "text-button-primary" : "text-muted"
+                        }`}
+                      >
+                        ₦{Number(sizeOption.price).toFixed(2)}
+                      </Text>
                     </TouchableOpacity>
                   );
                 })}
@@ -228,7 +229,9 @@ const ItemCustomizationSheet = forwardRef<
             (hasSides && !selectedSide)) && (
             <Text className="text-center text-xs text-status-error font-poppins mt-2">
               Please select{" "}
-              {hasSizes && selectedSizes.length === 0 ? "at least one size" : ""}
+              {hasSizes && selectedSizes.length === 0
+                ? "at least one size"
+                : ""}
               {hasSizes &&
               selectedSizes.length === 0 &&
               hasSides &&
