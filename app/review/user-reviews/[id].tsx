@@ -1,4 +1,5 @@
 import { ReviewsService } from "@/api/review";
+import EmptyList from "@/components/EmptyList";
 import LoadingIndicator from "@/components/LoadingIndicator";
 import ReviewCard from "@/components/ReviewCard";
 import { HEADER_BG_DARK, HEADER_BG_LIGHT } from "@/constants/theme";
@@ -24,6 +25,12 @@ const reviews = () => {
     return <LoadingIndicator />;
   }
 
+  if (data?.reviews.length === 0) {
+    <EmptyList
+      title="No reviews"
+      description="Be the first to review this user"
+    />;
+  }
   return (
     <View className="bg-background flex-1">
       <Stack.Screen

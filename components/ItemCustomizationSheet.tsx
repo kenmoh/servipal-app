@@ -20,7 +20,7 @@ interface ItemCustomizationSheetProps {
   item: RestaurantMenuItemResponse | null;
   onAdd: (
     item: RestaurantMenuItemResponse,
-    selectedSize: SizeOption | null,
+    selectedSizes: SizeOption[],
     selectedSide: string,
   ) => void;
 }
@@ -29,7 +29,7 @@ const ItemCustomizationSheet = forwardRef<
   BottomSheetModal,
   ItemCustomizationSheetProps
 >(({ item, onAdd }, ref) => {
-  const [selectedSize, setSelectedSize] = useState<SizeOption | null>(null);
+  const [selectedSizes, setSelectedSizes] = useState<SizeOption[]>([]);
   const [selectedSide, setSelectedSide] = useState<string>("");
   const theme = useColorScheme();
 
@@ -37,11 +37,26 @@ const ItemCustomizationSheet = forwardRef<
 
   const handleAdd = () => {
     if (item) {
-      onAdd(item, selectedSize, selectedSide);
-      setSelectedSize(null);
+      onAdd(item, selectedSizes, selectedSide);
+      setSelectedSizes([]);
       setSelectedSide("");
     }
   };
+
+  const toggleSize = (sizeOption: SizeOption) => {
+    setSelectedSizes((prev) => {
+      const exists = prev.some((s) => s.size === sizeOption.size);
+      if (exists) {
+        return prev.filter((s) => s.size !== sizeOption.size);
+      }
+      return [...prev, sizeOption];
+    });
+  };
+
+  const totalSizesPrice = useMemo(
+    () => selectedSizes.reduce((sum, s) => sum + Number(s.price), 0),
+    [selectedSizes],
+  );
 
   const renderBackdrop = useCallback(
     (props: any) => (
@@ -101,16 +116,18 @@ const ItemCustomizationSheet = forwardRef<
           {hasSizes && (
             <View className="mb-8">
               <Text className="text-base font-poppins-semibold text-primary mb-3">
-                Choose Size
+                Choose Size(s)
               </Text>
               <View className="flex-row flex-wrap gap-2">
                 {item?.sizes?.map((sizeOption) => {
-                  const isSelected = selectedSize?.size === sizeOption.size;
+                  const isSelected = selectedSizes.some(
+                    (s) => s.size === sizeOption.size,
+                  );
 
                   return (
                     <TouchableOpacity
                       key={sizeOption.size}
-                      onPress={() => setSelectedSize(sizeOption)}
+                      onPress={() => toggleSize(sizeOption)}
                       className={`px-5 py-3 rounded-full flex-row items-center ${
                         isSelected
                           ? "bg-button-primary/10 border border-button-primary"
@@ -118,14 +135,14 @@ const ItemCustomizationSheet = forwardRef<
                       }`}
                     >
                       <View
-                        className={`w-4 h-4 rounded-full border items-center justify-center mr-2 ${
+                        className={`w-4 h-4 rounded-md border items-center justify-center mr-2 ${
                           isSelected
-                            ? "border-button-primary"
+                            ? "border-button-primary bg-button-primary"
                             : "border-gray-300"
                         }`}
                       >
                         {isSelected && (
-                          <View className="w-2 h-2 rounded-full bg-button-primary" />
+                          <Text className="text-white text-[10px] font-bold">✓</Text>
                         )}
                       </View>
                       <View>
@@ -199,24 +216,27 @@ const ItemCustomizationSheet = forwardRef<
 
         <View className="mt-4">
           <AppButton
-            text={`Add to Cart • ₦${Number(selectedSize?.price || item.price).toFixed(2)}`}
+            text={`Add to Cart${selectedSizes.length > 1 ? ` (${selectedSizes.length} sizes)` : ""} • ₦${(hasSizes ? totalSizesPrice : Number(item.price)).toFixed(2)}`}
             onPress={handleAdd}
             width="100%"
             disabled={
-              (hasSizes && !selectedSize) || (hasSides && !selectedSide)
+              (hasSizes && selectedSizes.length === 0) ||
+              (hasSides && !selectedSide)
             }
           />
-          {((hasSizes && !selectedSize) || (hasSides && !selectedSide)) && (
+          {((hasSizes && selectedSizes.length === 0) ||
+            (hasSides && !selectedSide)) && (
             <Text className="text-center text-xs text-status-error font-poppins mt-2">
-              Please select {hasSizes && !selectedSize ? "a size" : ""}
+              Please select{" "}
+              {hasSizes && selectedSizes.length === 0 ? "at least one size" : ""}
               {hasSizes &&
-              !selectedSize &&
+              selectedSizes.length === 0 &&
               hasSides &&
               selectedSide.length === 0
                 ? " and "
                 : ""}
-              {hasSides && selectedSide.length === 0 ? "at least one side" : ""}{" "}
-              to continue
+              {hasSides && selectedSide.length === 0 ? "a side" : ""} to
+              continue
             </Text>
           )}
         </View>

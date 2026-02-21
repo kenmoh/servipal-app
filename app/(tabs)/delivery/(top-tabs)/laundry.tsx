@@ -7,7 +7,6 @@ import StatCard from "@/components/StatCard";
 import { useUserStore } from "@/store/userStore";
 import { UnifiedOrderResponse } from "@/types/order-types";
 import Feather from "@expo/vector-icons/Feather";
-import FontAwesome from "@expo/vector-icons/FontAwesome";
 import FontAwesome5 from "@expo/vector-icons/FontAwesome5";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { FlashList } from "@shopify/flash-list";
@@ -26,7 +25,7 @@ const UserOrders = () => {
     isFetching,
     isPending,
   } = useQuery({
-    queryKey: ["user-orders", user?.id],
+    queryKey: ["laundry-orders", user?.id],
     queryFn: () => fetchUserOrders(user?.id!, "LAUNDRY"),
     refetchOnWindowFocus: true,
     refetchOnMount: true,
@@ -71,8 +70,14 @@ const UserOrders = () => {
       },
       {
         id: "pickedUp",
-        icon: <FontAwesome name="handshake-o" color="blue" size={24} />,
-        label: "Picked Up",
+        icon: (
+          <MaterialCommunityIcons
+            name="washing-machine"
+            color="blue"
+            size={24}
+          />
+        ),
+        label: "Washing",
         value: stats.pickedUp,
       },
       {
@@ -94,7 +99,7 @@ const UserOrders = () => {
 
   const renderItem = useCallback(
     ({ item }: { item: UnifiedOrderResponse }) => (
-      <FoodLaundryOrderCard order={item} />
+      <FoodLaundryOrderCard order={item} orderType="LAUNDRY" />
     ),
     [],
   );

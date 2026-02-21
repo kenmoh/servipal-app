@@ -50,9 +50,9 @@ const Item = ({ item }: CartItemProps) => {
           {/* Bottom Right: Quantity Controls */}
           <View className="flex-row items-center gap-3 self-end">
             <View className="flex-row items-center rounded-full bg-gray-100 dark:bg-gray-800 px-5 py-0.5 gap-5">
-              <TouchableOpacity
+            <TouchableOpacity
                 onPress={() =>
-                  updateItemQuantity(item.item_id, item.quantity - 1)
+                  updateItemQuantity(item.item_id, item.quantity - 1, item.selected_size?.size)
                 }
               >
                 <Ionicons name="remove" size={18} color="#aaa" />
@@ -62,14 +62,14 @@ const Item = ({ item }: CartItemProps) => {
               </Text>
               <TouchableOpacity
                 onPress={() =>
-                  updateItemQuantity(item.item_id, item.quantity + 1)
+                  updateItemQuantity(item.item_id, item.quantity + 1, item.selected_size?.size)
                 }
               >
                 <Ionicons name="add" size={18} color="#aaa" />
               </TouchableOpacity>
             </View>
             <TouchableOpacity
-              onPress={() => removeItem(item.item_id)}
+              onPress={() => removeItem(item.item_id, item.selected_size?.size)}
               style={{ marginLeft: 10 }}
             >
               <Ionicons name="trash" size={18} color="#aaa" />

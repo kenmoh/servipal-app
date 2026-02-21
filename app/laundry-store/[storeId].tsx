@@ -16,7 +16,10 @@ import React, { useCallback, useState } from "react";
 import { View } from "react-native";
 
 const LaundryStore = () => {
-  const { storeId } = useLocalSearchParams<{ storeId: string }>();
+  const { storeId, deliveryFee } = useLocalSearchParams<{
+    storeId: string;
+    deliveryFee: string;
+  }>();
   const { user } = useUserStore();
   const { cart, addItem, totalCost, removeItem } = useCartStore();
   const [checkedItems, setCheckedItems] = useState<Set<string>>(new Set());
@@ -92,7 +95,12 @@ const LaundryStore = () => {
         <CartInfoBtn
           orderType="LAUNDRY"
           totalItem={cart.order_items.length}
-          onPress={() => router.push("/cart")}
+          onPress={() =>
+            router.push({
+              pathname: "/cart",
+              params: { isLaundry: "true", deliveryFee },
+            })
+          }
         />
       )}
     </View>

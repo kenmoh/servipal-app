@@ -43,6 +43,7 @@ export interface UnifiedOrderResponse {
   amount_due_vendor: number;
   pickup_location: string;
   destination: string;
+  delivery_fee: number;
   pickup_coordinates: [number, number] | any;
   dropoff_coordinates: [number, number] | any;
   distance: number;

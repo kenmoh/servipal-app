@@ -25,6 +25,12 @@ const ReceiptLayout = () => {
         }}
       />
       <Stack.Screen
+        name="laundry-receipt"
+        options={{
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
         name="[id]"
         options={{
           title: "Receipt",

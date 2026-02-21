@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import {
   ActivityIndicator,
   Dimensions,
@@ -9,11 +9,7 @@ import {
   View,
 } from "react-native";
 
-import {
-  fetchOrderDetails,
-  updateFoodOrderStatus,
-  updateLaundryOrderStatus,
-} from "@/api/order";
+import { fetchOrderDetails, updateLaundryOrderStatus } from "@/api/order";
 import LoadingIndicator from "@/components/LoadingIndicator";
 import { useToast } from "@/components/ToastProvider";
 import { AppButton } from "@/components/ui/app-button";
@@ -21,7 +17,7 @@ import { HEADER_BG_DARK, HEADER_BG_LIGHT } from "@/constants/theme";
 import { useUserStore } from "@/store/userStore";
 import { DetailResponse, OrderItem } from "@/types/order-types";
 import { getButtonConfig } from "@/utils/button-config";
-import { AntDesign } from "@expo/vector-icons";
+import { AntDesign, MaterialCommunityIcons } from "@expo/vector-icons";
 import Feather from "@expo/vector-icons/Feather";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
@@ -30,7 +26,7 @@ import * as Print from "expo-print";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import * as Sharing from "expo-sharing";
 
-const ReceiptPage = () => {
+const LaundryReceiptPage = () => {
   const screenWidth = Dimensions.get("window").width;
   const theme = useColorScheme();
   const { user } = useUserStore();
@@ -44,20 +40,17 @@ const ReceiptPage = () => {
   const TEXT_SECONDARY = isDark ? "text-gray-400" : "text-gray-600";
   const BORDER_COLOR = isDark ? "border-gray-700" : "border-gray-200";
 
-  const [cancelSheetVisible, setCancelSheetVisible] = useState(false);
-  const [cancelReason, setCancelReason] = useState("");
-
-  const { id, orderType } = useLocalSearchParams<{
-    id: string;
-    orderType: "FOOD" | "LAUNDRY";
-  }>();
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const orderType = "LAUNDRY";
 
   const { data, isLoading, refetch } = useQuery<DetailResponse>({
-    queryKey: ["order", id, orderType],
+    queryKey: ["laundry-order-details", id, orderType],
     queryFn: () => fetchOrderDetails(id, orderType),
-    enabled: !!id && !!orderType,
+    enabled: !!id,
     refetchOnWindowFocus: true,
   });
+
+  console.log("LAUNDRY ORDER", data);
 
   const buttonConfig = getButtonConfig(
     data?.order?.order_status!,
@@ -75,7 +68,7 @@ const ReceiptPage = () => {
     };
 
     const itemsTotal = Number(data.order?.total_price || 0);
-    const deliveryFee = Number(data.order?.delivery_fee || 0);
+    const deliveryFee = Number(data?.order?.delivery_fee || 0);
     const total = Number(data.order?.grand_total || itemsTotal + deliveryFee);
 
     return `
@@ -220,8 +213,8 @@ const ReceiptPage = () => {
                     <div class="container">
                         <div class="header">
                             <h1>ServiPal</h1>
-                            <div class="business-name">${data.order?.vendor_name || "Vendor"}</div>
-                            <div class="order-meta">Order #${data.order?.order_number}</div>
+                            <div class="business-name">${data.order?.vendor_name || "Laundry Vendor"}</div>
+                            <div class="order-meta">Laundry Order #${data.order?.order_number}</div>
                         </div>
                         
                         <div class="section">
@@ -246,12 +239,12 @@ const ReceiptPage = () => {
                           data.order.order_items.length > 0
                             ? `
                             <div class="section">
-                                <h2>Items</h2>
+                                <h2>Services</h2>
                                 ${data.order.order_items
                                   .map(
                                     (item) => `
                                     <div class="line-item">
-                                        <span>${item.quantity}X ${item.name}${item.sizes?.[0]?.size ? ` (${item.sizes[0].size.replace(/_/g, " ")})` : item.size ? ` (${item.size.replace(/_/g, " ")})` : ""}</span>
+                                        <span>${item.quantity}X ${item.name}</span>
                                         <span class="value">₦${Number((item.sizes?.[0]?.price ?? item.price) * item.quantity).toFixed(2)}</span>
                                     </div>
                                   `,
@@ -268,11 +261,11 @@ const ReceiptPage = () => {
                                 <span class="value">₦${itemsTotal.toFixed(2)}</span>
                             </div>
                             ${
-                              deliveryFee > 0 || data.order.delivery_fee > 0
+                              deliveryFee > 0
                                 ? `
                                 <div class="line-item">
                                     <span class="label">Delivery Fee</span>
-                                    <span class="value">₦${data.order.delivery_fee.toFixed(2)}</span>
+                                    <span class="value">₦${deliveryFee.toFixed(2)}</span>
                                 </div>
                             `
                                 : ""
@@ -284,19 +277,19 @@ const ReceiptPage = () => {
                         </div>
 
                         <div class="section">
-                            <h2>Delivery Details</h2>
+                            <h2>Address Details</h2>
                             <div class="address-box">
-                                <strong style="display:block; margin-bottom:4px; font-size:11px; color:#999;">PICKUP</strong>
+                                <strong style="display:block; margin-bottom:4px; font-size:11px; color:#999;">PICKUP LOCATION</strong>
                                 ${truncateText(data.delivery?.origin || "")}
                             </div>
                             <div class="address-box">
-                                <strong style="display:block; margin-bottom:4px; font-size:11px; color:#999;">DROP-OFF</strong>
+                                <strong style="display:block; margin-bottom:4px; font-size:11px; color:#999;">DROP-OFF LOCATION</strong>
                                 ${truncateText(data.delivery?.destination || "")}
                             </div>
                         </div>
                         
                         <div class="footer">
-                            <p>Thank you for choosing ServiPal!</p>
+                            <p>Thank you for choosing ServiPal Laundry!</p>
                             <p>Computer generated receipt. Valid without signature.</p>
                         </div>
                     </div>
@@ -308,29 +301,12 @@ const ReceiptPage = () => {
   const isVendor = user?.id === data?.order.vendor_id;
   const isCustomer = user?.id === data?.order.customer_id;
 
-  // Vendor can update: PENDING → DELIVERED
   const vendorStatuses = ["PENDING", "PREPARING", "READY", "IN_TRANSIT"];
   const showVendorButton =
     isVendor && vendorStatuses.includes(data?.order?.order_status!);
 
-  // Customer can update: DELIVERED → COMPLETED
   const showCustomerButton =
     isCustomer && data?.order.order_status === "DELIVERED";
-
-  const foodOrderMutation = useMutation({
-    mutationFn: () =>
-      updateFoodOrderStatus(data?.order.id!, {
-        new_status: buttonConfig.nextStatus!,
-      }),
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["user-orders", user?.id] });
-      refetch();
-      showSuccess(`${data.status}`, `Order status updated to ${data.status}`);
-    },
-    onError: (error) => {
-      showError("Error", `${error.message} `);
-    },
-  });
 
   const laundryOrderMutation = useMutation({
     mutationFn: () =>
@@ -348,11 +324,7 @@ const ReceiptPage = () => {
   });
 
   const handleOrderStatusUpdate = () => {
-    if (orderType === "FOOD") {
-      foodOrderMutation.mutate();
-    } else if (orderType === "LAUNDRY") {
-      laundryOrderMutation.mutate();
-    }
+    laundryOrderMutation.mutate();
   };
 
   const handleDownload = async () => {
@@ -371,7 +343,7 @@ const ReceiptPage = () => {
         receiptsDir.create({ intermediates: true });
       }
 
-      const fileName = `SERVIPAL-${order?.order_number}-${Date.now()}.pdf`;
+      const fileName = `SERVIPAL-LAUNDRY-${data?.order?.order_number}-${Date.now()}.pdf`;
 
       const sourceFile = new File(uri);
       const destinationFile = new File(receiptsDir, fileName);
@@ -386,6 +358,7 @@ const ReceiptPage = () => {
       showError("Error", "Failed to download receipt");
     }
   };
+
   const handleShare = async () => {
     try {
       const html = generateReceiptHTML();
@@ -398,7 +371,7 @@ const ReceiptPage = () => {
       if (await Sharing.isAvailableAsync()) {
         await Sharing.shareAsync(uri, {
           mimeType: "application/pdf",
-          dialogTitle: `Receipt #${data?.order?.order_number}`,
+          dialogTitle: `Laundry Receipt #${data?.order?.order_number}`,
           UTI: "com.adobe.pdf",
         });
       }
@@ -412,10 +385,10 @@ const ReceiptPage = () => {
 
   const { order, delivery } = data;
   const itemsTotal = Number(order?.total_price || 0);
-  const deliveryFee = Number(order?.delivery_fee || 0);
+  const deliveryFee = Number(delivery?.delivery_fee || 0);
   const total = Number(order?.grand_total || itemsTotal + deliveryFee);
 
-  const showButtons = order.vendor_id !== user?.id;
+  const showReviewButton = order.vendor_id !== user?.id;
 
   return (
     <ScrollView
@@ -426,9 +399,10 @@ const ReceiptPage = () => {
       <Stack.Screen
         options={{
           title: "Receipt",
-          headerTintColor: theme === "dark" ? "#eee" : "#000",
+          headerTintColor: theme === "dark" ? HEADER_BG_LIGHT : HEADER_BG_DARK,
           headerShadowVisible: false,
           headerTitleStyle: { fontFamily: "Poppins-Medium" },
+          headerStyle: { backgroundColor: BG_COLOR },
           headerRight: () => (
             <View className="flex-row items-center gap-5">
               <Pressable
@@ -460,11 +434,15 @@ const ReceiptPage = () => {
       >
         {/* Header */}
         <View className="items-center mb-8">
-          <View className="w-16 h-16 bg-orange-500/10 rounded-full items-center justify-center mb-4">
-            <Feather name="file-text" size={32} color="#FF8C00" />
+          <View className="w-16 h-16 bg-blue-500/10 rounded-full items-center justify-center mb-4">
+            <MaterialCommunityIcons
+              name="washing-machine"
+              size={32}
+              color="#3B82F6"
+            />
           </View>
           <Text className={`text-2xl font-poppins-bold ${TEXT_PRIMARY}`}>
-            {order?.vendor_name || "Reciept"}
+            {order?.vendor_name || "Laundry Receipt"}
           </Text>
           <Text className={`text-sm ${TEXT_SECONDARY} mt-1`}>
             Order #{order?.order_number}
@@ -507,27 +485,20 @@ const ReceiptPage = () => {
             <Text
               className={`${TEXT_PRIMARY} font-poppins-bold uppercase text-[10px] tracking-[2px] mb-4`}
             >
-              Order Items
+              Services
             </Text>
             {order.order_items.map((item: OrderItem) => (
               <View
                 className="flex-row justify-between items-center py-2"
-                key={`${item.id}-${item.item_id}-${item.size}`}
+                key={item.id || item.item_id}
               >
                 <View className="flex-1 mr-4">
                   <Text className={`${TEXT_PRIMARY} font-poppins-medium`}>
                     {item.quantity}x {item.name}
                   </Text>
-                  {(item.sizes?.[0]?.size ||
-                    item.size ||
-                    (item.sides && item.sides.length > 0)) && (
+                  {item.size && (
                     <Text className="text-[10px] text-gray-400 mt-0.5 uppercase">
-                      {(item.sizes?.[0]?.size ?? item.size ?? "").replace(
-                        /_/g,
-                        " ",
-                      )}
-                      {" | "}
-                      {item.sides?.join(", ")}
+                      {item.size}
                     </Text>
                   )}
                 </View>
@@ -564,24 +535,44 @@ const ReceiptPage = () => {
             <Text className={`${TEXT_PRIMARY} text-xl font-poppins-bold`}>
               Total Amount
             </Text>
-            <Text className="text-xl font-poppins-bold text-orange-500">
+            <Text className="text-xl font-poppins-bold text-blue-500">
               ₦{total.toFixed(2)}
             </Text>
           </View>
         </View>
+
+        {/* Instructions */}
+        {order.washing_instructions && (
+          <View className={`mt-8 pt-8 border-t ${BORDER_COLOR}`}>
+            <Text
+              className={`${TEXT_PRIMARY} font-poppins-bold uppercase text-[10px] tracking-[2px] mb-4`}
+            >
+              Washing Instructions
+            </Text>
+            <View
+              className={`p-4 rounded-xl ${isDark ? "bg-gray-700/30" : "bg-gray-50"} border ${BORDER_COLOR}`}
+            >
+              <Text
+                className={`${TEXT_PRIMARY} text-xs leading-5 font-poppins`}
+              >
+                {order.washing_instructions}
+              </Text>
+            </View>
+          </View>
+        )}
 
         {/* Delivery Details */}
         <View className={`mt-8 pt-8 border-t ${BORDER_COLOR}`}>
           <Text
             className={`${TEXT_PRIMARY} font-poppins-bold uppercase text-[10px] tracking-[2px] mb-4`}
           >
-            Delivery Details
+            Address Details
           </Text>
 
           <View className="gap-6">
             <View>
               <Text className="text-[10px] text-gray-400 font-poppins-bold uppercase mb-2">
-                From
+                Pickup Location
               </Text>
               <View
                 className={`p-4 rounded-xl ${isDark ? "bg-gray-700/30" : "bg-gray-50"} border ${BORDER_COLOR}`}
@@ -590,14 +581,14 @@ const ReceiptPage = () => {
                   className={`${TEXT_PRIMARY} text-xs leading-5 font-poppins`}
                   numberOfLines={2}
                 >
-                  {delivery?.origin || "Store Location"}
+                  {delivery?.origin || "Customer Address"}
                 </Text>
               </View>
             </View>
 
             <View>
               <Text className="text-[10px] text-gray-400 font-poppins-bold uppercase mb-2">
-                To
+                Drop-off Location
               </Text>
               <View
                 className={`p-4 rounded-xl ${isDark ? "bg-gray-700/30" : "bg-gray-50"} border ${BORDER_COLOR}`}
@@ -606,7 +597,7 @@ const ReceiptPage = () => {
                   className={`${TEXT_PRIMARY} text-xs leading-5 font-poppins`}
                   numberOfLines={2}
                 >
-                  {delivery?.destination || "Delivery Address"}
+                  {delivery?.destination || "Vendor Location"}
                 </Text>
               </View>
             </View>
@@ -621,7 +612,7 @@ const ReceiptPage = () => {
             text={buttonConfig.text}
             onPress={handleOrderStatusUpdate}
             icon={
-              foodOrderMutation.isPending || laundryOrderMutation.isPending ? (
+              laundryOrderMutation.isPending ? (
                 <ActivityIndicator color="white" />
               ) : (
                 buttonConfig.icon
@@ -630,98 +621,89 @@ const ReceiptPage = () => {
             variant="fill"
             borderRadius={50}
             width={"90%"}
-            // color={buttonConfig.color}
-            disabled={
-              buttonConfig.disabled ||
-              foodOrderMutation.isPending ||
-              laundryOrderMutation.isPending
-            }
+            disabled={buttonConfig.disabled || laundryOrderMutation.isPending}
           />
         )}
-
-        {showCustomerButton && (
-          <AppButton
-            text={buttonConfig.text}
-            onPress={handleOrderStatusUpdate}
-            icon={
-              foodOrderMutation.isPending || laundryOrderMutation.isPending ? (
-                <ActivityIndicator color="white" />
-              ) : (
-                buttonConfig.icon
-              )
-            }
-            variant="fill"
-            borderRadius={50}
-            width={"90%"}
-            // color={buttonConfig.color}
-            disabled={
-              buttonConfig.disabled ||
-              foodOrderMutation.isPending ||
-              laundryOrderMutation.isPending
-            }
-          />
-        )}
-
-        {order.order_status !== "COMPLETED" &&
-          order.order_status !== "DELIVERED" &&
-          order.order_status !== "CANCELLED" && (
+        <View className="w-[90%] gap-3">
+          {showCustomerButton && (
             <AppButton
-              text={"Cancel Order"}
-              onPress={() =>
-                router.push({
-                  pathname: "/receipt/cancel-sheet",
-                  params: { id: order.id, orderType: orderType },
-                })
+              text={buttonConfig.text}
+              onPress={handleOrderStatusUpdate}
+              icon={
+                laundryOrderMutation.isPending ? (
+                  <ActivityIndicator color="white" />
+                ) : (
+                  buttonConfig.icon
+                )
               }
-              icon={<AntDesign name="close" size={24} color="red" />}
-              variant="outline"
+              variant="fill"
               borderRadius={50}
-              width={"100%"}
-              color={"red"}
+              width={"90%"}
+              disabled={buttonConfig.disabled || laundryOrderMutation.isPending}
             />
           )}
-      </View>
-      <View className="flex-row justify-between my-3">
-        {showButtons && (
+
+          {order.order_status !== "COMPLETED" &&
+            order.order_status !== "DELIVERED" &&
+            order.order_status !== "CANCELLED" && (
+              <AppButton
+                text={"Cancel Order"}
+                onPress={() =>
+                  router.push({
+                    pathname: "/receipt/cancel-sheet",
+                    params: { id: order.id, orderType: orderType },
+                  })
+                }
+                icon={<AntDesign name="close" size={24} color="red" />}
+                variant="outline"
+                borderRadius={50}
+                //   width={"90%"}
+                color={"red"}
+              />
+            )}
+        </View>
+        <View className="flex-row gap-6  mt-2">
+          {showReviewButton && (
+            <AppButton
+              text="Leave a Review"
+              width={"42.5%"}
+              borderRadius={50}
+              disabled={data?.order?.order_status !== "COMPLETED"}
+              onPress={() =>
+                router.push({
+                  pathname: "/review/[id]",
+                  params: {
+                    id: order.id,
+                    orderType: "LAUNDRY",
+                    revieweeId: order.vendor_id,
+                  },
+                })
+              }
+            />
+          )}
           <AppButton
-            text="Leave a Review"
-            width={"45%"}
+            text="Raise Dispute"
+            width={showReviewButton ? "42.5%" : "90%"}
             borderRadius={50}
+            variant="outline"
             onPress={() =>
               router.push({
-                pathname: "/review/[id]",
+                pathname: "/report/[id]",
                 params: {
                   id: order.id,
-                  orderType: "FOOD",
+                  orderType: "LAUNDRY",
                   revieweeId: order.vendor_id,
                 },
               })
             }
           />
-        )}
-        <AppButton
-          text="Raise Dispute"
-          width={showButtons ? "45%" : "90%"}
-          borderRadius={50}
-          variant="outline"
-          onPress={() =>
-            router.push({
-              pathname: "/report/[id]",
-              params: {
-                id: order.id,
-                orderType: "FOOD",
-                revieweeId: order.vendor_id,
-              },
-            })
-          }
-        />
+        </View>
       </View>
-
       <Text className="text-center text-[10px] text-gray-500 mt-10 font-poppins tracking-widest uppercase">
-        ServiPal • Premium Delivery
+        ServiPal Laundry • Premium Care
       </Text>
     </ScrollView>
   );
 };
 
-export default ReceiptPage;
+export default LaundryReceiptPage;

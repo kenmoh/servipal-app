@@ -54,8 +54,8 @@ type CartState = {
     itemDetails: ItemDetails,
   ) => "VENDOR_MISMATCH" | "CART_TYPE_MISMATCH" | "OK";
 
-  removeItem: (item_id: string) => void;
-  updateItemQuantity: (item_id: string, quantity: number) => void;
+  removeItem: (item_id: string, selectedSize?: string) => void;
+  updateItemQuantity: (item_id: string, quantity: number, selectedSize?: string) => void;
   setDeliveryOption: (option: RequireDelivery) => void;
   setAdditionalInfo: (info: string) => void;
 
@@ -168,10 +168,11 @@ export const useCartStore = create<CartState>((set, get) => ({
     return "OK";
   },
 
-  removeItem: (item_id) =>
+  removeItem: (item_id, selectedSize) =>
     set((state) => {
       const updatedItems = state.cart.order_items.filter(
-        (item) => item.item_id !== item_id,
+        (item) =>
+          !(item.item_id === item_id && item.selected_size?.size === selectedSize),
       );
       const newTotalCost = updatedItems.reduce(
         (acc, item) => acc + (item.price || 0) * item.quantity,
@@ -189,13 +190,15 @@ export const useCartStore = create<CartState>((set, get) => ({
       };
     }),
 
-  updateItemQuantity: (item_id, quantity) =>
+  updateItemQuantity: (item_id, quantity, selectedSize) =>
     set((state) => {
+      const match = (item: CartItem) =>
+        item.item_id === item_id && item.selected_size?.size === selectedSize;
       const updatedItems =
         quantity <= 0
-          ? state.cart.order_items.filter((item) => item.item_id !== item_id)
+          ? state.cart.order_items.filter((item) => !match(item))
           : state.cart.order_items.map((item) =>
-              item.item_id === item_id ? { ...item, quantity } : item,
+              match(item) ? { ...item, quantity } : item,
             );
 
       const newTotalCost = updatedItems.reduce(

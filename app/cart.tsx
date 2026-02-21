@@ -27,19 +27,27 @@ import {
   useColorScheme,
   View,
 } from "react-native";
+import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 
 const Cart = () => {
   const [instructions, setInstructions] = useState("");
   const [modalVisible, setModalVisible] = useState(false);
   const theme = useColorScheme();
   const { user } = useUserStore();
-  const { isLaundry } = useLocalSearchParams();
+  const { isLaundry, deliveryFee } = useLocalSearchParams<{
+    isLaundry: string;
+    deliveryFee: string;
+  }>();
   const { showError } = useToast();
 
   const isLaundryOrder = isLaundry === "true";
 
   const { setDeliveryOption, cart, setAdditionalInfo, totalCost } =
     useCartStore();
+
+  const totalCostWithDeliveryFee = deliveryFee
+    ? totalCost + Number(deliveryFee)
+    : totalCost;
 
   const vendorId = cart.order_items[0]?.vendor_id;
   const { delivery_option } = cart;
@@ -58,7 +66,11 @@ const Cart = () => {
 
   // ---- Laundry mutation ----
   const { mutate: laundryMutate, isPending: laundryIsPending } = useMutation({
-    mutationFn: (payload: OrderCreate) => initiateLaundryOrderPayment(payload),
+    mutationFn: (payload: OrderCreate) => {
+      console.log(payload);
+      return initiateLaundryOrderPayment(payload);
+    },
+
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["laundry-orders", user?.id] });
       router.push({
@@ -172,7 +184,14 @@ const Cart = () => {
         quantity: item.quantity,
         images: item.images ?? (item.image ? [item.image] : []),
         sides: item.selected_side ? [item.selected_side] : [],
-        sizes: item.selected_size ? [item.selected_size] : [],
+        sizes: item.selected_size
+          ? [
+              {
+                ...item.selected_size,
+                size: item.selected_size.size.replace(/\s+/g, "_"),
+              },
+            ]
+          : [],
       })),
     };
 
@@ -221,13 +240,16 @@ const Cart = () => {
         <View className="px-5 pt-4">
           {/* Cart Items */}
           <View className="mb-8">
-            {cart.order_items.map((item) => (
-              <Item key={item.item_id} item={item} />
+            {cart.order_items.map((item, index) => (
+              <Item
+                key={`${item.item_id}-${item.selected_size?.size ?? index}`}
+                item={item}
+              />
             ))}
           </View>
 
           {/* Pricing Summary */}
-          <View className="bg-input rounded-2xl p-5 border border-gray-600 mb-8">
+          <View className="bg-input rounded-2xl p-5 border border-gray-300 dark:border-gray-600 mb-8">
             <View className="flex-row justify-between items-center">
               <Text className="text-gray-400 font-poppins-medium">
                 Subtotal
@@ -236,13 +258,23 @@ const Cart = () => {
                 ₦{Number(totalCost).toFixed(2)}
               </Text>
             </View>
-            <View className="h-[1px] bg-gray-600 my-4" />
+            {deliveryFee && delivery_option === "VENDOR_DELIVERY" && (
+              <View className="flex-row justify-between items-center">
+                <Text className="text-gray-400 font-poppins-medium">
+                  Delivery Fee
+                </Text>
+                <Text className="text-primary font-poppins-semibold">
+                  ₦{Number(deliveryFee).toFixed(2)}
+                </Text>
+              </View>
+            )}
+            <View className="h-[1px] dark:bg-gray-600 bg-gray-200 my-4" />
             <View className="flex-row justify-between items-center">
               <Text className="text-lg font-poppins-bold text-primary">
                 Total
               </Text>
               <Text className="text-lg font-poppins-bold text-button-primary">
-                ₦{Number(totalCost).toFixed(2)}
+                ₦{Number(totalCostWithDeliveryFee).toFixed(2)}
               </Text>
             </View>
           </View>
@@ -252,7 +284,7 @@ const Cart = () => {
             <Text className="text-base font-poppins-bold text-primary mb-4">
               Delivery Method
             </Text>
-            <View className="bg-input rounded-2xl p-4 border border-gray-600">
+            <View className="bg-input rounded-2xl p-4 border border-gray-300 dark:border-gray-600">
               {vendorProfile?.can_pickup_and_dropoff ? (
                 <>
                   <RadioButton
@@ -359,45 +391,53 @@ const Cart = () => {
       </ScrollView>
 
       {/* Delivery Address Modal */}
-      <AppModal
-        visible={modalVisible}
-        onClose={() => setModalVisible(false)}
-        height="65%"
-      >
-        <View className="flex-1 pt-2">
-          <Text className="text-xl font-poppins-bold text-primary mb-6">
-            Delivery Address
-          </Text>
-
-          <View className="mb-6">
-            <Text className="text-xs text-gray-400 font-poppins-medium mb-2 uppercase ml-1">
-              Dropoff Location
+      <KeyboardAvoidingView>
+        <AppModal
+          visible={modalVisible}
+          onClose={() => setModalVisible(false)}
+          height="75%"
+        >
+          <View className="flex-1 pt-2">
+            <Text className="text-xl font-poppins-bold text-primary mb-6">
+              Delivery Address
             </Text>
-            <View className="flex-row items-center gap-2">
-              <GoogleTextInput
-                placeholder="Enter delivery address"
-                value={destination}
-                onPlaceSelect={(lat, lng, address) => {
-                  setDestination(address, [lat, lng]);
-                }}
-              />
-              <CurrentLocationButton
-                onLocationSet={(address, coords) => {
-                  setDestination(address, coords);
-                }}
+
+            <View className="mb-6">
+              <Text className="text-xs text-gray-400 font-poppins-medium mb-2 uppercase ml-1">
+                Delivery Address
+              </Text>
+              <View className="flex-row items-center gap-2">
+                <View className="w-[81%]">
+                  <GoogleTextInput
+                    placeholder="Enter delivery address"
+                    value={destination}
+                    onPlaceSelect={(lat, lng, address) => {
+                      setDestination(address, [lat, lng]);
+                    }}
+                  />
+                </View>
+                <View className="w-[20%]">
+                  <CurrentLocationButton
+                    height={55}
+                    width={55}
+                    onLocationSet={(address, coords) => {
+                      setDestination(address, coords);
+                    }}
+                  />
+                </View>
+              </View>
+            </View>
+
+            <View className="mt-auto">
+              <AppButton
+                text="Confirm Address"
+                onPress={() => setModalVisible(false)}
+                disabled={!destination}
               />
             </View>
           </View>
-
-          <View className="mt-auto">
-            <AppButton
-              text="Confirm Address"
-              onPress={() => setModalVisible(false)}
-              disabled={!destination}
-            />
-          </View>
-        </View>
-      </AppModal>
+        </AppModal>
+      </KeyboardAvoidingView>
     </>
   );
 };

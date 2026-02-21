@@ -39,6 +39,7 @@ export const createLaundryItem = async (
       description: item.description ?? null,
       price: item.price,
       images: uploadedImages,
+      laundry_type: item.laundry_type,
     };
 
     const { data, error } = await supabase

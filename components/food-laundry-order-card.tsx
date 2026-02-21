@@ -20,7 +20,10 @@ interface OrderProps {
 const FoodLaundryOrderCard = ({ order, orderType }: OrderProps) => {
   const handlePress = () => {
     router.push({
-      pathname: "/receipt/[id]",
+      pathname:
+        orderType === "LAUNDRY"
+          ? "/receipt/laundry-receipt/[id]"
+          : "/receipt/[id]",
       params: { id: order.id, orderType },
     });
   };
@@ -121,7 +124,9 @@ const FoodLaundryOrderCard = ({ order, orderType }: OrderProps) => {
             order?.order_status === "PENDING"
               ? "Pending"
               : order?.order_status === "PREPARING"
-                ? "Preparing"
+                ? orderType === "LAUNDRY"
+                  ? "Washing"
+                  : "Preparing"
                 : order?.order_status === "READY"
                   ? "Ready"
                   : undefined

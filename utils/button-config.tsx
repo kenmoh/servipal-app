@@ -33,16 +33,19 @@ interface ButtonConfig {
 export const getButtonConfig = (
   currentStatus: OrderStatus,
   deliveryOption: "PICKUP" | "DELIVERY",
+  orderType: "FOOD" | "LAUNDRY" = "FOOD",
 ): ButtonConfig => {
+  const isLaundry = orderType === "LAUNDRY";
+
   const configs: Record<OrderStatus, ButtonConfig> = {
     PENDING: {
-      text: "Start Preparing",
+      text: isLaundry ? "Start Washing" : "Start Preparing",
       icon: <AntDesign name="play-circle" size={20} color="white" />,
       color: "#4CAF50",
       nextStatus: "PREPARING",
     },
     PREPARING: {
-      text: "Mark as Ready",
+      text: isLaundry ? "Finish Washing" : "Mark as Ready",
       icon: <AntDesign name="check-circle" size={20} color="white" />,
       color: "#2196F3",
       nextStatus: "READY",

@@ -7,9 +7,9 @@ import StatCard from "@/components/StatCard";
 import { useUserStore } from "@/store/userStore";
 import { UnifiedOrderResponse } from "@/types/order-types";
 import Feather from "@expo/vector-icons/Feather";
-import FontAwesome from "@expo/vector-icons/FontAwesome";
 import FontAwesome5 from "@expo/vector-icons/FontAwesome5";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+import SimpleLineIcons from "@expo/vector-icons/SimpleLineIcons";
 import { FlashList } from "@shopify/flash-list";
 import { useQuery } from "@tanstack/react-query";
 import React, { useCallback, useMemo } from "react";
@@ -26,7 +26,7 @@ const UserOrders = () => {
     isFetching,
     isPending,
   } = useQuery({
-    queryKey: ["user-orders", user?.id],
+    queryKey: ["food-orders", user?.id],
     queryFn: () => fetchUserOrders(user?.id!, "FOOD"),
     refetchOnWindowFocus: true,
     refetchOnMount: true,
@@ -71,8 +71,8 @@ const UserOrders = () => {
       },
       {
         id: "pickedUp",
-        icon: <FontAwesome name="handshake-o" color="blue" size={24} />,
-        label: "Picked Up",
+        icon: <SimpleLineIcons name="fire" color="gold" size={24} />,
+        label: "Cooking",
         value: stats.pickedUp,
       },
       {

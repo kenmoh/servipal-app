@@ -73,7 +73,10 @@ export const fetchOrderDetails = async (
       p_order_type: orderType,
     });
 
-    if (error) throw error;
+    if (error) {
+      console.log(error);
+      throw error;
+    }
     return data;
   } catch (error) {
     if (error instanceof Error) {

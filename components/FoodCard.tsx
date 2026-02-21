@@ -126,23 +126,52 @@ const FoodCard = ({
         </View>
       </View>
 
-      <Checkbox
-        style={{ borderWidth: 1, height: 18, width: 18, borderRadius: 3 }}
-        className="absolute right-2 bottom-2"
-        value={isChecked}
-        color={isChecked ? "orange" : undefined}
-        hitSlop={25}
-        disabled={isOwner}
-        onValueChange={
-          !isOwner
-            ? () => onPress(item)
-            : () =>
-                showError(
-                  "Not Allowed",
-                  "You cannot order from your own restaurant",
-                )
-        }
-      ></Checkbox>
+      {isOwner ? (
+        <View className="flex-row absolute right-2 bottom-2">
+          <Pressable
+            onPress={() =>
+              router.push({
+                pathname: "/store/add-menu",
+                params: {
+                  id: item.id,
+                  name: item.name,
+                  description: item.description,
+                  price: item.price,
+                  images: JSON.stringify(item.images),
+                  item_type: item.restaurant_item_type,
+                },
+              })
+            }
+            hitSlop={10}
+            style={({ pressed }) => [
+              {
+                opacity: pressed ? 0.5 : 1,
+                transform: [{ scale: pressed ? 0.95 : 1 }],
+              },
+            ]}
+          >
+            <Ionicons name="create-outline" color="gray" size={18} />
+          </Pressable>
+        </View>
+      ) : (
+        <Checkbox
+          style={{ borderWidth: 1, height: 18, width: 18, borderRadius: 3 }}
+          className="absolute right-2 bottom-2"
+          value={isChecked}
+          color={isChecked ? "orange" : undefined}
+          hitSlop={25}
+          disabled={isOwner}
+          onValueChange={
+            !isOwner
+              ? () => onPress(item)
+              : () =>
+                  showError(
+                    "Not Allowed",
+                    "You cannot order from your own restaurant",
+                  )
+          }
+        />
+      )}
     </TouchableOpacity>
   );
 };

@@ -351,7 +351,7 @@ const AddProductScreen = () => {
                 onBlur={onBlur}
                 value={value?.toString()}
                 onChangeText={(text) => onChange(Number(text))}
-                errorMessage={errors.stock?.message}
+                errorMessage={errors.shipping_cost?.message}
                 keyboardType="numeric"
                 width={"32.5%"}
                 height={45}
@@ -369,7 +369,7 @@ const AddProductScreen = () => {
                 onBlur={onBlur}
                 value={value?.toString()}
                 onChangeText={(text) => onChange(Number(text))}
-                errorMessage={errors.stock?.message}
+                errorMessage={errors.return_days?.message}
                 keyboardType="numeric"
                 width={"30%"}
                 height={45}
@@ -387,7 +387,7 @@ const AddProductScreen = () => {
                 onBlur={onBlur}
                 value={value?.toString()}
                 onChangeText={(text) => onChange(text)}
-                errorMessage={errors.stock?.message}
+                errorMessage={errors.warranty?.message}
                 keyboardType="default"
                 width={"32.5%"}
                 height={45}
@@ -397,36 +397,38 @@ const AddProductScreen = () => {
           />
         </View>
 
+        <View className="items-center">
+          <Controller
+            control={control}
+            name="category_id"
+            render={({ field: { onChange, value } }) => (
+              <AppPicker
+                label="Category"
+                items={productCategories || []}
+                onValueChange={onChange}
+                value={value}
+              />
+            )}
+          />
+        </View>
+      </View>
+      <View className="w-[90%] self-center">
         <Controller
           control={control}
-          name="category_id"
+          name="sizes"
           render={({ field: { onChange, value } }) => (
-            <AppPicker
-              label="Category"
-              items={productCategories || []}
-              onValueChange={onChange}
-              value={value}
+            <ChipInput
+              label="Sizes"
+              value={value || []}
+              onChange={onChange}
+              placeholder="Type size and press Enter (e.g., S, M, L)"
+              error={errors.sizes?.message}
+              disabled={isPending}
+              maxChips={10}
             />
           )}
         />
       </View>
-
-      <Controller
-        control={control}
-        name="sizes"
-        render={({ field: { onChange, value } }) => (
-          <ChipInput
-            label="Sizes"
-            value={value || []}
-            onChange={onChange}
-            placeholder="Type size and press Enter (e.g., S, M, L)"
-            error={errors.sizes?.message}
-            disabled={isPending}
-            maxChips={10}
-          />
-        )}
-      />
-
       {/* Color Picker */}
       <ColorPickerInput
         control={control}

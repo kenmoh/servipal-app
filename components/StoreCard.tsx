@@ -32,6 +32,7 @@ const StoreCard = ({
       pathname: finalPath as any,
       params: {
         storeId: item?.id,
+        deliveryFee: item?.pickup_and_delivery_charge,
       },
     });
   };
