@@ -1,14 +1,15 @@
 import {
   InitBankTransferResponse,
+  InitiatePaymentResponse,
   PaymentLink,
   PayWithWalletResponse,
-} from "@/types/payment";
+} from "@/types/payment-types";
 import { Bank } from "@/types/user-types";
 import { apiClient } from "@/utils/client";
 import { ApiResponse } from "apisauce";
 import { ErrorResponse } from "./auth";
 
-const BASE_URL = "/payment";
+const BASE_URL = "/wallet";
 
 interface Amount {
   amount: number;
@@ -19,6 +20,36 @@ export interface FundWalletReturn extends Amount {
   payment_link: string;
 }
 
+/**
+ * Initiates a wallet topup request.
+ *
+ * @param amount - The amount to top up
+ * @returns Promise<InitiatePaymentResponse>
+ */
+export const initiateWalletTopup = async (
+  amount: number,
+): Promise<InitiatePaymentResponse> => {
+  try {
+    const response: ApiResponse<InitiatePaymentResponse | ErrorResponse> =
+      await apiClient.post(`${BASE_URL}/initiate-wallet-topup`, {
+        amount,
+      });
+
+    if (!response.ok) {
+      const errorData = response.data as any;
+      throw new Error(
+        errorData?.detail ||
+          errorData?.message ||
+          "Failed to initiate wallet topup",
+      );
+    }
+
+    return response.data as InitiatePaymentResponse;
+  } catch (error) {
+    throw error;
+  }
+};
+
 // Fund wallet
 // This function allows a user to fund their wallet with a specified amount.
 // It takes an object with an amount property and returns a promise that resolves to the funded amount
@@ -26,7 +57,7 @@ export interface FundWalletReturn extends Amount {
 // The function sends a POST request to the /fund-wallet endpoint with the amount in the request body.
 // If the response is not ok or contains an error, it throws an error with a message
 export const fundWallet = async (
-  payData: Amount
+  payData: Amount,
 ): Promise<FundWalletReturn> => {
   const data = {
     amount: payData.amount,
@@ -60,20 +91,19 @@ export const fundWallet = async (
 // It takes an orderId as a parameter and returns a promise that resolves to the amount paid
 // or throws an error if the payment fails.
 // The function sends a POST request to the /:orderId/pay-with-wallet endpoint.
-export const payWithWallet = async (
-  orderId: string
-): Promise<PayWithWalletResponse> => {
+export interface PayWithWalletData {
+  amount: number | string;
+  tx_ref: string;
+}
+
+export const payWithWallet = async (payload: PayWithWalletData) => {
   try {
     const response: ApiResponse<PayWithWalletResponse | ErrorResponse> =
-      await apiClient.post(
-        `${BASE_URL}/${orderId}/pay-with-wallet`,
-
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      await apiClient.post(`${BASE_URL}/pay-with-wallet`, payload, {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
 
     if (!response.ok || !response.data || "detail" in response.data) {
       const errorMessage =
@@ -93,7 +123,7 @@ export const payWithWallet = async (
 
 // Pay with bank transfer
 export const payWithBankTransfer = async (
-  orderId: string
+  orderId: string,
 ): Promise<InitBankTransferResponse> => {
   try {
     const response: ApiResponse<InitBankTransferResponse | ErrorResponse> =
@@ -104,7 +134,7 @@ export const payWithBankTransfer = async (
           headers: {
             "Content-Type": "application/json",
           },
-        }
+        },
       );
 
     if (!response.ok || !response.data || "detail" in response.data) {
@@ -133,7 +163,7 @@ export const withDrawFunds = async (): Promise<Amount> => {
         headers: {
           "Content-Type": "application/json",
         },
-      }
+      },
     );
 
     if (!response.ok || !response.data || "detail" in response.data) {
@@ -161,7 +191,7 @@ export const getBanks = async (): Promise<Bank[]> => {
         headers: {
           "Content-Type": "application/json",
         },
-      }
+      },
     );
 
     if (!response.ok || !response.data || "detail" in response.data) {
@@ -180,14 +210,11 @@ export const getBanks = async (): Promise<Bank[]> => {
   }
 };
 
-
-
 interface Status {
-  status: string
+  status: string;
 }
 // Verify bank transfer
 export const verifyBankTransfer = async (txRef: string): Promise<Status> => {
-
   try {
     const response: ApiResponse<Status | ErrorResponse> = await apiClient.get(
       `/verify-bank-transfer`,
@@ -195,7 +222,7 @@ export const verifyBankTransfer = async (txRef: string): Promise<Status> => {
         headers: {
           "Content-Type": "application/json",
         },
-      }
+      },
     );
 
     if (!response.ok || !response.data || "detail" in response.data) {
@@ -215,7 +242,7 @@ export const verifyBankTransfer = async (txRef: string): Promise<Status> => {
 };
 
 export const generateTransactionPaymentLink = async (
-  transactionId: string
+  transactionId: string,
 ): Promise<PaymentLink> => {
   try {
     const response: ApiResponse<PaymentLink | ErrorResponse> =
@@ -226,7 +253,7 @@ export const generateTransactionPaymentLink = async (
           headers: {
             "Content-Type": "application/json",
           },
-        }
+        },
       );
 
     if (!response.ok || !response.data || "detail" in response.data) {

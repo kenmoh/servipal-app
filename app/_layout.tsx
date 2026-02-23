@@ -174,17 +174,19 @@ export default function RootLayout() {
                     <Stack.Screen
                       name="wallet/fund"
                       options={{
-                        title: "",
-                        headerTransparent: true,
                         headerShadowVisible: false,
-                        animation: "fade_from_bottom",
+                        presentation: "formSheet",
+                        sheetAllowedDetents: [0.65],
+                        sheetCornerRadius: 25,
+                        sheetGrabberVisible: true,
+                        sheetInitialDetentIndex: 0,
                       }}
                     />
                     <Stack.Screen
                       name="payment/index"
                       options={{
                         title: "Order Sumary",
-                        headerTransparent: true,
+
                         headerShadowVisible: false,
                         animation: "fade_from_bottom",
                         headerTintColor:
@@ -193,15 +195,7 @@ export default function RootLayout() {
                             : HEADER_BG_DARK,
                       }}
                     />
-                    <Stack.Screen
-                      name="wallet/transaction/[id]"
-                      options={{
-                        title: "",
-                        headerTransparent: true,
-                        headerShadowVisible: false,
-                        animation: "fade_from_bottom",
-                      }}
-                    />
+
                     <Stack.Screen
                       name="receipt"
                       options={{

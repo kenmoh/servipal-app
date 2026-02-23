@@ -20,7 +20,7 @@ const StoreTabLayout = () => {
 
   const BG_COLOR = theme === "dark" ? HEADER_BG_DARK : HEADER_BG_LIGHT;
   return (
-    <Wrapper>
+    <Wrapper storeId={storeId}>
       <StoreHeader storeId={storeId!} />
       <StoreTabs
         className="bg-background border-b-border-subtle text-primary"
@@ -81,13 +81,22 @@ const StoreTabLayout = () => {
 
 export default StoreTabLayout;
 
-const Wrapper = ({ children }: { children: React.ReactNode }) => {
+const Wrapper = ({
+  children,
+  storeId,
+}: {
+  children: React.ReactNode;
+  storeId: string;
+}) => {
   const { user } = useUserStore();
+  const showFAB =
+    user?.user_metadata?.user_type === "RESTAURANT_VENDOR" &&
+    user?.id === storeId;
+
   return (
     <View className="flex-1">
       {children}
-      {(user?.user_metadata.user_type === "RESTAURANT_VENDOR" ||
-        user?.user_metadata.user_type === "LAUNDRY_VENDOR") && (
+      {showFAB && (
         <View className="absolute bottom-12 right-3">
           <FAB
             icon={<AntDesign name="menu" color={"white"} />}

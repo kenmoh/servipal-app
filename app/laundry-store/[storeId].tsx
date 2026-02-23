@@ -30,6 +30,9 @@ const LaundryStore = () => {
     enabled: !!storeId,
   });
 
+  const showFAB =
+    user?.user_metadata.user_type === "LAUNDRY_VENDOR" && user?.id === storeId;
+
   const handleAddToCart = useCallback(
     (item: LaundryItemResponse) => {
       const isChecked = cart.order_items.some(
@@ -81,15 +84,14 @@ const LaundryStore = () => {
         contentContainerStyle={{ paddingBottom: 100 }}
       />
 
-      {user?.user_metadata.user_type === "LAUNDRY_VENDOR" &&
-        user?.id === storeId && (
-          <View className="absolute bottom-12 right-3">
-            <FAB
-              icon={<AntDesign name="plus" color={"white"} size={24} />}
-              onPress={() => router.push("/laundry-store/add-item")}
-            />
-          </View>
-        )}
+      {showFAB && (
+        <View className="absolute bottom-12 right-3">
+          <FAB
+            icon={<AntDesign name="plus" color={"white"} size={24} />}
+            onPress={() => router.push("/laundry-store/add-item")}
+          />
+        </View>
+      )}
 
       {totalCost > 0 && (
         <CartInfoBtn

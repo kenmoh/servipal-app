@@ -8,7 +8,7 @@ import { AuthError } from "@supabase/supabase-js";
 import { useMutation } from "@tanstack/react-query";
 
 export const useSignIn = () => {
-  const { showSuccess, showError } = useToast();
+  const { showError } = useToast();
   const { setUser } = useUserStore();
 
   const signInMutation = useMutation({
@@ -16,7 +16,6 @@ export const useSignIn = () => {
       const trimmed = identifier.trim();
       const isEmail = trimmed.includes("@");
 
-      // Fix: Create proper credentials based on whether it's email or phone
       if (isEmail) {
         const { data, error } = await supabase.auth.signInWithPassword({
           email: trimmed.toLowerCase(),
@@ -78,9 +77,7 @@ export const useSignIn = () => {
         const authUser = toAuthUser(data.user);
         await authStorage.storeUser(authUser);
         setUser(authUser);
-        showSuccess("Welcome back!", "You've successfully logged in.");
       } catch (error) {
-        console.error("❌ Error storing auth data:", error);
         showError("Error", "Failed to save login data. Please try again.");
         await supabase.auth.signOut();
       }

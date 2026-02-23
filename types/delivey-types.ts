@@ -37,7 +37,7 @@ export interface DeliveryOrder {
   package_image_url: string | null;
   additional_info: string | null;
   delivery_fee: number;
-  total_price: number | null;
+  total_price: number;
   requires_return: boolean;
   amount_due_dispatch: number;
   rider_id: string | null;

@@ -1,3 +1,6 @@
+import { CartItem } from "@/store/cartStore";
+import { Coordinates } from "@/store/locationStore";
+
 export interface InitPaymentData {
   logo: string;
   email: string;
@@ -27,7 +30,11 @@ export interface WithdrawalResponse {
 }
 
 export interface PayWithWalletResponse {
-  amount: string;
+  status: string;
+  order_id: string;
+  tx_ref: string;
+  grand_total: number;
+  message: string;
 }
 
 export interface InitBankTransferResponse {
@@ -104,4 +111,74 @@ export interface RedirectParams {
   status: "successful" | "cancelled";
   transaction_id?: string;
   tx_ref: string;
+}
+
+export interface FoodOrderPayload {
+  order_type: "FOOD";
+  grand_total: number;
+  total_price: number;
+  delivery_fee: number;
+  delivery_option: "DELIVERY";
+  vendor_id: string;
+  order_data: CartItem[];
+  destination: string;
+  additional_info: string;
+}
+
+// PRODUCT
+export interface ProductOrderPayload {
+  order_type: "PRODUCT";
+  grand_total: number;
+  vendor_id: string;
+  product_id: string;
+  quantity: number;
+  product_name: string;
+  unit_price: number;
+  subtotal: number;
+  shipping_cost: number;
+  delivery_option: string;
+  delivery_address: string;
+  images: string;
+  selected_size: string;
+  selected_color: string;
+  additional_info: string;
+}
+
+// LAUNDRY
+export interface LaundryOrderPayload {
+  order_type: "LAUNDRY";
+  grand_total: number;
+  subtotal: number;
+  delivery_fee: number;
+  delivery_option: string;
+  vendor_id: string;
+  order_data: CartItem[];
+  destination: string;
+  additional_info: string;
+}
+
+// DELIVERY
+export interface DeliveryOrderPayload {
+  order_type: "DELIVERY";
+  grand_total: number;
+  distance: number;
+  package_name: string;
+  receiver_phone: string;
+  sender_phone_number: string;
+  pickup_location: string;
+  destination: string;
+  pickup_coordinates: Coordinates;
+  dropoff_coordinates: Coordinates;
+  additional_info: string;
+  delivery_type: "STANDARD";
+  duration: number;
+  package_image_url: string;
+}
+
+export interface PayWithWalletPayload {
+  serviceType: "FOOD" | "LAUNDRY" | "PRODUCT" | "DELIVERY" | "WALLET";
+  food?: FoodOrderPayload;
+  laundry?: LaundryOrderPayload;
+  product?: ProductOrderPayload;
+  delivery?: DeliveryOrderPayload;
 }

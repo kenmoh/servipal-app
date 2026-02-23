@@ -279,7 +279,7 @@ export const cancelFoodOrder = async (
 };
 
 /**
- * Update food order status
+ * Update laundry order status
  */
 export const updateLaundryOrderStatus = async (
   orderId: string,

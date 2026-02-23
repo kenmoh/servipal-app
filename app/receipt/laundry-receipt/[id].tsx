@@ -50,8 +50,6 @@ const LaundryReceiptPage = () => {
     refetchOnWindowFocus: true,
   });
 
-  console.log("LAUNDRY ORDER", data);
-
   const buttonConfig = getButtonConfig(
     data?.order?.order_status!,
     data?.order?.delivery_option as "PICKUP" | "DELIVERY",
@@ -350,11 +348,8 @@ const LaundryReceiptPage = () => {
 
       sourceFile.copy(destinationFile);
 
-      console.log("Saved to:", destinationFile.uri);
-
       showSuccess("Success", "Receipt downloaded");
     } catch (error) {
-      console.error(error);
       showError("Error", "Failed to download receipt");
     }
   };
@@ -572,23 +567,7 @@ const LaundryReceiptPage = () => {
           <View className="gap-6">
             <View>
               <Text className="text-[10px] text-gray-400 font-poppins-bold uppercase mb-2">
-                Pickup Location
-              </Text>
-              <View
-                className={`p-4 rounded-xl ${isDark ? "bg-gray-700/30" : "bg-gray-50"} border ${BORDER_COLOR}`}
-              >
-                <Text
-                  className={`${TEXT_PRIMARY} text-xs leading-5 font-poppins`}
-                  numberOfLines={2}
-                >
-                  {delivery?.origin || "Customer Address"}
-                </Text>
-              </View>
-            </View>
-
-            <View>
-              <Text className="text-[10px] text-gray-400 font-poppins-bold uppercase mb-2">
-                Drop-off Location
+                Delivery Address
               </Text>
               <View
                 className={`p-4 rounded-xl ${isDark ? "bg-gray-700/30" : "bg-gray-50"} border ${BORDER_COLOR}`}
@@ -624,7 +603,7 @@ const LaundryReceiptPage = () => {
             disabled={buttonConfig.disabled || laundryOrderMutation.isPending}
           />
         )}
-        <View className="w-[90%] gap-3">
+        <View className="w-full gap-3 items-center">
           {showCustomerButton && (
             <AppButton
               text={buttonConfig.text}
@@ -668,7 +647,11 @@ const LaundryReceiptPage = () => {
               text="Leave a Review"
               width={"42.5%"}
               borderRadius={50}
-              disabled={data?.order?.order_status !== "COMPLETED"}
+              disabled={
+                data?.order?.order_status === "CANCELLED" ||
+                data?.order?.order_status === "DELIVERED" ||
+                data?.order?.order_status === "COMPLETED"
+              }
               onPress={() =>
                 router.push({
                   pathname: "/review/[id]",

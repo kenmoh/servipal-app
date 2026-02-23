@@ -274,10 +274,8 @@ const DeliveryReceiptPage = () => {
 
       sourceFile.copy(destinationFile);
 
-      console.log("Saved to:", destinationFile.uri);
       showSuccess("Success", "Receipt downloaded");
     } catch (error) {
-      console.error(error);
       showError("Error", "Failed to download receipt");
     }
   };

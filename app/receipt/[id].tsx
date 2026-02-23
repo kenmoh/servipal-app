@@ -286,10 +286,6 @@ const ReceiptPage = () => {
                         <div class="section">
                             <h2>Delivery Details</h2>
                             <div class="address-box">
-                                <strong style="display:block; margin-bottom:4px; font-size:11px; color:#999;">PICKUP</strong>
-                                ${truncateText(data.delivery?.origin || "")}
-                            </div>
-                            <div class="address-box">
                                 <strong style="display:block; margin-bottom:4px; font-size:11px; color:#999;">DROP-OFF</strong>
                                 ${truncateText(data.delivery?.destination || "")}
                             </div>
@@ -378,11 +374,8 @@ const ReceiptPage = () => {
 
       sourceFile.copy(destinationFile);
 
-      console.log("Saved to:", destinationFile.uri);
-
       showSuccess("Success", "Receipt downloaded");
     } catch (error) {
-      console.error(error);
       showError("Error", "Failed to download receipt");
     }
   };
@@ -581,23 +574,7 @@ const ReceiptPage = () => {
           <View className="gap-6">
             <View>
               <Text className="text-[10px] text-gray-400 font-poppins-bold uppercase mb-2">
-                From
-              </Text>
-              <View
-                className={`p-4 rounded-xl ${isDark ? "bg-gray-700/30" : "bg-gray-50"} border ${BORDER_COLOR}`}
-              >
-                <Text
-                  className={`${TEXT_PRIMARY} text-xs leading-5 font-poppins`}
-                  numberOfLines={2}
-                >
-                  {delivery?.origin || "Store Location"}
-                </Text>
-              </View>
-            </View>
-
-            <View>
-              <Text className="text-[10px] text-gray-400 font-poppins-bold uppercase mb-2">
-                To
+                Delivery Address
               </Text>
               <View
                 className={`p-4 rounded-xl ${isDark ? "bg-gray-700/30" : "bg-gray-50"} border ${BORDER_COLOR}`}
@@ -676,17 +653,27 @@ const ReceiptPage = () => {
               icon={<AntDesign name="close" size={24} color="red" />}
               variant="outline"
               borderRadius={50}
-              width={"100%"}
+              width={"90%"}
               color={"red"}
+              disabled={
+                data?.order?.order_status === "CANCELLED" ||
+                data?.order?.order_status === "DELIVERED" ||
+                data?.order?.order_status === "COMPLETED"
+              }
             />
           )}
       </View>
-      <View className="flex-row justify-between my-3">
+      <View className="flex-row gap-1 justify-between my-3 mx-auto">
         {showButtons && (
           <AppButton
             text="Leave a Review"
             width={"45%"}
             borderRadius={50}
+            disabled={
+              data?.order?.order_status === "CANCELLED" ||
+              data?.order?.order_status === "DELIVERED" ||
+              data?.order?.order_status === "COMPLETED"
+            }
             onPress={() =>
               router.push({
                 pathname: "/review/[id]",

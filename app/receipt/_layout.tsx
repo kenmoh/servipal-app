@@ -24,12 +24,7 @@ const ReceiptLayout = () => {
           sheetInitialDetentIndex: 0,
         }}
       />
-      <Stack.Screen
-        name="laundry-receipt"
-        options={{
-          headerShown: false,
-        }}
-      />
+
       <Stack.Screen
         name="[id]"
         options={{

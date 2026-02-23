@@ -27,12 +27,11 @@ const StoreHeader = ({ storeId }: StoreHeaderProps) => {
   const { data: vendorProfile, isLoading } = useQuery({
     queryKey: ["vendorProfile", storeId],
     queryFn: () => fetchProfileWithReviews(storeId!),
-    enabled: !!storeId && !isOwnStore,
+    enabled: !!storeId,
   });
 
-  const displayProfile = isOwnStore
-    ? currentUserProfile
-    : (vendorProfile as UserProfile);
+  const displayProfile =
+    (vendorProfile as UserProfile) || (isOwnStore ? currentUserProfile : null);
 
   if (isLoading && !displayProfile) return <LoadingIndicator />;
 

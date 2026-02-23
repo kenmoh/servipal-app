@@ -155,22 +155,13 @@ const ItemDetails = () => {
     }) => updateDeliveryStatus(txRef, newStatus, riderId, reason),
     onSuccess: async () => {
       // Invalidate and refetch
-      (refetch(),
-        queryClient.invalidateQueries({ queryKey: ["delivery-order", id] }));
+      refetch();
+      queryClient.invalidateQueries({ queryKey: ["delivery-order", id] });
       queryClient.invalidateQueries({
-        queryKey: ["user-orders", user?.id],
+        queryKey: ["delivery-orders", user?.id],
       });
       queryClient.invalidateQueries({ queryKey: ["riders", user?.id] });
-      queryClient.invalidateQueries({
-        queryKey: ["user-delivery-orders", user?.id],
-      });
 
-      await Promise.all([
-        queryClient.refetchQueries({ queryKey: ["delivery-order", id] }),
-        queryClient.refetchQueries({
-          queryKey: ["user-delivery-orders", user?.id],
-        }),
-      ]);
       Sentry.addBreadcrumb({
         message: "Delivery status updated",
         category: "delivery",
@@ -264,7 +255,7 @@ const ItemDetails = () => {
       ) {
         // Redirect to riders screen
         router.push({
-          pathname: "/(tabs)/delivery/riders",
+          pathname: "/riders",
           params: {
             txRef: data.tx_ref,
             paymentStatus: "PAID",
@@ -628,7 +619,7 @@ const ItemDetails = () => {
             </View>
 
             {/* Additional Action Buttons */}
-            <View className="flex-row w-[90%] self-center justify-between mt-4 mb-8 gap-2">
+            <View className="flex-row w-full self-center justify-between mt-4 mb-8 gap-2">
               {data?.rider_id !== user?.id && (
                 <AppButton
                   text="Review"

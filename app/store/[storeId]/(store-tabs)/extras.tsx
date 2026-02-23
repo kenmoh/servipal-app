@@ -65,19 +65,29 @@ const ExtrasMenu = () => {
   const handleCustomAdd = useCallback(
     (
       item: RestaurantMenuItemResponse,
-      selectedSize: SizeOption | null,
+      selectedSizes: SizeOption[],
       selectedSide: string,
     ) => {
-      // Use the selected size's price if available, otherwise use base price
-      const finalPrice = selectedSize?.price ?? Number(item.price);
-
-      addItem(storeId as string, item.id, 1, {
-        name: item.name,
-        price: finalPrice,
-        image: item.images[0] || "",
-        selected_size: selectedSize || undefined,
-        selected_side: selectedSide,
-      });
+      if (selectedSizes.length > 0) {
+        // Add each selected size as a separate cart item
+        selectedSizes.forEach((size) => {
+          addItem(storeId as string, item.id, 1, {
+            name: item.name,
+            price: Number(size.price),
+            image: item.images[0] || "",
+            selected_size: size,
+            selected_side: selectedSide,
+          });
+        });
+      } else {
+        // No sizes — use base price
+        addItem(storeId as string, item.id, 1, {
+          name: item.name,
+          price: Number(item.price),
+          image: item.images[0] || "",
+          selected_side: selectedSide,
+        });
+      }
 
       setCheckedItems((prev) => {
         const newChecked = new Set(prev);

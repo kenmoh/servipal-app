@@ -1,6 +1,11 @@
+import { payWithWallet, PayWithWalletData } from "@/api/payment";
 import HDivider from "@/components/HDivider";
+import LoadingIndicator from "@/components/LoadingIndicator";
 import { useToast } from "@/components/ToastProvider";
+import { AppButton } from "@/components/ui/app-button";
 import { useCartStore } from "@/store/cartStore";
+import Ionicons from "@expo/vector-icons/Ionicons";
+import { useMutation } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
 import { PayWithFlutterwave } from "flutterwave-react-native";
 import { RedirectParams } from "flutterwave-react-native/dist/PayWithFlutterwave";
@@ -8,7 +13,7 @@ import React from "react";
 import { ActivityIndicator, Text, TouchableOpacity, View } from "react-native";
 
 const payment = () => {
-  const { showSuccess } = useToast();
+  const { showSuccess, showError } = useToast();
   const {
     logo,
     email,
@@ -46,6 +51,9 @@ const payment = () => {
   const { clearCart } = useCartStore();
 
   const handleOnRedirect = (data: RedirectParams) => {
+    console.log("====================");
+    console.log(data);
+    console.log("====================");
     clearCart();
 
     showSuccess(
@@ -77,13 +85,39 @@ const payment = () => {
         params: { txRef: data.tx_ref, paymentStatus: data.status },
       });
     }
+    if (serviceType === "WALLET") {
+      router.push({
+        pathname: "/wallet",
+        params: { txRef: data.tx_ref, paymentStatus: data.status },
+      });
+    }
   };
 
+  const paymentWithWalletMutaion = useMutation({
+    mutationFn: (data: PayWithWalletData) => payWithWallet(data),
+    onSuccess: () => handleOnRedirect,
+    onError: (error) => {
+      showError("Error", error.message);
+    },
+  });
+
+  const handlePayWithWallet = () => {
+    paymentWithWalletMutaion.mutate({
+      amount: Number(amount),
+      tx_ref: txRef,
+    });
+  };
+
+  if (paymentWithWalletMutaion.isPending) {
+    return <LoadingIndicator />;
+  }
+
   return (
-    <View className="flex-1 bg-background px-6 pt-8 w-full">
+    <View className="flex-1 bg-background px-3 pt-8 w-full">
       <View className="mb-6">
-        <Text className="font-poppins-bold text-2xl text-primary">{title}</Text>
-        <Text className="font-poppins text-sm text-muted">{description}</Text>
+        <Text className="font-poppins-medium text-sm text-muted">
+          Transaction Ref: {txRef}
+        </Text>
       </View>
 
       <View className="bg-input rounded-2xl p-4 mb-4">
@@ -92,7 +126,7 @@ const payment = () => {
         ) : null}
         <DisplayDetails label="Amount" value={`₦${amount}`} />
         <HDivider />
-        <DisplayDetails label="Ref" value={txRef} />
+        {/* <DisplayDetails label="Ref" value={txRef} /> */}
         <HDivider />
 
         {receiverPhoneNumber ? (
@@ -129,7 +163,14 @@ const payment = () => {
         ) : null}
       </View>
 
-      <View className="flex-1 justify-end pb-16 w-full">
+      <View className="flex-1 justify-end pb-16 w-full gap-3">
+        <AppButton
+          text={`PAY WITH WALLET ₦${amount}`}
+          onPress={handlePayWithWallet}
+          borderRadius={50}
+          variant="outline"
+          icon={<Ionicons name="wallet-outline" size={22} color="orange" />}
+        />
         <PayWithFlutterwave
           onRedirect={handleOnRedirect}
           options={{
@@ -153,12 +194,15 @@ const payment = () => {
           }}
           customButton={({ onPress, disabled }) => (
             <TouchableOpacity
-              className="bg-button-primary h-14 mb-4 rounded-full flex-row items-center justify-center shadow-md"
+              className="bg-button-primary gap-2 h-14 mb-4 rounded-full flex-row items-center justify-center shadow-md"
               activeOpacity={0.7}
               onPress={() => onPress()}
               disabled={disabled}
               style={{ opacity: disabled ? 0.6 : 1 }}
             >
+              {!disabled && (
+                <Ionicons name="card-outline" size={22} color="white" />
+              )}
               {disabled ? (
                 <ActivityIndicator size={"small"} color={"white"} />
               ) : (

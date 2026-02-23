@@ -469,7 +469,7 @@ const addMenu = () => {
 
                       {/* Price inputs for selected sizes */}
                       {(value || []).length > 0 && (
-                        <View className="gap-3 flex-row">
+                        <View className="gap-3">
                           {(value || []).map((item: any) => {
                             const sizeOption =
                               typeof item === "string"
