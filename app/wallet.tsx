@@ -21,9 +21,6 @@ const WalletScreen = () => {
     refetchOnWindowFocus: true,
     refetchOnMount: true,
     enabled: !!profile?.id,
-    staleTime: 0,
-    gcTime: 5 * 60 * 1000,
-    retry: 3,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 
@@ -145,8 +142,12 @@ const WalletScreen = () => {
             <Text className="text-primary font-poppins-semibold text-lg">
               Recent Transactions
             </Text>
-            <Pressable hitSlop={8}>
-              <Text className="text-orange-500 font-poppins-medium text-sm underline">
+            <Pressable
+              hitSlop={8}
+              onPress={() => router.push("/wallet/all-transactions")}
+              className="bg-orange-600/15 px-3 py-1 rounded-full active:opacity-20"
+            >
+              <Text className="text-orange-500 font-poppins-medium text-sm">
                 See All
               </Text>
             </Pressable>
@@ -155,14 +156,16 @@ const WalletScreen = () => {
 
         {/* Transaction List */}
         <FlatList
-          data={data?.transactions || []}
+          data={data?.transactions?.slice(0, 9) || []}
           keyExtractor={(item) => item.id}
           ItemSeparatorComponent={() => <HDivider />}
           contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 24 }}
           showsVerticalScrollIndicator={false}
           renderItem={({ item }) => <Transactioncard data={item} />}
-          refreshControl={<RefreshControl refreshing={isFetching} />}
-          refreshing={isFetching}
+          refreshControl={
+            <RefreshControl refreshing={isFetching || isLoading || isPending} />
+          }
+          refreshing={isFetching || isLoading || isPending}
           onRefresh={refetch}
         />
       </View>

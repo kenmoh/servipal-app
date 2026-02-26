@@ -4,6 +4,7 @@ import { useUserStore } from "@/store/userStore";
 import { SignInFormValues } from "@/types/auth-types";
 import { toAuthUser } from "@/types/user-types";
 import { supabase } from "@/utils/supabase";
+import * as Sentry from "@sentry/react-native";
 import { AuthError } from "@supabase/supabase-js";
 import { useMutation } from "@tanstack/react-query";
 
@@ -45,6 +46,7 @@ export const useSignIn = () => {
 
     onError: (error: AuthError | Error) => {
       console.error("❌ Login error:", error);
+      Sentry.captureException(error, { tags: { action: "sign_in" } });
 
       let errorMessage = "Login failed. Please try again.";
 
@@ -72,6 +74,8 @@ export const useSignIn = () => {
         userId: data.user.id,
         email: data.user.email,
       });
+      Sentry.setUser({ id: data.user.id, email: data.user.email ?? undefined });
+      Sentry.addBreadcrumb({ category: "auth", message: "User signed in successfully", level: "info" });
 
       try {
         const authUser = toAuthUser(data.user);

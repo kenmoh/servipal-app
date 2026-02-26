@@ -11,16 +11,20 @@ import authStorage from "@/storage/auth-storage";
 import { useUserStore } from "@/store/userStore";
 import { ImageUrl } from "@/types/user-types";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import * as Sentry from "@sentry/react-native";
 import { useMutation } from "@tanstack/react-query";
 import Constants from "expo-constants";
 import * as Linking from "expo-linking";
+import * as Location from "expo-location";
 import { router } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import { useColorScheme } from "nativewind";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Dimensions,
+  Platform,
   Pressable,
   ScrollView,
   Switch,
@@ -34,8 +38,18 @@ const BACKDROP_IMAGE_WIDTH = Dimensions.get("window").width;
 
 const ProfileScreen = () => {
   const { setColorScheme } = useColorScheme();
-  const { user, signOut, profile, profileImageUrl, backdropImageUrl } =
-    useUserStore();
+  const {
+    user,
+    signOut,
+    profile,
+    profileImageUrl,
+    backdropImageUrl,
+    isIosBackgroundLocationEnabled,
+    isAndroidBackgroundLocationEnabled,
+    locationAlwaysAndWhenInUsePermission,
+    locationWhenInUsePermission,
+    checkLocationPermission,
+  } = useUserStore();
   const [theme, setTheme] = useState<themeType>("dark");
   const [isOnline, setIsOnline] = useState(profile?.is_online ?? false);
   const [canPickup, setCanPickup] = useState(
@@ -87,12 +101,17 @@ const ProfileScreen = () => {
     mutationFn: (imageData: ImageData) =>
       uploadImage(imageData, "backdrop_image_url"),
     onSuccess: (result) => {
-      console.log("✅ Backdrop image uploaded:", result.publicUrl);
+      Sentry.addBreadcrumb({
+        category: "profile",
+        message: "Backdrop image uploaded",
+        level: "info",
+      });
       setBackdropUri(result.publicUrl);
       showSuccess("Success", "Backdrop image updated!");
     },
     onError: (error: any) => {
       console.error("❌ Backdrop upload failed:", error);
+      Sentry.captureException(error, { tags: { action: "upload_backdrop" } });
       showError(
         "Upload Failed",
         error.message || "Failed to upload backdrop image",
@@ -141,6 +160,173 @@ const ProfileScreen = () => {
         setCanPickup(previousValue);
       },
     });
+  };
+
+  useEffect(() => {
+    checkLocationPermission();
+  }, [checkLocationPermission]);
+
+  const handleForegroundToggle = async () => {
+    console.log("👆 Foreground toggle pressed");
+    try {
+      const { status: initialStatus, canAskAgain } =
+        await Location.getForegroundPermissionsAsync();
+      console.log("Current foreground status:", { initialStatus, canAskAgain });
+
+      if (initialStatus === "granted") {
+        Alert.alert(
+          "Location Enabled",
+          "General location access is already enabled. You can manage this in your device settings.",
+          [
+            { text: "Open Settings", onPress: () => Linking.openSettings() },
+            { text: "OK", style: "cancel" },
+          ],
+        );
+        return;
+      }
+
+      if (initialStatus === "denied" && !canAskAgain) {
+        Alert.alert(
+          "Permission Required",
+          "General location access is needed to find the best services. Please enable location access in your device settings.",
+          [
+            { text: "Open Settings", onPress: () => Linking.openSettings() },
+            { text: "Cancel", style: "cancel" },
+          ],
+        );
+        return;
+      }
+
+      // Explanatory alert before requesting (if not already granted/permanently denied)
+      Alert.alert(
+        "Location Access",
+        "ServiPal needs your general location to find the best services and nearby vendors for you.",
+        [
+          {
+            text: "Continue",
+            onPress: async () => {
+              try {
+                console.log("🔄 Triggering native foreground request...");
+                const { status: requestStatus } =
+                  await Location.requestForegroundPermissionsAsync();
+                console.log("Foreground request result:", requestStatus);
+
+                if (requestStatus === "granted") {
+                  showSuccess("Success", "General location enabled!");
+                } else {
+                  showError(
+                    "Permission Denied",
+                    "General location access is needed to find the best services.",
+                  );
+                }
+                await checkLocationPermission();
+              } catch (error) {
+                console.error("Error in foreground request:", error);
+                showError("Error", "Failed to request permission.");
+              }
+            },
+          },
+          { text: "Cancel", style: "cancel" },
+        ],
+      );
+    } catch (error) {
+      console.error("Error in foreground toggle:", error);
+      showError("Error", "Failed to check permission.");
+    }
+  };
+
+  const handleBackgroundToggle = async () => {
+    console.log("👆 Background toggle pressed");
+    try {
+      // 1. Check Foreground dependency first
+      const { status: fgStatus } =
+        await Location.getForegroundPermissionsAsync();
+      if (fgStatus !== "granted") {
+        Alert.alert(
+          "Action Required",
+          "Please enable 'General Location' first before enabling 'Delivery Tracking'.",
+          [{ text: "OK" }],
+        );
+        return;
+      }
+
+      // 2. Check Background status
+      const { status: bgStatus, canAskAgain } =
+        await Location.getBackgroundPermissionsAsync();
+      console.log("Current background status:", { bgStatus, canAskAgain });
+
+      if (bgStatus === "granted") {
+        Alert.alert(
+          "Permission Enabled",
+          "Delivery tracking is already enabled. You can manage this in your device settings.",
+          [
+            { text: "Open Settings", onPress: () => Linking.openSettings() },
+            { text: "OK", style: "cancel" },
+          ],
+        );
+        return;
+      }
+
+      if (bgStatus === "denied" && !canAskAgain) {
+        const message =
+          Platform.OS === "android"
+            ? "Background location must be set to 'Allow all the time' in your system settings."
+            : "Background location access must be set to 'Always' in your system settings.";
+
+        Alert.alert("Action Required", message, [
+          { text: "Open Settings", onPress: () => Linking.openSettings() },
+          { text: "Cancel", style: "cancel" },
+        ]);
+        return;
+      }
+
+      // 3. Show explanation before background request
+      Alert.alert(
+        "Delivery Tracking",
+        "Allow ServiPal to access your location even when the app is in the background? This is specifically used to display riders closest to you and provide faster delivery updates.",
+        [
+          {
+            text: "Allow",
+            onPress: async () => {
+              try {
+                console.log("🔄 Triggering native background request...");
+                const { status: requestStatus } =
+                  await Location.requestBackgroundPermissionsAsync();
+                console.log("Background request result:", requestStatus);
+
+                if (requestStatus === "granted") {
+                  showSuccess("Success", "Delivery tracking enabled!");
+                } else {
+                  console.warn("Background permission denied:", requestStatus);
+                  const message =
+                    Platform.OS === "android"
+                      ? "Background location must be set to 'Allow all the time'. Please update this in settings."
+                      : "Background location permission must be set to 'Always' in your system settings.";
+
+                  showError("Permission Denied", message);
+
+                  Alert.alert("Action Required", message, [
+                    {
+                      text: "Open Settings",
+                      onPress: () => Linking.openSettings(),
+                    },
+                    { text: "Cancel", style: "cancel" },
+                  ]);
+                }
+                await checkLocationPermission();
+              } catch (error) {
+                console.error("Error in background request:", error);
+                showError("Error", "Failed to request permission.");
+              }
+            },
+          },
+          { text: "Cancel", style: "cancel" },
+        ],
+      );
+    } catch (error) {
+      console.error("Error in background toggle:", error);
+      showError("Error", "Failed to check permission.");
+    }
   };
 
   useEffect(() => {
@@ -374,6 +560,39 @@ const ProfileScreen = () => {
               <Switch value={isOnline} onValueChange={handleToggle} />
             </View>
           </View>
+          <View className="flex-row items-center justify-between">
+            <View className="flex-row items-center gap-3">
+              <Ionicons name="location-outline" size={20} color="gray" />
+              <Text className="text-muted">General Location</Text>
+            </View>
+            <View className="flex-row gap-1">
+              <Switch
+                value={!!locationWhenInUsePermission}
+                onValueChange={handleForegroundToggle}
+              />
+            </View>
+          </View>
+
+          {(user?.user_metadata?.user_type === "RIDER" ||
+            profile?.user_type === "RIDER") && (
+            <View className="flex-row items-center justify-between">
+              <View className="flex-row items-center gap-3">
+                <Ionicons name="navigate-outline" size={20} color="gray" />
+                <Text className="text-muted">Delivery Tracking</Text>
+              </View>
+              <View className="flex-row gap-1">
+                <Switch
+                  value={
+                    Platform.OS === "ios"
+                      ? !!isIosBackgroundLocationEnabled
+                      : !!isAndroidBackgroundLocationEnabled
+                  }
+                  onValueChange={handleBackgroundToggle}
+                />
+              </View>
+            </View>
+          )}
+
           {["RESTAURANT_VENDOR", "LAUNDRY_VENDOR"].includes(
             user?.user_metadata?.user_type!,
           ) && (

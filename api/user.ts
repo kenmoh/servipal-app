@@ -13,6 +13,7 @@ import {
 import { apiClient } from "@/utils/client";
 
 import { supabase } from "@/utils/supabase";
+import * as Sentry from "@sentry/react-native";
 import { ApiResponse } from "apisauce";
 import { ErrorResponse } from "./auth";
 
@@ -36,6 +37,7 @@ export async function fetchProfileWithReviews(
 
   if (error) {
     console.error("Failed to fetch user profile:", error);
+    Sentry.captureException(error, { tags: { action: "fetch_profile_with_reviews" } });
   }
 
   return data as UserProfile;
@@ -116,8 +118,10 @@ export const uploadImage = async (
 
     if (updateError) {
       console.warn(`Failed to update ${fieldType}:`, updateError);
+      Sentry.captureException(updateError, { tags: { action: "update_image_field", field: fieldType } });
     } else {
       console.log(`${fieldType} updated successfully`);
+      Sentry.addBreadcrumb({ category: "api.user", message: `${fieldType} updated successfully`, level: "info" });
     }
 
     return { publicUrl };
@@ -731,7 +735,6 @@ export const registerPushToken = async (
       throw new Error(error.message || "Failed to register push token");
     }
   } catch (error) {
-    99;
     throw error;
   }
 };

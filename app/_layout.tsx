@@ -28,7 +28,6 @@ Sentry.init({
     Sentry.feedbackIntegration(),
   ],
 
-  // uncomment the line below to enable Spotlight (https://spotlightjs.com)
   spotlight: __DEV__,
 });
 
@@ -45,7 +44,7 @@ const queryClient = new QueryClient({
   },
 });
 
-export default function RootLayout() {
+export default Sentry.wrap(function RootLayout() {
   const colorScheme = useColorScheme();
   const BG_COLOR = colorScheme === "dark" ? HEADER_BG_DARK : HEADER_BG_LIGHT;
   const { user, hydrate, hasHydrated, isFirstLaunch, initialize } =
@@ -83,6 +82,11 @@ export default function RootLayout() {
       const url = Linking.parse(event.url);
 
       console.log("Deep link received:", url);
+      Sentry.addBreadcrumb({
+        category: "navigation",
+        message: `Deep link received: ${url.hostname}`,
+        level: "info",
+      });
 
       // Handle password reset link
       // Format: servipal://reset-password?access_token=xxx&type=recovery
@@ -146,6 +150,10 @@ export default function RootLayout() {
                       options={{ title: "Recover password" }}
                     />
                     <Stack.Screen
+                      name="onboarding"
+                      options={{ headerShown: false }}
+                    />
+                    <Stack.Screen
                       name="reset-password"
                       options={{ title: "Reset password" }}
                     />
@@ -176,7 +184,7 @@ export default function RootLayout() {
                       options={{
                         headerShadowVisible: false,
                         presentation: "formSheet",
-                        sheetAllowedDetents: [0.65],
+                        sheetAllowedDetents: [0.75],
                         sheetCornerRadius: 25,
                         sheetGrabberVisible: true,
                         sheetInitialDetentIndex: 0,
@@ -306,4 +314,4 @@ export default function RootLayout() {
       </GestureHandlerRootView>
     </View>
   );
-}
+});

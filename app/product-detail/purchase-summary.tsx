@@ -56,19 +56,8 @@ const PurchaseSummary = () => {
     mutationFn: (data: ProductOrderCreateRequest) =>
       initiateProductPayment(data),
     onSuccess: (responseData) => {
-      Alert.alert(
-        "Order Placed!",
-        "Your order has been created successfully. Proceed to payment to complete your purchase.",
-        [
-          {
-            text: "Go to Payment",
-            onPress: () => {
-              resetPurchase();
-              navigateToPayment(responseData);
-            },
-          },
-        ],
-      );
+      resetPurchase();
+      navigateToPayment({ ...responseData, serviceType: "PRODUCT" });
       queryClient.invalidateQueries({ queryKey: ["products", user?.id] });
     },
     onError: (error: any) => {

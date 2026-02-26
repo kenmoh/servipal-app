@@ -10,7 +10,7 @@ import { BottomSheetModal } from "@gorhom/bottom-sheet";
 import { FlashList } from "@shopify/flash-list";
 import { useQuery } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Text, View } from "react-native";
 
 interface GroupedItem {
@@ -30,6 +30,13 @@ const FoodMenu = () => {
   const [selectedItem, setSelectedItem] =
     useState<RestaurantMenuItemResponse | null>(null);
   const bottomSheetRef = useRef<BottomSheetModal>(null);
+
+  // Present the sheet only after selectedItem state has committed
+  useEffect(() => {
+    if (selectedItem) {
+      bottomSheetRef.current?.present();
+    }
+  }, [selectedItem]);
 
   const { data, refetch, isFetching } = useQuery({
     queryKey: ["foodMenutItems", storeId],
@@ -75,9 +82,8 @@ const FoodMenu = () => {
           return newChecked;
         });
       } else {
-        if (hasOptions) {
+      if (hasOptions) {
           setSelectedItem(item);
-          bottomSheetRef.current?.present();
         } else {
           addItem(storeId as string, item.id, 1, {
             name: item.name,
@@ -187,6 +193,7 @@ const FoodMenu = () => {
         ref={bottomSheetRef}
         item={selectedItem}
         onAdd={handleCustomAdd}
+        onDismiss={() => setSelectedItem(null)}
       />
     </View>
   );

@@ -3,6 +3,7 @@ import { useToast } from "@/components/ToastProvider";
 import { AppButton } from "@/components/ui/app-button";
 import { AppTextInput } from "@/components/ui/app-text-input";
 import { AntDesign } from "@expo/vector-icons";
+import * as Sentry from "@sentry/react-native";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
 import { router } from "expo-router";
@@ -36,7 +37,6 @@ const FundWalletScreen = () => {
   const { mutate, isPending } = useMutation({
     mutationFn: (amount: number) => initiateWalletTopup(amount),
     onSuccess: (data) => {
-      console.log("Payment amount:", data.amount);
       router.push({
         pathname: "/payment",
         params: {
@@ -54,7 +54,6 @@ const FundWalletScreen = () => {
       });
     },
     onError: (error) => {
-      console.error("Error creating order:", error);
       showError(
         "Error",
         error instanceof Error ? error.message : "An unexpected error occurred",
@@ -65,12 +64,13 @@ const FundWalletScreen = () => {
   const onSubmit = (data: FundWalletForm) => {
     // Proceed with payment
     console.log("Payment amount:", data.amount);
+    Sentry.addBreadcrumb({ category: "payment", message: `Wallet fund initiated: ${data.amount}`, level: "info" });
     mutate(data.amount);
   };
 
   return (
     <View className="flex-1 bg-background px-5 mt-5 gap-6">
-      <Text className="text-primary font-poppins-medium tracking-wider">
+      <Text className="text-primary mt-4 font-poppins-medium tracking-wider">
         Fund your wallet
       </Text>
       <View className="gap-6">

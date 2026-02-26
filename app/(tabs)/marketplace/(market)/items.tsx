@@ -8,6 +8,7 @@ import Feather from "@expo/vector-icons/Feather";
 import { FlashList } from "@shopify/flash-list";
 import { useQuery } from "@tanstack/react-query";
 import { router } from "expo-router";
+import * as Sentry from "@sentry/react-native";
 import React, { useCallback } from "react";
 import { StyleSheet, Text, View } from "react-native";
 
@@ -20,8 +21,6 @@ const items = () => {
 
     enabled: !!user?.id,
   });
-
-  console.log(data);
 
   const handleRefresh = useCallback(() => {
     refetch();
@@ -41,8 +40,6 @@ const items = () => {
       />
     );
   }
-  console.log("RENDERING MARKETPLACE ITEMS");
-
   return (
     <View className="flex-1 bg-background">
       <View>

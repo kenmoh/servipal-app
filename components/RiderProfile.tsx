@@ -45,8 +45,6 @@ const RiderProfile = ({ ref, riderId, showButton = true }: ProfileData) => {
     enabled: !!riderId,
   });
 
-  console.log(data);
-
   return (
     <BottomSheet
       ref={ref}

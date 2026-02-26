@@ -1,3 +1,5 @@
+import * as Sentry from "@sentry/react-native";
+
 interface Coordinates {
   lat: number;
   lng: number;
@@ -43,6 +45,7 @@ export const getCoordinatesFromAddress = async (
     return null;
   } catch (error) {
     console.error("Geocoding error:", error);
+    Sentry.captureException(error, { tags: { action: "geocoding" } });
     return null;
   }
 };

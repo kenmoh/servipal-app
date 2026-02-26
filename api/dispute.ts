@@ -6,6 +6,7 @@ import {
   SendMessageRequest,
 } from "@/types/dispute-types";
 import { supabase } from "@/utils/supabase";
+import * as Sentry from "@sentry/react-native";
 
 /**
  * Create a new dispute
@@ -24,6 +25,7 @@ export const createDispute = async (
     }
 
     console.log("📋 Creating dispute...", request.order_type);
+    Sentry.addBreadcrumb({ category: "api.dispute", message: `Creating dispute for ${request.order_type}`, level: "info" });
 
     const { data, error } = await supabase.rpc("create_dispute", {
       p_order_id: request.order_id,
@@ -35,13 +37,16 @@ export const createDispute = async (
 
     if (error) {
       console.error("❌ Create dispute failed:", error);
+      Sentry.captureException(error, { tags: { action: "create_dispute" } });
       throw new Error(error.message || "Failed to create dispute");
     }
 
     console.log("✅ Dispute created:", data);
+    Sentry.addBreadcrumb({ category: "api.dispute", message: "Dispute created successfully", level: "info", data: { dispute_id: data?.dispute_id } });
     return data;
   } catch (error) {
     console.error("❌ Create dispute error:", error);
+    Sentry.captureException(error, { tags: { action: "create_dispute" } });
     throw error;
   }
 };
@@ -70,12 +75,14 @@ export const getMyDisputes = async (): Promise<Dispute[]> => {
 
     if (error) {
       console.error("❌ Get disputes failed:", error);
+      Sentry.captureException(error, { tags: { action: "get_disputes" } });
       throw new Error(error.message);
     }
 
     return data || [];
   } catch (error) {
     console.error("❌ Get disputes error:", error);
+    Sentry.captureException(error, { tags: { action: "get_disputes" } });
     throw error;
   }
 };
@@ -93,12 +100,14 @@ export const getDisputeDetails = async (
 
     if (error) {
       console.error("❌ Get dispute details failed:", error);
+      Sentry.captureException(error, { tags: { action: "get_dispute_details" } });
       throw new Error(error.message);
     }
 
     return data as DisputeDetails;
   } catch (error) {
     console.error("❌ Get dispute details error:", error);
+    Sentry.captureException(error, { tags: { action: "get_dispute_details" } });
     throw error;
   }
 };
@@ -118,12 +127,14 @@ export const getDisputeMessages = async (
 
     if (error) {
       console.error("❌ Get messages failed:", error);
+      Sentry.captureException(error, { tags: { action: "get_dispute_messages" } });
       throw new Error(error.message);
     }
 
     return data || [];
   } catch (error) {
     console.error("❌ Get messages error:", error);
+    Sentry.captureException(error, { tags: { action: "get_dispute_messages" } });
     throw error;
   }
 };
@@ -145,6 +156,7 @@ export const sendDisputeMessage = async (
     }
 
     console.log("💬 Sending message...", request);
+    Sentry.addBreadcrumb({ category: "api.dispute", message: "Sending dispute message", level: "info", data: { dispute_id: request.dispute_id } });
 
     const { data, error } = await supabase.rpc("send_dispute_message", {
       p_dispute_id: request.dispute_id,
@@ -155,13 +167,16 @@ export const sendDisputeMessage = async (
 
     if (error) {
       console.error("❌ Send message failed:", error);
+      Sentry.captureException(error, { tags: { action: "send_dispute_message" } });
       throw new Error(error.message || "Failed to send message");
     }
 
     console.log("✅ Message sent:", data);
+    Sentry.addBreadcrumb({ category: "api.dispute", message: "Dispute message sent", level: "info" });
     return data;
   } catch (error) {
     console.error("❌ Send message error:", error);
+    Sentry.captureException(error, { tags: { action: "send_dispute_message" } });
     throw error;
   }
 };
@@ -185,6 +200,7 @@ export const subscribeToDisputeMessages = (
       },
       (payload) => {
         console.log("🔔 New message received:", payload);
+        Sentry.addBreadcrumb({ category: "realtime.dispute", message: "New dispute message received", level: "info" });
         onNewMessage(payload.new as DisputeMessage);
       },
     )
@@ -212,6 +228,7 @@ export const subscribeToDisputeUpdates = (
       },
       (payload) => {
         console.log("🔔 Dispute updated:", payload);
+        Sentry.addBreadcrumb({ category: "realtime.dispute", message: "Dispute updated via realtime", level: "info" });
         onUpdate(payload.new as Dispute);
       },
     )
@@ -244,6 +261,7 @@ export const markMessagesAsRead = async (disputeId: string): Promise<void> => {
 
     if (messageError) {
       console.error("❌ Mark messages as read failed:", messageError);
+      Sentry.captureException(messageError, { tags: { action: "mark_messages_read" } });
       throw new Error(messageError.message);
     }
 
@@ -255,11 +273,14 @@ export const markMessagesAsRead = async (disputeId: string): Promise<void> => {
 
     if (disputeError) {
       console.error("❌ Reset unread count failed:", disputeError);
+      Sentry.captureException(disputeError, { tags: { action: "reset_unread_count" } });
     }
 
     console.log("✅ Messages marked as read");
+    Sentry.addBreadcrumb({ category: "api.dispute", message: "Messages marked as read", level: "info" });
   } catch (error) {
     console.error("❌ Mark as read error:", error);
+    Sentry.captureException(error, { tags: { action: "mark_messages_read" } });
     throw error;
   }
 };
@@ -299,6 +320,7 @@ export const uploadDisputeImage = async (
 
     if (error) {
       console.error("❌ Upload image failed:", error);
+      Sentry.captureException(error, { tags: { action: "upload_dispute_image" } });
       throw new Error(error.message);
     }
 
@@ -308,9 +330,11 @@ export const uploadDisputeImage = async (
       .getPublicUrl(data.path);
 
     console.log("✅ Image uploaded:", urlData.publicUrl);
+    Sentry.addBreadcrumb({ category: "api.dispute", message: "Dispute image uploaded", level: "info" });
     return urlData.publicUrl;
   } catch (error) {
     console.error("❌ Upload image error:", error);
+    Sentry.captureException(error, { tags: { action: "upload_dispute_image" } });
     throw error;
   }
 };

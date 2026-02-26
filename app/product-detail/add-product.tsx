@@ -22,6 +22,7 @@ import { useToast } from "@/components/ToastProvider";
 import { AppButton } from "@/components/ui/app-button";
 import { AppTextInput } from "@/components/ui/app-text-input";
 import { useUserStore } from "@/store/userStore";
+import * as Sentry from "@sentry/react-native";
 import { CreateProduct } from "@/types/product-types";
 import z from "zod";
 
@@ -147,7 +148,7 @@ const AddProductScreen = () => {
 
     onError: (error: Error) => {
       showError("Error", error.message);
-      console.log(error);
+      Sentry.captureException(error, { tags: { action: "create_product" } });
     },
   });
 
@@ -164,7 +165,7 @@ const AddProductScreen = () => {
 
     onError: (error: Error) => {
       showError("Error", error.message);
-      console.log(error);
+      Sentry.captureException(error, { tags: { action: "delete_product" } });
     },
   });
 
@@ -195,7 +196,7 @@ const AddProductScreen = () => {
   const isPending = createMutation.isPending || updateMutation.isPending;
 
   const onSubmit = (data: ProductCreateFormData) => {
-    console.log("SUBMITTED", data);
+    Sentry.addBreadcrumb({ category: "product", message: isEditing ? "Updating product" : "Creating product", level: "info" });
     const productData: CreateProduct = {
       name: data.name,
       description: data.description,
@@ -461,7 +462,7 @@ const AddProductScreen = () => {
                 : "Create Product"
           }
           onPress={handleSubmit(onSubmit, (errors) =>
-            console.log("Form errors:", errors),
+            Sentry.addBreadcrumb({ category: "product", message: "Product form validation errors", level: "warning", data: errors }),
           )}
           icon={
             isPending ? (

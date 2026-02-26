@@ -81,6 +81,17 @@ const RecoverPassword = () => {
   );
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: bgColor }}>
+      {/* <Stack.Screen
+        options={{
+          title: "Reset Password",
+          headerShown: true,
+          headerStyle: {
+            backgroundColor:
+              theme === "dark" ? HEADER_BG_DARK : HEADER_BG_LIGHT,
+          },
+          headerTintColor: theme === "dark" ? HEADER_BG_DARK : HEADER_BG_LIGHT,
+        }}
+      /> */}
       <ScrollView
         className="flex-1 w-full bg-background"
         showsVerticalScrollIndicator={false}
@@ -90,11 +101,6 @@ const RecoverPassword = () => {
         }}
       >
         <View className="flex-1 bg-background w-full">
-          <View className="items-center w-[90%] my-10">
-            <Text className="self-start text-primary font-poppins text-xs">
-              Enter the new password to reset your password.
-            </Text>
-          </View>
           <View className="gap-5 w-full">
             <View className="hidden">
               <Controller
@@ -105,6 +111,7 @@ const RecoverPassword = () => {
                     label={"Access Token"}
                     placeholder="Access Token"
                     onBlur={onBlur}
+                    width={"90%"}
                     onChangeText={onChange}
                     value={value}
                     keyboardType="email-address"
@@ -122,6 +129,7 @@ const RecoverPassword = () => {
                   label={"New Password"}
                   placeholder="********"
                   onBlur={onBlur}
+                  width={"90%"}
                   onChangeText={onChange}
                   value={value}
                   errorMessage={errors.newPassword?.message}
@@ -137,6 +145,7 @@ const RecoverPassword = () => {
                   label={"Confirm Password"}
                   placeholder="********"
                   onBlur={onBlur}
+                  width={"90%"}
                   onChangeText={onChange}
                   value={value}
                   errorMessage={errors.confirmPassword?.message}
@@ -144,15 +153,19 @@ const RecoverPassword = () => {
                 />
               )}
             />
-            <AppButton
-              text={isPending ? "Sending" : "Send"}
-              disabled={isPending}
-              width={"90%"}
-              icon={
-                isPending && <ActivityIndicator size={"large"} color="white" />
-              }
-              onPress={handleSubmit(onSubmit)}
-            />
+            <View className="w-[90%] self-center">
+              <AppButton
+                text={isPending ? "Sending" : "Send"}
+                disabled={isPending}
+                width={"100%"}
+                icon={
+                  isPending && (
+                    <ActivityIndicator size={"large"} color="white" />
+                  )
+                }
+                onPress={handleSubmit(onSubmit)}
+              />
+            </View>
           </View>
 
           <View className="items-center self-center mt-[25px] justify-center w-[90%] mb-[30px]">

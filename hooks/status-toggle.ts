@@ -3,6 +3,7 @@ import { useToast } from "@/components/ToastProvider";
 import { useUserStore } from "@/store/userStore";
 import { ToggleOnlineResponse, TogglePickupResponse } from "@/types/user-types";
 import { supabase } from "@/utils/supabase";
+import * as Sentry from "@sentry/react-native";
 import { useMutation } from "@tanstack/react-query";
 
 
@@ -44,6 +45,7 @@ export const useToggleOnlineStatus = () => {
 
     onError: (error: Error) => {
       console.error("❌ Error toggling online status:", error);
+      Sentry.captureException(error, { tags: { action: "toggle_online_status" } });
       showError("Error", error.message || "Failed to update status");
     },
   });
@@ -88,6 +90,7 @@ export const useTogglePickupAndDropoff = () => {
 
     onError: (error: Error) => {
       console.error("❌ Error toggling pickup preference:", error);
+      Sentry.captureException(error, { tags: { action: "toggle_pickup" } });
       showError("Error", error.message || "Failed to update preference");
     },
   });

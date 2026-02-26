@@ -5,6 +5,7 @@ import {
   UserReview,
 } from "@/types/review-types";
 import { supabase } from "@/utils/supabase";
+import * as Sentry from "@sentry/react-native";
 
 export const ReviewsService = {
   /**
@@ -23,6 +24,7 @@ export const ReviewsService = {
 
     if (error) {
       console.log(error.message);
+      Sentry.captureException(error, { tags: { action: "fetch_user_reviews" } });
       throw new Error(error.message);
     }
 
@@ -40,6 +42,7 @@ export const ReviewsService = {
 
     if (error) {
       console.log(error.message);
+      Sentry.captureException(error, { tags: { action: "get_user_reviews_by_id" } });
       throw new Error(error.message);
     }
 

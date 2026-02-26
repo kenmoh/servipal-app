@@ -9,6 +9,12 @@ import {
   type TextStyle,
   type ViewStyle,
 } from "react-native";
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from "react-native-reanimated";
 
 interface AppButtonProps extends Omit<PressableProps, "style"> {
   /**
@@ -74,6 +80,8 @@ interface AppButtonProps extends Omit<PressableProps, "style"> {
   borderColor?: string;
 }
 
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
 export function AppButton({
   text,
   variant = "fill",
@@ -95,38 +103,37 @@ export function AppButton({
   // Check if textColor is a NativeWind class (starts with 'text-')
   const isTextColorClass = textColor?.startsWith("text-");
 
-  // Compute variant-specific styles
-  const variantStyle = useMemo<ViewStyle>(() => {
-    // If backgroundColor class is provided, don't set inline backgroundColor
-    if (backgroundColor) {
-      if (variant === "outline") {
-        return { borderWidth, borderColor: borderColor };
-      }
-      return {};
-    }
-
-    switch (variant) {
-      case "fill":
-        return { backgroundColor: color };
-      case "outline":
-        return {
-          backgroundColor: "transparent",
-          borderWidth,
-          borderColor: color,
-        };
-      case "ghost":
-        return { backgroundColor: "transparent" };
-      default:
-        return { backgroundColor: color };
-    }
-  }, [variant, borderWidth, color, backgroundColor]);
-
   // Compute text color based on variant (only if not using NativeWind class)
   const computedTextColor = useMemo(() => {
     if (isTextColorClass) return undefined;
     if (textColor) return textColor;
     return variant === "fill" ? "#FFFFFF" : color;
   }, [variant, textColor, color, isTextColorClass]);
+
+  // Reanimated shared values for animations
+  const pressScale = useSharedValue(1);
+
+  const animatedContainerStyle = useAnimatedStyle(() => {
+    return {
+      backgroundColor: withTiming(variant === "fill" ? color : "transparent", {
+        duration: 300,
+      }),
+      borderColor: withTiming(
+        variant === "outline" ? borderColor : "transparent",
+        { duration: 300 },
+      ),
+      borderWidth: variant === "outline" ? borderWidth : 0,
+      transform: [{ scale: pressScale.value }],
+    };
+  });
+
+  const handlePressIn = () => {
+    pressScale.value = withSpring(0.96);
+  };
+
+  const handlePressOut = () => {
+    pressScale.value = withSpring(1);
+  };
 
   // Build className for Pressable
   const pressableClassName = useMemo(() => {
@@ -144,15 +151,19 @@ export function AppButton({
   }, [isTextColorClass, textColor]);
 
   return (
-    <Pressable
+    <AnimatedPressable
       disabled={disabled}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
       style={[
         {
           height,
           width,
+          borderRadius,
           opacity: disabled ? 0.5 : 1,
         },
         style,
+        animatedContainerStyle,
       ]}
       {...pressableProps}
     >
@@ -164,10 +175,8 @@ export function AppButton({
               flex: 1,
               borderRadius,
               gap: 8,
-              paddingHorizontal: 12, // Ensure text has room
-              opacity: pressed ? 0.7 : 1,
+              paddingHorizontal: 12,
             },
-            variantStyle,
           ]}
         >
           {icon}
@@ -184,6 +193,6 @@ export function AppButton({
           </Text>
         </View>
       )}
-    </Pressable>
+    </AnimatedPressable>
   );
 }

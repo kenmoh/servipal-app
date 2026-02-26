@@ -1,5 +1,4 @@
 import { requestPasswordReset } from "@/api/auth";
-import HDivider from "@/components/HDivider";
 import { useToast } from "@/components/ToastProvider";
 import { AppButton } from "@/components/ui/app-button";
 import { AppTextInput } from "@/components/ui/app-text-input";
@@ -50,7 +49,7 @@ const RecoverPassword = () => {
         "Success",
         "Password reset link sent to your email. It will expire in 24 hours.",
       );
-      router.replace("/reset-password");
+      router.replace("/sign-in");
     },
   });
 
@@ -79,7 +78,7 @@ const RecoverPassword = () => {
           headerStyle: { backgroundColor: bgColor },
         }}
       />
-      <HDivider />
+
       <ScrollView
         className="flex-1 w-full bg-background"
         showsVerticalScrollIndicator={false}
@@ -89,11 +88,6 @@ const RecoverPassword = () => {
         }}
       >
         <View className="flex-1 bg-background w-full items-center mt-4 ">
-          <View className="items-center w-[90%] mb-10">
-            <Text className="self-start text-primary font-poppins text-sm">
-              Enter the email you registered with.
-            </Text>
-          </View>
           <View className="gap-5 w-full">
             <Controller
               name="email"

@@ -3,12 +3,16 @@ import React from "react";
 
 import { HapticTab } from "@/components/haptic-tab";
 import { HEADER_BG_DARK, HEADER_BG_LIGHT } from "@/constants/theme";
+import { useUserStore } from "@/store/userStore";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useColorScheme } from "react-native";
 
 export default function TabLayout() {
   const theme = useColorScheme();
+  const { user } = useUserStore();
+  const ALLOWED_USER = ["CUSTOMER", "LAUNDRY_VENDOR", "RESTAURANT_VENDOR"];
+  const isAllowed = ALLOWED_USER.includes(user?.user_metadata?.user_type!);
   return (
     <Tabs
       screenOptions={{
@@ -38,12 +42,14 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => (
             <MaterialIcons size={24} name="restaurant" color={color} />
           ),
+          href: isAllowed ? "/(tabs)/food" : null,
         }}
       />
       <Tabs.Screen
         name="laundry"
         options={{
           title: "Laundry",
+          href: isAllowed ? "/(tabs)/laundry" : null,
           tabBarIcon: ({ color }) => (
             <MaterialCommunityIcons
               size={24}

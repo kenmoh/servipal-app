@@ -23,12 +23,13 @@ interface ItemCustomizationSheetProps {
     selectedSizes: SizeOption[],
     selectedSide: string,
   ) => void;
+  onDismiss?: () => void;
 }
 
 const ItemCustomizationSheet = forwardRef<
   BottomSheetModal,
   ItemCustomizationSheetProps
->(({ item, onAdd }, ref) => {
+>(({ item, onAdd, onDismiss }, ref) => {
   const [selectedSizes, setSelectedSizes] = useState<SizeOption[]>([]);
   const [selectedSide, setSelectedSide] = useState<string>("");
   const theme = useColorScheme();
@@ -80,6 +81,7 @@ const ItemCustomizationSheet = forwardRef<
       index={0}
       snapPoints={snapPoints}
       backdropComponent={renderBackdrop}
+      onDismiss={onDismiss}
       handleIndicatorStyle={{ backgroundColor: "#ccc" }}
       backgroundStyle={{
         backgroundColor: theme === "dark" ? HEADER_BG_DARK : HEADER_BG_LIGHT,

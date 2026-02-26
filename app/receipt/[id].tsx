@@ -607,7 +607,7 @@ const ReceiptPage = () => {
             variant="fill"
             borderRadius={50}
             width={"90%"}
-            // color={buttonConfig.color}
+            color={buttonConfig.color}
             disabled={
               buttonConfig.disabled ||
               foodOrderMutation.isPending ||
@@ -630,7 +630,7 @@ const ReceiptPage = () => {
             variant="fill"
             borderRadius={50}
             width={"90%"}
-            // color={buttonConfig.color}
+            color={buttonConfig.color}
             disabled={
               buttonConfig.disabled ||
               foodOrderMutation.isPending ||
@@ -644,6 +644,7 @@ const ReceiptPage = () => {
           order.order_status !== "CANCELLED" && (
             <AppButton
               text={"Cancel Order"}
+              borderColor="red"
               onPress={() =>
                 router.push({
                   pathname: "/receipt/cancel-sheet",
@@ -705,7 +706,7 @@ const ReceiptPage = () => {
       </View>
 
       <Text className="text-center text-[10px] text-gray-500 mt-10 font-poppins tracking-widest uppercase">
-        ServiPal • Premium Delivery
+        ServiPal • Restaurant Services
       </Text>
     </ScrollView>
   );

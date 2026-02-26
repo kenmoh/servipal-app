@@ -22,7 +22,7 @@ export default function Index() {
 
   // // First launch - show onboarding
   if (isFirstLaunch === true) {
-    return;
+    return <Redirect href="/onboarding" />;
   }
 
   // User exists - go to main app

@@ -1,4 +1,5 @@
 import { updateDeliveryCoords } from "@/api/delivery";
+import * as Sentry from "@sentry/react-native";
 import * as Location from "expo-location";
 import * as TaskManager from "expo-task-manager";
 
@@ -13,6 +14,7 @@ export const defineLocationTask = () => {
     async ({ data, error }: any) => {
       if (error) {
         console.error("📍 Background location task error:", error);
+        Sentry.captureException(error, { tags: { action: "bg_location_task" } });
         return;
       }
 
@@ -37,6 +39,7 @@ export const defineLocationTask = () => {
               );
             } catch (err) {
               console.error("❌ Failed to update coords from bg task:", err);
+              Sentry.captureException(err, { tags: { action: "bg_delivery_coords_update" } });
             }
           }
         }
@@ -109,6 +112,7 @@ export const startDeliveryTracking = async (
     console.log("📍 Background delivery tracking started");
   } catch (error) {
     console.error("❌ Failed to start background tracking:", error);
+    Sentry.captureException(error, { tags: { action: "start_delivery_tracking" } });
   }
 };
 
@@ -128,5 +132,6 @@ export const stopDeliveryTracking = async (): Promise<void> => {
     console.log("📍 Delivery tracking stopped");
   } catch (error) {
     console.error("❌ Failed to stop tracking:", error);
+    Sentry.captureException(error, { tags: { action: "stop_delivery_tracking" } });
   }
 };

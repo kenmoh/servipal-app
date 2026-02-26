@@ -186,6 +186,7 @@ const RidersScreen = () => {
       return { status, isLocationEnabled };
     } catch (error) {
       console.error("Permission check failed:", error);
+      Sentry.captureException(error, { tags: { action: "check_location_permission" } });
       setLocationPermission(false);
       return { status: "undetermined", isLocationEnabled: false };
     }
@@ -280,6 +281,7 @@ const RidersScreen = () => {
             }
           } catch (err) {
             console.error("[Location] Update failed:", err);
+            Sentry.captureException(err, { tags: { action: "location_update" } });
           }
         },
       );
@@ -326,6 +328,7 @@ const RidersScreen = () => {
         },
         (payload) => {
           console.log("[Realtime] Rider changed:", payload.eventType);
+          Sentry.addBreadcrumb({ category: "realtime", message: `Rider changed: ${payload.eventType}`, level: "info" });
           // Invalidate to refetch with fresh distance calculations
           queryClient.invalidateQueries({ queryKey: ["riders", user?.id] });
         },
@@ -370,7 +373,6 @@ const RidersScreen = () => {
     return <RefreshButton onPress={refetch} label="Error loading riders" />;
   }
 
-  console.log(riders)
   return (
     <View className="bg-background flex-1 p-2">
       <HDivider />

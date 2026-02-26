@@ -25,6 +25,7 @@ export const navigateToPayment = (paymentData: InitiatePaymentResponse) => {
       destination: paymentData.destination || "",
       distance: paymentData.distance || "",
       packageName: paymentData.package_name || "",
+      serviceType: paymentData.serviceType || "",
     },
   });
 };

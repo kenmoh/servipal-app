@@ -252,6 +252,7 @@ const RidersScreen = () => {
         },
         (payload) => {
           console.log("[Realtime] Rider changed:", payload.eventType);
+          Sentry.addBreadcrumb({ category: "realtime", message: `Rider changed: ${payload.eventType}`, level: "info" });
           // Invalidate to refetch with fresh distance calculations
           queryClient.invalidateQueries({ queryKey: ["riders", user?.id] });
         },

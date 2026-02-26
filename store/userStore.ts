@@ -1,5 +1,7 @@
-// @/stores/user-store.ts
-import { updatecurrentUserLocation } from "@/api/user";
+import {
+  registerPushToken as syncPushToken,
+  updatecurrentUserLocation,
+} from "@/api/user";
 import authStorage from "@/storage/auth-storage";
 import {
   AuthUser,
@@ -7,20 +9,36 @@ import {
   UserProfile,
   toAuthUser,
 } from "@/types/user-types";
+import { registerForPushNotificationAsync } from "@/utils/registerForPushNotificationAsync";
 import { supabase } from "@/utils/supabase";
+import * as Sentry from "@sentry/react-native";
 import { AuthChangeEvent, Session } from "@supabase/supabase-js";
 import * as Location from "expo-location";
+import * as Notifications from "expo-notifications";
 import * as SecureStore from "expo-secure-store";
 import * as TaskManager from "expo-task-manager";
+import { Platform } from "react-native";
 import { create } from "zustand";
 
-// 🔑 CRITICAL: Define background task AT MODULE LEVEL (before store creation)
+// Configure how notifications should be handled when the app is in the foreground
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+    shouldShowBanner: true,
+    shouldShowList: true,
+  }),
+});
+
+// Define background task AT MODULE LEVEL (before store creation)
 // Must execute during JS bundle initialization, NOT inside React/store lifecycle
 const LOCATION_TASK_NAME = "background-location-task";
 
 TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
   if (error) {
-    console.error("❌ [BG Location Task] Error:", error);
+    console.error("[BG Location Task] Error:", error);
+    Sentry.captureException(error, { tags: { action: "bg_location_task" } });
     return;
   }
 
@@ -28,6 +46,11 @@ TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
   const locations = (data as any)?.locations as Location.LocationObject[];
   if (!locations?.length) {
     console.warn("⚠️ [BG Location Task] No locations in payload");
+    Sentry.addBreadcrumb({
+      category: "location",
+      message: "BG Location Task: No locations in payload",
+      level: "warning",
+    });
     return;
   }
 
@@ -35,12 +58,24 @@ TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
   console.log(
     `📍 [BG Task] Location received: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`,
   );
+  Sentry.addBreadcrumb({
+    category: "location",
+    message: "BG Task: Location received",
+    level: "info",
+    data: { latitude, longitude },
+  });
 
   try {
     await updatecurrentUserLocation({ latitude, longitude });
     console.log("✅ [BG Task] Location updated to server");
+    Sentry.addBreadcrumb({
+      category: "location",
+      message: "BG Task: Location updated to server",
+      level: "info",
+    });
   } catch (err) {
     console.error("❌ [BG Task] Failed to update server:", err);
+    Sentry.captureException(err, { tags: { action: "bg_location_update" } });
   }
 });
 
@@ -99,6 +134,10 @@ interface UserStore {
   lastSentLocation: { lat: number; lng: number } | null;
   lastLocationUpdate: number | null;
   vendorLocationCaptured: boolean; // Tracks if vendor's one-time location was captured
+  isIosBackgroundLocationEnabled: boolean | null;
+  isAndroidBackgroundLocationEnabled: boolean | null;
+  locationAlwaysAndWhenInUsePermission: boolean | null;
+  locationWhenInUsePermission: boolean | null;
 
   // Auth Setters
   setUser: (user: AuthUser | null) => void;
@@ -127,6 +166,7 @@ interface UserStore {
   setFirstLaunchComplete: () => Promise<void>;
   refreshSession: () => Promise<void>;
   fetchProfile: () => Promise<void>;
+  registerPushToken: () => Promise<void>;
   initialize: () => () => void;
 
   // 🔑 Location Actions
@@ -162,6 +202,10 @@ export const useUserStore = create<UserStore>((set, get) => ({
   lastSentLocation: null,
   lastLocationUpdate: null,
   vendorLocationCaptured: false,
+  isIosBackgroundLocationEnabled: null,
+  isAndroidBackgroundLocationEnabled: null,
+  locationAlwaysAndWhenInUsePermission: null,
+  locationWhenInUsePermission: null,
 
   // Auth & Profile Setters (existing)
   setUser: (user) => set({ user }),
@@ -184,6 +228,12 @@ export const useUserStore = create<UserStore>((set, get) => ({
     console.log(
       `📍 Location updated locally: ${location?.lat.toFixed(4)}, ${location?.lng.toFixed(4)}`,
     );
+    Sentry.addBreadcrumb({
+      category: "location",
+      message: "Location updated locally",
+      level: "debug",
+      data: { lat: location?.lat, lng: location?.lng },
+    });
   },
   setLocationPermissionGranted: (granted) => {
     set({ locationPermissionGranted: granted });
@@ -192,12 +242,26 @@ export const useUserStore = create<UserStore>((set, get) => ({
         ? "✅ Location permission granted"
         : "❌ Location permission denied",
     );
+    Sentry.addBreadcrumb({
+      category: "location",
+      message: granted
+        ? "Location permission granted"
+        : "Location permission denied",
+      level: granted ? "info" : "warning",
+    });
   },
   setLocationTrackingActive: (active) => {
     set({ locationTrackingActive: active });
     console.log(
       active ? "✅ Location tracking ACTIVE" : "⏸️ Location tracking INACTIVE",
     );
+    Sentry.addBreadcrumb({
+      category: "location",
+      message: active
+        ? "Location tracking ACTIVE"
+        : "Location tracking INACTIVE",
+      level: "info",
+    });
   },
   setVendorLocationCaptured: (captured) => {
     set({ vendorLocationCaptured: captured });
@@ -206,6 +270,13 @@ export const useUserStore = create<UserStore>((set, get) => ({
         ? "✅ Vendor location captured"
         : "🔄 Vendor location not yet captured",
     );
+    Sentry.addBreadcrumb({
+      category: "location",
+      message: captured
+        ? "Vendor location captured"
+        : "Vendor location not yet captured",
+      level: "info",
+    });
   },
 
   // First Launch Management (existing)
@@ -217,6 +288,9 @@ export const useUserStore = create<UserStore>((set, get) => ({
       return isFirst;
     } catch (error) {
       console.error("❌ Error checking first launch:", error);
+      Sentry.captureException(error, {
+        tags: { action: "check_first_launch" },
+      });
       set({ isFirstLaunch: true });
       return true;
     }
@@ -228,36 +302,75 @@ export const useUserStore = create<UserStore>((set, get) => ({
       set({ isFirstLaunch: false });
     } catch (error) {
       console.error("❌ Error setting first launch complete:", error);
+      Sentry.captureException(error, {
+        tags: { action: "set_first_launch_complete" },
+      });
     }
   },
 
   // 🔑 Location Permission Check
   checkLocationPermission: async () => {
     console.log("🔄 Checking location permissions...");
+    Sentry.addBreadcrumb({
+      category: "location",
+      message: "Checking location permissions",
+      level: "info",
+    });
 
     try {
-      // Check foreground permission first
-      const { status: fgStatus } =
+      const { status: currentFgStatus } =
         await Location.getForegroundPermissionsAsync();
       const isLocationEnabled = await Location.hasServicesEnabledAsync();
 
-      if (fgStatus !== "granted" || !isLocationEnabled) {
+      // Helper to update specific permission flags even on early returns
+      const updatePermissionFlags = async () => {
+        const { status: finalFgStatus } =
+          await Location.getForegroundPermissionsAsync();
+        const { status: finalBgStatus } =
+          await Location.getBackgroundPermissionsAsync();
+
+        const isAlwaysGranted = finalBgStatus === "granted";
+        const isWhenInUseGranted = finalFgStatus === "granted";
+
+        set({
+          isIosBackgroundLocationEnabled:
+            Platform.OS === "ios" ? isAlwaysGranted : null,
+          isAndroidBackgroundLocationEnabled:
+            Platform.OS === "android" ? isAlwaysGranted : null,
+          locationAlwaysAndWhenInUsePermission: isAlwaysGranted,
+          locationWhenInUsePermission: isWhenInUseGranted,
+        });
+
+        console.log("📊 Permission flags synchronized:", {
+          isWhenInUseGranted,
+          isAlwaysGranted,
+        });
+      };
+
+      if (currentFgStatus !== "granted" || !isLocationEnabled) {
         console.warn(
           "⚠️ Location services not enabled or permission not granted",
         );
+        Sentry.addBreadcrumb({
+          category: "location",
+          message: "Location services not enabled or permission not granted",
+          level: "warning",
+        });
 
         // Request permission if not granted
-        if (fgStatus !== "granted") {
+        if (currentFgStatus !== "granted") {
           const { status: newStatus } =
             await Location.requestForegroundPermissionsAsync();
           if (newStatus !== "granted") {
             set({ locationPermissionGranted: false });
+            await updatePermissionFlags();
             return false;
           }
         }
 
         if (!isLocationEnabled) {
           set({ locationPermissionGranted: false });
+          await updatePermissionFlags();
           return false;
         }
       }
@@ -276,6 +389,11 @@ export const useUserStore = create<UserStore>((set, get) => ({
           console.log(
             "🔄 Requesting background location permission for rider...",
           );
+          Sentry.addBreadcrumb({
+            category: "location",
+            message: "Requesting background location permission for rider",
+            level: "info",
+          });
           const { status: newBgStatus } =
             await Location.requestBackgroundPermissionsAsync();
 
@@ -283,18 +401,43 @@ export const useUserStore = create<UserStore>((set, get) => ({
             console.warn(
               "⚠️ Background location permission denied (rider will only update in foreground)",
             );
+            Sentry.addBreadcrumb({
+              category: "location",
+              message: "Background location permission denied for rider",
+              level: "warning",
+            });
             // Still allow foreground tracking
             set({ locationPermissionGranted: true });
+            await updatePermissionFlags(); // Update flags even if background is denied but foreground is granted
             return true;
           }
         }
       }
 
       set({ locationPermissionGranted: true });
-      console.log("✅ Location permissions granted");
+
+      // Update specific permission flags
+      await updatePermissionFlags();
+
+      console.log("✅ Location permissions updated in store:", {
+        isWhenInUseGranted: get().locationWhenInUsePermission, // Use values from store after update
+        isAlwaysGranted: get().locationAlwaysAndWhenInUsePermission, // Use values from store after update
+      });
+      Sentry.addBreadcrumb({
+        category: "location",
+        message: "Location permissions updated in store",
+        level: "info",
+        data: {
+          isWhenInUseGranted: get().locationWhenInUsePermission,
+          isAlwaysGranted: get().locationAlwaysAndWhenInUsePermission,
+        },
+      });
       return true;
     } catch (error) {
       console.error("❌ Error checking location permissions:", error);
+      Sentry.captureException(error, {
+        tags: { action: "check_location_permission" },
+      });
       set({ locationPermissionGranted: false });
       return false;
     }
@@ -321,9 +464,17 @@ export const useUserStore = create<UserStore>((set, get) => ({
       console.log(
         `ℹ️ Customer active order check: ${hasActive ? "YES" : "NO"} (${data?.[0]?.delivery_status || "none"})`,
       );
+      Sentry.addBreadcrumb({
+        category: "order",
+        message: `Customer active order check: ${hasActive ? "YES" : "NO"}`,
+        level: "info",
+      });
       return hasActive;
     } catch (error) {
       console.error("❌ Error checking active orders:", error);
+      Sentry.captureException(error, {
+        tags: { action: "check_active_order" },
+      });
       return false;
     }
   },
@@ -342,6 +493,11 @@ export const useUserStore = create<UserStore>((set, get) => ({
     // Riders: ALWAYS update server location
     if (userType === "RIDER") {
       console.log("📍 Rider location update: ALWAYS (active rider)");
+      Sentry.addBreadcrumb({
+        category: "location",
+        message: "Rider location update: ALWAYS",
+        level: "debug",
+      });
       return true;
     }
 
@@ -353,11 +509,21 @@ export const useUserStore = create<UserStore>((set, get) => ({
         console.log(
           `📍 Vendor (${userType}) location update: YES (first-time capture)`,
         );
+        Sentry.addBreadcrumb({
+          category: "location",
+          message: `Vendor (${userType}) first-time location capture`,
+          level: "info",
+        });
         return true;
       }
       console.log(
         `📍 Vendor (${userType}) location update: NO (already captured)`,
       );
+      Sentry.addBreadcrumb({
+        category: "location",
+        message: `Vendor (${userType}) location already captured`,
+        level: "debug",
+      });
       return false;
     }
 
@@ -367,11 +533,21 @@ export const useUserStore = create<UserStore>((set, get) => ({
       console.log(
         `📍 Customer location update: ${hasActive ? "YES (active order)" : "NO (no active order)"}`,
       );
+      Sentry.addBreadcrumb({
+        category: "location",
+        message: `Customer location update: ${hasActive ? "YES" : "NO"}`,
+        level: "debug",
+      });
       return hasActive;
     }
 
     // Other user types: never update
     console.log(`📍 Location update skipped for user type: ${userType}`);
+    Sentry.addBreadcrumb({
+      category: "location",
+      message: `Location update skipped for ${userType}`,
+      level: "debug",
+    });
     return false;
   },
 
@@ -390,6 +566,11 @@ export const useUserStore = create<UserStore>((set, get) => ({
     // Skip if already captured
     if (vendorLocationCaptured) {
       console.log("ℹ️ Vendor location already captured - skipping");
+      Sentry.addBreadcrumb({
+        category: "location",
+        message: "Vendor location already captured - skipping",
+        level: "debug",
+      });
       return;
     }
 
@@ -398,10 +579,20 @@ export const useUserStore = create<UserStore>((set, get) => ({
       console.warn(
         "⚠️ Cannot capture vendor location: No current location available",
       );
+      Sentry.addBreadcrumb({
+        category: "location",
+        message: "Cannot capture vendor location: No current location",
+        level: "warning",
+      });
       return;
     }
 
     console.log(`🔄 Capturing vendor location ONCE for ${userType}...`);
+    Sentry.addBreadcrumb({
+      category: "location",
+      message: `Capturing vendor location ONCE for ${userType}`,
+      level: "info",
+    });
 
     try {
       const lat = currentLocation?.lat;
@@ -419,8 +610,17 @@ export const useUserStore = create<UserStore>((set, get) => ({
       set({ vendorLocationCaptured: true });
 
       console.log(`✅ Vendor location captured ONCE: ${lat}, ${lng}`);
+      Sentry.addBreadcrumb({
+        category: "location",
+        message: "Vendor location captured",
+        level: "info",
+        data: { lat, lng },
+      });
     } catch (error) {
       console.error("❌ Failed to capture vendor location:", error);
+      Sentry.captureException(error, {
+        tags: { action: "capture_vendor_location" },
+      });
     }
   },
 
@@ -464,6 +664,11 @@ export const useUserStore = create<UserStore>((set, get) => ({
     }
 
     console.log(`🔄 Starting location tracking for ${userType} (${userId})...`);
+    Sentry.addBreadcrumb({
+      category: "location",
+      message: `Starting location tracking for ${userType}`,
+      level: "info",
+    });
 
     // Check permissions
     const hasPermission = await get().checkLocationPermission();
@@ -569,6 +774,9 @@ export const useUserStore = create<UserStore>((set, get) => ({
               }
             } catch (error) {
               console.error("❌ Failed to update location to server:", error);
+              Sentry.captureException(error, {
+                tags: { action: "update_location_to_server" },
+              });
             }
           });
       });
@@ -583,8 +791,16 @@ export const useUserStore = create<UserStore>((set, get) => ({
       console.log(
         `   Config: ${config.timeInterval ? config.timeInterval / 1000 : "N/A"}s interval, ${config.distanceInterval}m distance`,
       );
+      Sentry.addBreadcrumb({
+        category: "location",
+        message: `Location tracking STARTED for ${userType}`,
+        level: "info",
+      });
     } catch (error) {
       console.error("❌ Error starting location tracking:", error);
+      Sentry.captureException(error, {
+        tags: { action: "start_location_tracking" },
+      });
       set({ locationTrackingActive: false });
     }
   },
@@ -611,9 +827,12 @@ export const useUserStore = create<UserStore>((set, get) => ({
     if (userType === "RIDER") {
       Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME)
         .then(() => console.log("✅ Background location task stopped"))
-        .catch((err) =>
-          console.error("❌ Error stopping background task:", err),
-        );
+        .catch((err) => {
+          console.error("❌ Error stopping background task:", err);
+          Sentry.captureException(err, {
+            tags: { action: "stop_bg_location_task" },
+          });
+        });
     }
 
     set({
@@ -677,6 +896,11 @@ export const useUserStore = create<UserStore>((set, get) => ({
         `   Vendor location captured: ${isVendor ? (locationCaptured ? "YES" : "NO") : "N/A"}`,
       );
 
+      // 🔑 REGISTER PUSH TOKEN AFTER PROFILE FETCH
+      setTimeout(() => {
+        get().registerPushToken();
+      }, 500);
+
       // 🔑 START LOCATION TRACKING AFTER PROFILE FETCH
       // (We need profile to determine user_type for proper config)
       setTimeout(() => {
@@ -693,9 +917,29 @@ export const useUserStore = create<UserStore>((set, get) => ({
       }, 1000);
     } catch (error: any) {
       console.error("❌ Error fetching profile:", error);
+      Sentry.captureException(error, { tags: { action: "fetch_profile" } });
       set({
         profileError: error?.message || "Failed to load profile",
         isProfileLoading: false,
+      });
+    }
+  },
+
+  // 🔑 Register Push Token
+  registerPushToken: async () => {
+    try {
+      console.log("🔄 Registering for push notifications...");
+      const token = await registerForPushNotificationAsync();
+
+      if (token) {
+        console.log("✅ Push token obtained:", token);
+        await syncPushToken(token, Platform.OS);
+        console.log("✅ Push token synchronized with backend");
+      }
+    } catch (error) {
+      console.error("❌ Push token registration failed:", error);
+      Sentry.captureException(error, {
+        tags: { action: "register_push_token" },
       });
     }
   },
@@ -714,6 +958,9 @@ export const useUserStore = create<UserStore>((set, get) => ({
 
       if (sessionError) {
         console.error("❌ Session error:", sessionError);
+        Sentry.captureException(sessionError, {
+          tags: { action: "hydrate_session" },
+        });
         // Stop location tracking on auth failure
         get().stopLocationTracking();
         set({ user: null });
@@ -750,6 +997,7 @@ export const useUserStore = create<UserStore>((set, get) => ({
       console.log("✅ Hydration complete");
     } catch (error) {
       console.error("❌ Error during hydration:", error);
+      Sentry.captureException(error, { tags: { action: "hydrate" } });
       // Stop location tracking on error
       get().stopLocationTracking();
       set({ user: null, profile: null });
@@ -770,6 +1018,7 @@ export const useUserStore = create<UserStore>((set, get) => ({
 
       if (error) {
         console.error("❌ Error refreshing session:", error);
+        Sentry.captureException(error, { tags: { action: "refresh_session" } });
         // Stop location on session error
         get().stopLocationTracking();
         set({ user: null, profile: null });
@@ -788,6 +1037,7 @@ export const useUserStore = create<UserStore>((set, get) => ({
       }
     } catch (error) {
       console.error("❌ Error refreshing session:", error);
+      Sentry.captureException(error, { tags: { action: "refresh_session" } });
       // Stop location on error
       get().stopLocationTracking();
     }
@@ -797,6 +1047,11 @@ export const useUserStore = create<UserStore>((set, get) => ({
   signOut: async () => {
     try {
       console.log("🔄 Signing out...");
+      Sentry.addBreadcrumb({
+        category: "auth",
+        message: "User signing out",
+        level: "info",
+      });
       set({ isLoading: true });
 
       // STOP LOCATION TRACKING BEFORE SIGNING OUT
@@ -806,6 +1061,7 @@ export const useUserStore = create<UserStore>((set, get) => ({
 
       if (error) {
         console.error("❌ Error during sign out:", error);
+        Sentry.captureException(error, { tags: { action: "sign_out" } });
         throw error;
       }
 
@@ -833,6 +1089,7 @@ export const useUserStore = create<UserStore>((set, get) => ({
       console.log("✅ Sign out successful");
     } catch (error) {
       console.error("❌ Error signing out:", error);
+      Sentry.captureException(error, { tags: { action: "sign_out" } });
       throw error;
     } finally {
       set({ isLoading: false });
@@ -848,6 +1105,11 @@ export const useUserStore = create<UserStore>((set, get) => ({
     } = supabase.auth.onAuthStateChange(
       async (event: AuthChangeEvent, session: Session | null) => {
         console.log("🔔 Auth state changed:", event);
+        Sentry.addBreadcrumb({
+          category: "auth",
+          message: `Auth state changed: ${event}`,
+          level: "info",
+        });
 
         switch (event) {
           case "SIGNED_IN":
@@ -913,11 +1175,39 @@ export const useUserStore = create<UserStore>((set, get) => ({
       },
     );
 
+    // 🔔 Setup Push Notification Listeners
+    const notificationListener = Notifications.addNotificationReceivedListener(
+      (notification) => {
+        console.log("🔔 Notification Received in foreground:", notification);
+        Sentry.addBreadcrumb({
+          category: "notification",
+          message: "Notification received in foreground",
+          level: "info",
+        });
+      },
+    );
+
+    const responseListener =
+      Notifications.addNotificationResponseReceivedListener((response) => {
+        console.log("👆 Notification Tapped:", response);
+        Sentry.addBreadcrumb({
+          category: "notification",
+          message: "Notification tapped",
+          level: "info",
+        });
+        // Here you can handle navigation based on notification data
+        // For example: router.push(response.notification.request.content.data.url)
+      });
+
     return () => {
       subscription.unsubscribe();
+      notificationListener.remove();
+      responseListener.remove();
       // Stop location tracking on cleanup
       get().stopLocationTracking();
-      console.log("🧹 Auth state listener cleaned up");
+      console.log(
+        "🧹 Auth state listener and notification listeners cleaned up",
+      );
     };
   },
 }));

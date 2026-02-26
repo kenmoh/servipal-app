@@ -13,6 +13,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   newArchEnabled: true,
   ios: {
     supportsTablet: true,
+    googleServicesFile: "./GoogleService-Info.plist",
     config: {
       googleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_MAP_API_KEY,
     },
@@ -28,6 +29,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       foregroundImage: "./assets/images/android-icon.png",
       backgroundColor: "#000000",
     },
+    googleServicesFile: "./google-services.json",
     edgeToEdgeEnabled: true,
     softwareKeyboardLayoutMode: "pan",
     package: "com.kenmoh.servipal",
@@ -83,16 +85,25 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       "expo-location",
       {
-        locationAlwaysPermission:
-          "Allow $(PRODUCT_NAME) to access your location in the background for delivery tracking",
+        locationAlwaysAndWhenInUsePermission:
+          "Allow $(PRODUCT_NAME) to access your location to find the best services and display riders closest to you",
         locationWhenInUsePermission:
-          "Allow $(PRODUCT_NAME) to access your location",
+          "Allow $(PRODUCT_NAME) to access your location to find the best services and display riders closest to you",
         backgroundLocationPermission:
-          "Allow $(PRODUCT_NAME) to access your location in the background for delivery tracking",
+          "Allow $(PRODUCT_NAME) to access your location in the background",
       },
     ],
     "expo-secure-store",
-    // "@sentry/react-native",
+    [
+      "expo-notifications",
+      {
+        icon: "./assets/images/notification-icon.png",
+        color: "#000000",
+        defaultChannel: "default",
+        enableBackgroundRemoteNotifications: false,
+      },
+    ],
+
     [
       "@sentry/react-native/expo",
       {
@@ -112,4 +123,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     },
   },
   owner: "kenmoh",
+  updates: {
+    url: "https://u.expo.dev/c20ee5ab-649d-44f9-ba8a-df17ded1ae16",
+  },
+  runtimeVersion: {
+    policy: "appVersion",
+  },
 });

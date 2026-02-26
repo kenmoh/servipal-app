@@ -17,8 +17,6 @@ const ProductItemCard = ({ item }: ItemProps) => {
     });
   };
 
-  console.log(item?.images[0]);
-
   return (
     <TouchableOpacity
       activeOpacity={0.8}

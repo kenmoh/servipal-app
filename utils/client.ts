@@ -9,14 +9,11 @@ export const apiClient = create({
 apiClient.addAsyncRequestTransform(async (request) => {
   const {
     data: { session },
-    error: sessionError,
   } = await supabase.auth.getSession();
 
-  if (sessionError || !session) {
-    throw new Error("User not authenticated");
+  if (session) {
+    request.headers!["Authorization"] = "Bearer " + session.access_token;
   }
-
-  request.headers!["Authorization"] = "Bearer " + session.access_token;
 });
 
 export const mapboxClient = create({

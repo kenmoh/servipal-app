@@ -2,12 +2,15 @@ import { InitiatePaymentResponse } from "@/types/payment-types";
 import {
   CategoriesWithSubcategories,
   CreateProduct,
+  ProductOrder,
   ProductOrderCreateRequest,
   ProductResponse,
   ProductSubcategory,
+  UserOrdersResponse,
 } from "@/types/product-types";
 import { apiClient } from "@/utils/client";
 import { supabase } from "@/utils/supabase";
+import * as Sentry from "@sentry/react-native";
 import { ApiResponse } from "apisauce";
 import { ErrorResponse } from "./auth";
 import { normalizeMenuImages } from "./food";
@@ -38,7 +41,11 @@ export const initiateProductPayment = async (
       throw new Error(errorMessage);
     }
 
-    console.log(response.data);
+    Sentry.addBreadcrumb({
+      category: "api.product",
+      message: "Product payment initiated",
+      level: "info",
+    });
 
     return response.data;
   } catch (error) {
@@ -361,6 +368,9 @@ export const updateProduct = async (
         updateData.images = uploadedUrls;
       } catch (imageError) {
         console.error("Image update failed:", imageError);
+        Sentry.captureException(imageError, {
+          tags: { action: "update_product_images" },
+        });
         // Continue with other updates even if images fail
       }
     }
@@ -492,6 +502,7 @@ export const getCategoriesWithSubcategories =
 
     if (error) {
       console.error("Error fetching categories:", error);
+      Sentry.captureException(error, { tags: { action: "get_categories" } });
       throw new Error(error.message || "Failed to fetch categories");
     }
 
@@ -507,8 +518,60 @@ export const getAllProductSubcategories = async (): Promise<
 
   if (error) {
     console.error("Error fetching categories:", error);
+    Sentry.captureException(error, { tags: { action: "get_subcategories" } });
     throw new Error(error.message || "Failed to fetch categories");
   }
 
   return data as ProductSubcategory[];
+};
+
+export const listOrders = async (page = 0, limit = 20) => {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (!session) {
+    throw new Error("User not authenticated");
+  }
+  const userId = session.user.id;
+  const { data, error } = await supabase.rpc("get_user_product_orders", {
+    p_user_id: userId,
+    p_limit: limit,
+    p_offset: page * limit,
+  });
+  if (error) throw error;
+  return data as UserOrdersResponse;
+};
+
+export const getOrderDetails = async (orderId: string) => {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (!session) {
+    throw new Error("User not authenticated");
+  }
+  const userId = session.user.id;
+
+  const { data, error } = await supabase.rpc("get_product_order_details", {
+    p_order_id: orderId,
+    p_user_id: userId,
+  });
+  if (error) throw error;
+  return data as ProductOrder;
+};
+
+export const updateOrderStatus = async ({
+  orderId,
+  newStatus,
+  cancelReason,
+}: {
+  orderId: string;
+  newStatus: string;
+  cancelReason?: string;
+}) => {
+  const response = await apiClient.patch(`${BASE_URL}/${orderId}/status`, {
+    order_id: orderId,
+    new_status: newStatus,
+    cancel_reason: cancelReason ?? null,
+  });
+  return response.data;
 };

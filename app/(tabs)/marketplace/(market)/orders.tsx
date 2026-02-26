@@ -1,4 +1,4 @@
-import { fetUserOrders } from "@/api/marketplace";
+import { listOrders } from "@/api/product";
 import EmptyList from "@/components/EmptyList";
 import LoadingIndicator from "@/components/LoadingIndicator";
 import ProductOrderCard from "@/components/ProductOrderCard";
@@ -22,7 +22,7 @@ const orders = () => {
   const { data, isLoading, isPending, refetch, isFetching, isFetched } =
     useQuery({
       queryKey: ["products", user?.id],
-      queryFn: () => fetUserOrders(user?.id as string),
+      queryFn: () => listOrders(),
       enabled: !!user?.id,
     });
 
@@ -32,6 +32,7 @@ const orders = () => {
     }, []),
   );
 
+  console.log(data);
   const handleRefresh = useCallback(() => {
     refetch();
   }, [refetch]);
@@ -39,21 +40,23 @@ const orders = () => {
   const stats = useMemo(
     () => ({
       pending:
-        data?.filter((order) => order?.order_status === "pending").length || 0,
+        data?.orders?.filter((order) => order?.order_status === "PENDING")
+          .length || 0,
 
       received:
-        data?.filter((order) => order.order_status === "received").length || 0,
+        data?.orders?.filter((order) => order.order_status === "COMPLETED")
+          .length || 0,
       delivered:
-        data?.filter((order) => order?.order_status === "delivered").length ||
-        0,
+        data?.orders?.filter((order) => order?.order_status === "DELIVERED")
+          .length || 0,
       cancelled:
-        data?.filter((order) => order?.order_status === "cancelled").length ||
-        0,
+        data?.orders?.filter((order) => order?.order_status === "CANCELLED")
+          .length || 0,
     }),
     [data],
   );
 
-  if (isFetched && data?.length === 0) {
+  if (isFetched && data?.orders?.length === 0) {
     return (
       <EmptyList
         title="No Products Found"
@@ -78,7 +81,7 @@ const orders = () => {
           <StatCard
             icon=<FontAwesome5 name="coins" color="gray" size={24} />
             label="Total Orders"
-            value={data?.length || 0}
+            value={data?.orders?.length || 0}
           />
           <StatCard
             icon=<FontAwesome name="handshake-o" color="blue" size={24} />
@@ -111,7 +114,7 @@ const orders = () => {
   return (
     <View className="flex-1 bg-background">
       <FlashList
-        data={data}
+        data={data?.orders || []}
         renderItem={({ item }) => <ProductOrderCard data={item} />}
         keyExtractor={(item) => item.id}
         refreshing={isFetching}

@@ -7,6 +7,7 @@ import { searchNearbyLaundry } from "@/api/user";
 import LoadingIndicator from "@/components/LoadingIndicator";
 import StoreCard from "@/components/StoreCard";
 import { AppTextInput } from "@/components/ui/app-text-input";
+import * as Sentry from "@sentry/react-native";
 import { useQuery } from "@tanstack/react-query";
 import * as Location from "expo-location";
 
@@ -33,7 +34,7 @@ const LaundryScreen = () => {
     enabled: !!user?.id,
   });
 
-  console.log("data", data);
+  if (__DEV__) console.log("data", data);
 
   const handleRefresh = useCallback(() => {
     refetch();

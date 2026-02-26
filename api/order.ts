@@ -5,6 +5,7 @@ import {
 } from "@/types/order-types";
 import { apiClient } from "@/utils/client";
 import { supabase } from "@/utils/supabase";
+import * as Sentry from "@sentry/react-native";
 
 interface OrderStatusUpdate {
   status?: string;
@@ -75,6 +76,7 @@ export const fetchOrderDetails = async (
 
     if (error) {
       console.log(error);
+      Sentry.captureException(error, { tags: { action: "fetch_order_details" } });
       throw error;
     }
     return data;

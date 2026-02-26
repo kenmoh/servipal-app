@@ -76,6 +76,7 @@ export interface InitiatePaymentResponse {
   distance?: string;
   duration?: string;
   package_name?: string;
+  serviceType?: "PRODUCT" | "WALLET" | "DELIVERY" | "FOOD" | "LAUNDRY";
 }
 
 export interface FlutterwavePayload {

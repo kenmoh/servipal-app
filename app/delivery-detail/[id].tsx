@@ -338,6 +338,7 @@ const ItemDetails = () => {
     if (!id || !isMountedRef.current) return;
 
     console.log("🔌 Setting up Realtime for order:", id);
+    Sentry.addBreadcrumb({ category: "realtime", message: `Setting up Realtime for delivery order: ${id}`, level: "info" });
     const channel = supabase
       .channel(`delivery_order_${id}`)
       .on(

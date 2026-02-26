@@ -15,8 +15,6 @@ const Rider = memo(
       user?.user_metadata.user_type === "RIDER" ||
       user?.user_metadata.user_type === "DISPATCH";
 
-    console.log(rider.reviews);
-
     return (
       <>
         <Pressable

@@ -16,18 +16,26 @@ import { useUserStore } from "@/store/userStore";
 import { OrderCreate, RestaurantOrderCreate } from "@/types/item-types";
 import { RequireDelivery } from "@/types/order-types";
 import Feather from "@expo/vector-icons/Feather";
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+import * as Sentry from "@sentry/react-native";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { router, useLocalSearchParams } from "expo-router";
-import React, { useState } from "react";
+import { router, Stack, useLocalSearchParams } from "expo-router";
+import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Pressable,
   ScrollView,
   Text,
-  TouchableOpacity,
   useColorScheme,
   View,
 } from "react-native";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
+import Animated, {
+  FadeIn,
+  FadeInDown,
+  FadeOutUp,
+  LinearTransition,
+} from "react-native-reanimated";
 
 const Cart = () => {
   const [instructions, setInstructions] = useState("");
@@ -42,7 +50,7 @@ const Cart = () => {
 
   const isLaundryOrder = isLaundry === "true";
 
-  const { setDeliveryOption, cart, setAdditionalInfo, totalCost } =
+  const { setDeliveryOption, cart, clearCart, setAdditionalInfo, totalCost } =
     useCartStore();
 
   const totalCostWithDeliveryFee = deliveryFee
@@ -64,10 +72,27 @@ const Cart = () => {
   const isDark = theme === "dark";
   const bgColor = isDark ? HEADER_BG_DARK : HEADER_BG_LIGHT;
 
+  const hasItems = cart.order_items.length > 0;
+  const [showEmpty, setShowEmpty] = useState(!hasItems);
+
+  useEffect(() => {
+    if (hasItems) {
+      setShowEmpty(false);
+      return;
+    }
+
+    const t = setTimeout(() => setShowEmpty(true), 180);
+    return () => clearTimeout(t);
+  }, [hasItems]);
+
   // ---- Laundry mutation ----
   const { mutate: laundryMutate, isPending: laundryIsPending } = useMutation({
     mutationFn: (payload: OrderCreate) => {
-      console.log(payload);
+      Sentry.addBreadcrumb({
+        category: "order",
+        message: "Initiating laundry order payment",
+        level: "info",
+      });
       return initiateLaundryOrderPayment(payload);
     },
 
@@ -202,193 +227,212 @@ const Cart = () => {
     }
   };
 
-  // ---- Empty cart ----
-  if (cart.order_items.length === 0) {
-    return (
-      <View
-        style={{ backgroundColor: bgColor }}
-        className="flex-1 items-center justify-center px-10"
-      >
-        <View className="w-24 h-24 rounded-full bg-button-primary/10 items-center justify-center mb-6">
-          <Feather name="shopping-cart" color="#FF8C00" size={40} />
-        </View>
-        <Text className="text-xl font-poppins-bold text-primary text-center mb-2 px-4 w-full">
-          Your cart is empty
-        </Text>
-        <Text className="text-sm font-poppins-regular text-gray-400 text-center mb-8 px-4 w-full">
-          Browse our menu and add some items to your cart!
-        </Text>
-        <AppButton
-          text="Go Back"
-          width="50%"
-          height={45}
-          variant="outline"
-          borderRadius={50}
-          onPress={() => router.back()}
-        />
-      </View>
-    );
-  }
-
   return (
-    <>
-      <ScrollView
-        className="flex-1 bg-background"
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 400 }}
-      >
-        <View className="px-5 pt-4">
-          {/* Cart Items */}
-          <View className="mb-8">
-            {cart.order_items.map((item, index) => (
-              <Item
-                key={`${item.item_id}-${item.selected_size?.size ?? index}`}
-                item={item}
+    <View style={{ flex: 1, backgroundColor: bgColor }}>
+      <Stack.Screen
+        options={{
+          headerRight: () => (
+            <Pressable
+              className="flex-row gap-2 bg-red-900/35 items-center rounded-full px-3 py-1 justify-center"
+              onPress={() => clearCart()}
+            >
+              <Text className="text-red-500 font-poppins text-sm">Empty</Text>
+              <MaterialCommunityIcons
+                name="cart-remove"
+                size={24}
+                color="red"
               />
-            ))}
+            </Pressable>
+          ),
+        }}
+      />
+      {showEmpty ? (
+        <Animated.View
+          entering={FadeIn.duration(220)}
+          className="flex-1 items-center justify-center px-10"
+        >
+          <View className="w-24 h-24 rounded-full bg-button-primary/10 items-center justify-center mb-6">
+            <Feather name="shopping-cart" color="#FF8C00" size={40} />
           </View>
-
-          {/* Pricing Summary */}
-          <View className="bg-input rounded-2xl p-5 border border-gray-300 dark:border-gray-600 mb-8">
-            <View className="flex-row justify-between items-center">
-              <Text className="text-gray-400 font-poppins-medium">
-                Subtotal
-              </Text>
-              <Text className="text-primary font-poppins-semibold">
-                ₦{Number(totalCost).toFixed(2)}
-              </Text>
+          <Text className="text-xl font-poppins-bold text-primary text-center mb-2 px-4 w-full">
+            Your cart is empty
+          </Text>
+          <Text className="text-sm font-poppins-regular text-gray-400 text-center mb-8 px-4 w-full">
+            Browse our menu and add some items to your cart!
+          </Text>
+          <AppButton
+            text="Go Back"
+            width="50%"
+            height={45}
+            variant="outline"
+            borderRadius={50}
+            onPress={() => router.back()}
+          />
+        </Animated.View>
+      ) : (
+        <ScrollView
+          className="flex-1 bg-background"
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: 400 }}
+        >
+          <View className="px-5 pt-4">
+            {/* Cart Items */}
+            <View className="mb-8">
+              {cart.order_items.map((item) => (
+                <Animated.View
+                  key={`${item.item_id}-${item.selected_size?.size ?? "nosize"}-${item.selected_side ?? "noside"}`}
+                  entering={FadeInDown.duration(140)}
+                  exiting={FadeOutUp.duration(160)}
+                  layout={LinearTransition.duration(140)}
+                >
+                  <Item item={item} />
+                </Animated.View>
+              ))}
             </View>
-            {deliveryFee && delivery_option === "VENDOR_DELIVERY" && (
+
+            {/* Pricing Summary */}
+            <View className="bg-input rounded-2xl p-5 border border-gray-300 dark:border-gray-600 mb-8">
               <View className="flex-row justify-between items-center">
                 <Text className="text-gray-400 font-poppins-medium">
-                  Delivery Fee
+                  Subtotal
                 </Text>
                 <Text className="text-primary font-poppins-semibold">
-                  ₦{Number(deliveryFee).toFixed(2)}
+                  ₦{Number(totalCost).toFixed(2)}
                 </Text>
               </View>
-            )}
-            <View className="h-[1px] dark:bg-gray-600 bg-gray-200 my-4" />
-            <View className="flex-row justify-between items-center">
-              <Text className="text-lg font-poppins-bold text-primary">
-                Total
-              </Text>
-              <Text className="text-lg font-poppins-bold text-button-primary">
-                ₦{Number(totalCostWithDeliveryFee).toFixed(2)}
-              </Text>
+              {deliveryFee && delivery_option === "VENDOR_DELIVERY" && (
+                <View className="flex-row justify-between items-center">
+                  <Text className="text-gray-400 font-poppins-medium">
+                    Delivery Fee
+                  </Text>
+                  <Text className="text-primary font-poppins-semibold">
+                    ₦{Number(deliveryFee).toFixed(2)}
+                  </Text>
+                </View>
+              )}
+              <View className="h-[1px] dark:bg-gray-600 bg-gray-200 my-4" />
+              <View className="flex-row justify-between items-center">
+                <Text className="text-lg font-poppins-bold text-primary">
+                  Total
+                </Text>
+                <Text className="text-lg font-poppins-bold text-button-primary">
+                  ₦{Number(totalCostWithDeliveryFee).toFixed(2)}
+                </Text>
+              </View>
             </View>
-          </View>
 
-          {/* Delivery Options */}
-          <View className="mb-8">
-            <Text className="text-base font-poppins-bold text-primary mb-4">
-              Delivery Method
-            </Text>
-            <View className="bg-input rounded-2xl p-4 border border-gray-300 dark:border-gray-600">
-              {vendorProfile?.can_pickup_and_dropoff ? (
-                <>
+            {/* Delivery Options */}
+            <View className="mb-8">
+              <Text className="text-base font-poppins-bold text-primary mb-4">
+                Delivery Method
+              </Text>
+              <View className="bg-input rounded-2xl p-4 border border-gray-300 dark:border-gray-600">
+                {vendorProfile?.can_pickup_and_dropoff ? (
+                  <>
+                    <RadioButton
+                      label={
+                        isLaundryOrder
+                          ? "Self Drop-off / Pickup"
+                          : "Pickup from Store"
+                      }
+                      selected={delivery_option === "PICKUP"}
+                      onPress={() => handleDeliveryOptionChange("PICKUP")}
+                    />
+                    <RadioButton
+                      label="Vendor Delivery"
+                      selected={delivery_option === "VENDOR_DELIVERY"}
+                      onPress={() =>
+                        handleDeliveryOptionChange("VENDOR_DELIVERY")
+                      }
+                    />
+                  </>
+                ) : (
                   <RadioButton
-                    label={
-                      isLaundryOrder
-                        ? "Self Drop-off / Pickup"
-                        : "Pickup from Store"
-                    }
+                    label="Select delivery address"
                     selected={delivery_option === "PICKUP"}
                     onPress={() => handleDeliveryOptionChange("PICKUP")}
                   />
-                  <RadioButton
-                    label="Vendor Delivery"
-                    selected={delivery_option === "VENDOR_DELIVERY"}
-                    onPress={() =>
-                      handleDeliveryOptionChange("VENDOR_DELIVERY")
-                    }
-                  />
-                </>
-              ) : (
-                <RadioButton
-                  label="Select delivery address"
-                  selected={delivery_option === "PICKUP"}
-                  onPress={() => handleDeliveryOptionChange("PICKUP")}
-                />
+                )}
+              </View>
+            </View>
+
+            {/* Delivery address summary — shown after modal is confirmed */}
+            {(delivery_option === "VENDOR_DELIVERY" ||
+              (delivery_option === "PICKUP" &&
+                !vendorProfile?.can_pickup_and_dropoff)) &&
+              destination &&
+              !modalVisible && (
+                <View className="mb-8">
+                  <View className="flex-row justify-between items-center mb-3">
+                    <Text className="text-base font-poppins-bold text-primary">
+                      Delivery Address
+                    </Text>
+                    <Pressable
+                      onPress={() => setModalVisible(true)}
+                      hitSlop={8}
+                      className="py-1 px -3 bg-orange-500/20 rounded-full active:opacity-50"
+                    >
+                      <Text className="text-sm font-poppins-medium text-button-primary">
+                        Change
+                      </Text>
+                    </Pressable>
+                  </View>
+                  <View className="bg-input rounded-2xl p-4 border border-gray-600 flex-row">
+                    <Feather
+                      name="map-pin"
+                      size={16}
+                      color="#FF8C00"
+                      style={{ marginTop: 2, marginRight: 10 }}
+                    />
+                    <Text className="text-sm text-primary font-poppins-regular flex-1">
+                      {destination}
+                    </Text>
+                  </View>
+                </View>
               )}
+
+            {/* Instructions */}
+            <View className="mb-8">
+              <Text className="text-base font-poppins-bold text-primary mb-4">
+                Instructions
+              </Text>
+              <AppTextInput
+                placeholder={
+                  isLaundryOrder
+                    ? "e.g. Use cold water, no bleach, handle delicates with care"
+                    : "e.g. Less spice, no onions, leave at the front desk"
+                }
+                multiline
+                disabled={isPending}
+                textAlignVertical="center"
+                value={instructions}
+                onChangeText={(text) => {
+                  setInstructions(text);
+                  setAdditionalInfo(text);
+                }}
+              />
             </View>
           </View>
 
-          {/* Delivery address summary — shown after modal is confirmed */}
-          {(delivery_option === "VENDOR_DELIVERY" ||
-            (delivery_option === "PICKUP" &&
-              !vendorProfile?.can_pickup_and_dropoff)) &&
-            destination &&
-            !modalVisible && (
-              <View className="mb-8">
-                <View className="flex-row justify-between items-center mb-3">
-                  <Text className="text-base font-poppins-bold text-primary">
-                    Delivery Address
-                  </Text>
-                  <TouchableOpacity
-                    onPress={() => setModalVisible(true)}
-                    hitSlop={8}
-                  >
-                    <Text className="text-sm font-poppins-medium text-button-primary">
-                      Change
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-                <View className="bg-input rounded-2xl p-4 border border-gray-600 flex-row">
-                  <Feather
-                    name="map-pin"
-                    size={16}
-                    color="#FF8C00"
-                    style={{ marginTop: 2, marginRight: 10 }}
-                  />
-                  <Text className="text-sm text-primary font-poppins-regular flex-1">
-                    {destination}
-                  </Text>
-                </View>
-              </View>
-            )}
-
-          {/* Instructions */}
-          <View className="mb-8">
-            <Text className="text-base font-poppins-bold text-primary mb-4">
-              Instructions
-            </Text>
-            <AppTextInput
-              placeholder={
-                isLaundryOrder
-                  ? "e.g. Use cold water, no bleach, handle delicates with care"
-                  : "e.g. Less spice, no onions, leave at the front desk"
-              }
-              multiline
-              disabled={isPending}
-              textAlignVertical="center"
-              value={instructions}
-              onChangeText={(text) => {
-                setInstructions(text);
-                setAdditionalInfo(text);
-              }}
-            />
-          </View>
-        </View>
-
-        {/* Footer */}
-        {!modalVisible && (
-          <View className="w-full px-5 pb-5 bg-background">
-            <AppButton
-              disabled={isPending}
-              text={isPending ? "" : "Place Order"}
-              onPress={handleOrderCreate}
-              icon={
-                isPending ? (
-                  <ActivityIndicator color="white" />
-                ) : (
-                  <Feather name="check-circle" size={18} color="white" />
-                )
-              }
-            />
-          </View>
-        )}
-      </ScrollView>
+          {/* Footer */}
+          {!modalVisible && (
+            <View className="w-full px-5 pb-5 bg-background">
+              <AppButton
+                disabled={isPending}
+                text={isPending ? "" : "Place Order"}
+                onPress={handleOrderCreate}
+                icon={
+                  isPending ? (
+                    <ActivityIndicator color="white" />
+                  ) : (
+                    <Feather name="check-circle" size={18} color="white" />
+                  )
+                }
+              />
+            </View>
+          )}
+        </ScrollView>
+      )}
 
       {/* Delivery Address Modal */}
       <KeyboardAvoidingView>
@@ -438,7 +482,7 @@ const Cart = () => {
           </View>
         </AppModal>
       </KeyboardAvoidingView>
-    </>
+    </View>
   );
 };
 

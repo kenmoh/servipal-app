@@ -4,16 +4,24 @@ import LoadingIndicator from "@/components/LoadingIndicator";
 import { useToast } from "@/components/ToastProvider";
 import { AppButton } from "@/components/ui/app-button";
 import { useCartStore } from "@/store/cartStore";
+import { useUserStore } from "@/store/userStore";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
 import { PayWithFlutterwave } from "flutterwave-react-native";
 import { RedirectParams } from "flutterwave-react-native/dist/PayWithFlutterwave";
 import React from "react";
 import { ActivityIndicator, Text, TouchableOpacity, View } from "react-native";
 
+interface WalletPaymentResponse {
+  status: string;
+  tx_ref: string;
+}
+
 const payment = () => {
   const { showSuccess, showError } = useToast();
+  const user = useUserStore((state) => state.user);
+  const queryClient = useQueryClient();
   const {
     logo,
     email,
@@ -50,12 +58,7 @@ const payment = () => {
 
   const { clearCart } = useCartStore();
 
-  const handleOnRedirect = (data: RedirectParams) => {
-    console.log("====================");
-    console.log(data);
-    console.log("====================");
-    clearCart();
-
+  const redirect = (data: WalletPaymentResponse | RedirectParams) => {
     showSuccess(
       "Payment Successful",
       "Your payment was successful. Please select a rider.",
@@ -86,6 +89,10 @@ const payment = () => {
       });
     }
     if (serviceType === "WALLET") {
+      queryClient.invalidateQueries({
+        queryKey: ["user-wallet", user?.id],
+      });
+
       router.push({
         pathname: "/wallet",
         params: { txRef: data.tx_ref, paymentStatus: data.status },
@@ -93,9 +100,19 @@ const payment = () => {
     }
   };
 
+  const handleOnRedirect = (data: RedirectParams) => {
+    clearCart();
+    redirect(data);
+  };
+
+  const handleOnWalletRedirect = (data: WalletPaymentResponse) => {
+    clearCart();
+    redirect(data);
+  };
+
   const paymentWithWalletMutaion = useMutation({
     mutationFn: (data: PayWithWalletData) => payWithWallet(data),
-    onSuccess: () => handleOnRedirect,
+    onSuccess: handleOnWalletRedirect,
     onError: (error) => {
       showError("Error", error.message);
     },
@@ -164,13 +181,15 @@ const payment = () => {
       </View>
 
       <View className="flex-1 justify-end pb-16 w-full gap-3">
-        <AppButton
-          text={`PAY WITH WALLET ₦${amount}`}
-          onPress={handlePayWithWallet}
-          borderRadius={50}
-          variant="outline"
-          icon={<Ionicons name="wallet-outline" size={22} color="orange" />}
-        />
+        {serviceType !== "WALLET" && (
+          <AppButton
+            text={`PAY WITH WALLET ₦${amount}`}
+            onPress={handlePayWithWallet}
+            borderRadius={50}
+            variant="outline"
+            icon={<Ionicons name="wallet-outline" size={22} color="orange" />}
+          />
+        )}
         <PayWithFlutterwave
           onRedirect={handleOnRedirect}
           options={{

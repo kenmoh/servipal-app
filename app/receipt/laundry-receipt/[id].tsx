@@ -600,6 +600,7 @@ const LaundryReceiptPage = () => {
             variant="fill"
             borderRadius={50}
             width={"90%"}
+            color={buttonConfig.color}
             disabled={buttonConfig.disabled || laundryOrderMutation.isPending}
           />
         )}
@@ -618,6 +619,7 @@ const LaundryReceiptPage = () => {
               variant="fill"
               borderRadius={50}
               width={"90%"}
+              color={buttonConfig.color}
               disabled={buttonConfig.disabled || laundryOrderMutation.isPending}
             />
           )}
