@@ -39,7 +39,9 @@ export function useTheme() {
 
   const applyTheme = (option: ColorSchemeName) => {
     setTheme(option);
-    Appearance.setColorScheme(option);
+    if (option === "light" || option === "dark" || option === "unspecified") {
+      Appearance.setColorScheme(option);
+    }
   };
 
   // const setThemeOption = async (option: ColorSchemeName) => {

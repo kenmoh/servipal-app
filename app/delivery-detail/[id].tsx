@@ -86,7 +86,6 @@ const ItemDetails = () => {
     const [c1, c2] = coords;
 
     if (c1 < c2 && c2 > 5.5 && c1 < 5) {
-      console.log("🔄 Swapping coordinates [lng, lat] -> [lat, lng]:", coords);
       return [c2, c1];
     }
     return [c1, c2];
@@ -758,7 +757,7 @@ const ItemDetails = () => {
             text="Cancel Delivery"
             width={"90%"}
             onPress={openAlert}
-            color="primary"
+            color="#ef4444"
             icon={
               updateDeliveryMutation.isPending && (
                 <ActivityIndicator color="#fff" />

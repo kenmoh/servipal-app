@@ -1,4 +1,3 @@
-import { ThemeTransitionOverlay } from "@/components/ThemeTransitionOverlay ";
 import ToastProvider from "@/components/ToastProvider";
 import { HEADER_BG_DARK, HEADER_BG_LIGHT } from "@/constants/theme";
 import "@/global.css";
@@ -306,7 +305,7 @@ export default Sentry.wrap(function RootLayout() {
                     />
                   </Stack.Protected>
                 </Stack>
-                <ThemeTransitionOverlay />
+
                 <StatusBar style="auto" />
               </ToastProvider>
             </BottomSheetModalProvider>

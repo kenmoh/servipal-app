@@ -37,7 +37,13 @@ export function ThemeTransitionOverlay() {
   }, []);
 
   const applyThemeAndReset = (nextTheme: ColorSchemeName) => {
-    Appearance.setColorScheme(nextTheme);
+    if (
+      nextTheme === "light" ||
+      nextTheme === "dark" ||
+      nextTheme === "unspecified"
+    ) {
+      Appearance.setColorScheme(nextTheme);
+    }
     setColorScheme(nextTheme as any);
     // Fade out overlay after theme applied
     opacity.value = withTiming(0, { duration: 150 }, () => {
