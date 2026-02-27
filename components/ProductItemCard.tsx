@@ -3,7 +3,7 @@ import { ProductResponse } from "@/types/product-types";
 import { Feather } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { router } from "expo-router";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
 type ItemProps = {
   item: ProductResponse;
@@ -18,11 +18,9 @@ const ProductItemCard = ({ item }: ItemProps) => {
   };
 
   return (
-    <TouchableOpacity
-      activeOpacity={0.8}
+    <Pressable
       onPress={handlePress}
-      style={styles.card}
-      className="bg-input rounded-xl mx-4 my-2 p-3 flex-row items-center border border-slate-100 dark:border-slate-800"
+      className="bg-input active:opacity-80 rounded-xl mx-4 my-2 p-3 flex-row items-center border border-slate-100 dark:border-slate-800"
     >
       {/* Image Section */}
       <View className="h-20 w-20 rounded-xl overflow-hidden bg-slate-200 dark:bg-slate-700 items-center justify-center">
@@ -64,7 +62,7 @@ const ProductItemCard = ({ item }: ItemProps) => {
       <View className="ml-2">
         <Feather name="edit" size={16} color="gray" />
       </View>
-    </TouchableOpacity>
+    </Pressable>
   );
 };
 

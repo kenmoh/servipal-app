@@ -1,17 +1,11 @@
 import React from "react";
-import {
-  Dimensions,
-  Pressable,
-  ScrollView,
-  Text,
-  useColorScheme,
-  View,
-} from "react-native";
+import { Dimensions, Pressable, ScrollView, Text, View } from "react-native";
 
 import { getDeliveryDetailsById } from "@/api/delivery";
 import LoadingIndicator from "@/components/LoadingIndicator";
 import { useToast } from "@/components/ToastProvider";
 import { HEADER_BG_DARK, HEADER_BG_LIGHT } from "@/constants/theme";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useUserStore } from "@/store/userStore";
 import { DeliveryOrder } from "@/types/delivey-types";
 import Feather from "@expo/vector-icons/Feather";

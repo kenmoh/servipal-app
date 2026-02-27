@@ -1,6 +1,7 @@
 import { initiateProductPayment } from "@/api/product";
 import { AppButton } from "@/components/ui/app-button";
 import { HEADER_BG_DARK, HEADER_BG_LIGHT } from "@/constants/theme";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 import { usePurchaseActions, usePurchaseSelectors } from "@/store/productStore";
 import { useUserStore } from "@/store/userStore";
 import { ProductOrderCreateRequest } from "@/types/product-types";
@@ -21,7 +22,6 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  useColorScheme,
   View,
 } from "react-native";
 

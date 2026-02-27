@@ -5,6 +5,7 @@ import FAB from "@/components/FAB";
 import LoadingIndicator from "@/components/LoadingIndicator";
 import ProductCard from "@/components/ProductCard";
 import { HEADER_BG_DARK, HEADER_BG_LIGHT } from "@/constants/theme";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useUserStore } from "@/store/userStore";
 import Feather from "@expo/vector-icons/Feather";
 import BottomSheet, { BottomSheetScrollView } from "@gorhom/bottom-sheet";
@@ -17,7 +18,7 @@ import {
   Text,
   TouchableOpacity,
   View,
-  useColorScheme,
+  
 } from "react-native";
 
 const MarketPlace = () => {

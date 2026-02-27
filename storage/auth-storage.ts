@@ -1,5 +1,6 @@
 import { AuthUser } from "@/types/user-types";
 import * as SecureStore from "expo-secure-store";
+import { ColorSchemeName } from "react-native";
 
 const THEME_KEY = "theme";
 const USER_KEY = "user";
@@ -31,7 +32,7 @@ const removeItem = async (key: string): Promise<void> => {
 };
 
 // Theme storage (optional - keep if you use it)
-const storeTheme = async (theme: "light" | "dark" | "system") => {
+const storeTheme = async (theme: ColorSchemeName) => {
   try {
     await SecureStore.setItemAsync(THEME_KEY, theme);
   } catch (error) {
@@ -39,13 +40,13 @@ const storeTheme = async (theme: "light" | "dark" | "system") => {
   }
 };
 
-const getTheme = async (): Promise<"light" | "dark" | "system" | null> => {
+const getTheme = async (): Promise<ColorSchemeName> => {
   try {
     const theme = await SecureStore.getItemAsync(THEME_KEY);
-    return theme as "light" | "dark" | "system" | null;
+    return theme as ColorSchemeName;
   } catch (error) {
     console.error("Error getting theme:", error);
-    return null;
+    return "light";
   }
 };
 

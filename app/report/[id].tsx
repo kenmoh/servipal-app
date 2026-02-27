@@ -4,7 +4,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  useColorScheme,
   View,
 } from "react-native";
 
@@ -13,6 +12,7 @@ import { useToast } from "@/components/ToastProvider";
 import { AppButton } from "@/components/ui/app-button";
 import { AppTextInput } from "@/components/ui/app-text-input";
 import { HEADER_BG_DARK, HEADER_BG_LIGHT } from "@/constants/theme";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 import { DisputeOrderType } from "@/types/dispute-types";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";

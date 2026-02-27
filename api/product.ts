@@ -538,7 +538,12 @@ export const listOrders = async (page = 0, limit = 20) => {
     p_limit: limit,
     p_offset: page * limit,
   });
-  if (error) throw error;
+  if (error) {
+    Sentry.captureException(error, {
+      tags: { action: "list_orders" },
+    });
+    throw error;
+  }
   return data as UserOrdersResponse;
 };
 
@@ -555,7 +560,12 @@ export const getOrderDetails = async (orderId: string) => {
     p_order_id: orderId,
     p_user_id: userId,
   });
-  if (error) throw error;
+  if (error) {
+    Sentry.captureException(error, {
+      tags: { action: "get_order_details" },
+    });
+    throw error;
+  }
   return data as ProductOrder;
 };
 
@@ -568,10 +578,20 @@ export const updateOrderStatus = async ({
   newStatus: string;
   cancelReason?: string;
 }) => {
-  const response = await apiClient.patch(`${BASE_URL}/${orderId}/status`, {
-    order_id: orderId,
-    new_status: newStatus,
-    cancel_reason: cancelReason ?? null,
-  });
-  return response.data;
+  try {
+    const response = await apiClient.patch(
+      `${BASE_URL}/orders/${orderId}/status`,
+      {
+        order_id: orderId,
+        new_status: newStatus,
+        cancel_reason: cancelReason ?? null,
+      },
+    );
+    return response.data;
+  } catch (error) {
+    Sentry.captureException(error, {
+      tags: { action: "update_order_status" },
+    });
+    throw error;
+  }
 };

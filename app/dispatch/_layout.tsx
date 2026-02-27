@@ -1,7 +1,8 @@
 import { HEADER_BG_DARK, HEADER_BG_LIGHT } from "@/constants/theme";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 import { Stack } from "expo-router";
 import React from "react";
-import { useColorScheme, View } from "react-native";
+import { View } from "react-native";
 
 const DispatchLayout = () => {
   const theme = useColorScheme();

@@ -8,9 +8,10 @@ import { router, useLocalSearchParams, withLayoutContext } from "expo-router";
 // import { Bike, Landmark, MapPin, Menu, Star } from "lucide-react-native";
 import LoadingIndicator from "@/components/LoadingIndicator";
 import React from "react";
-import { Dimensions, StyleSheet, useColorScheme, View } from "react-native";
+import { Dimensions, StyleSheet, View } from "react-native";
 
 import StoreHeader from "@/components/StoreHeader";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 
 const StoreTabs = withLayoutContext(createMaterialTopTabNavigator().Navigator);
 

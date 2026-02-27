@@ -7,7 +7,7 @@ import {
   useToggleOnlineStatus,
   useTogglePickupAndDropoff,
 } from "@/hooks/status-toggle";
-import authStorage from "@/storage/auth-storage";
+import { useTheme } from "@/hooks/theme-toggle";
 import { useUserStore } from "@/store/userStore";
 import { ImageUrl } from "@/types/user-types";
 import Ionicons from "@expo/vector-icons/Ionicons";
@@ -33,7 +33,7 @@ import {
 } from "react-native";
 
 type themeType = "dark" | "light" | "system";
-const BACKDROP_IMAGE_HEIGHT = Dimensions.get("window").height * 0.2;
+const BACKDROP_IMAGE_HEIGHT = Dimensions.get("window").height * 0.18;
 const BACKDROP_IMAGE_WIDTH = Dimensions.get("window").width;
 
 const ProfileScreen = () => {
@@ -50,7 +50,7 @@ const ProfileScreen = () => {
     locationWhenInUsePermission,
     checkLocationPermission,
   } = useUserStore();
-  const [theme, setTheme] = useState<themeType>("dark");
+
   const [isOnline, setIsOnline] = useState(profile?.is_online ?? false);
   const [canPickup, setCanPickup] = useState(
     profile?.can_pickup_and_dropoff ?? false,
@@ -65,6 +65,8 @@ const ProfileScreen = () => {
   const togglePickupMutation = useTogglePickupAndDropoff();
 
   const toggleOnlineMutation = useToggleOnlineStatus();
+
+  const { setThemeOption, theme } = useTheme();
 
   // Sync with profile changes
   useEffect(() => {
@@ -167,7 +169,6 @@ const ProfileScreen = () => {
   }, [checkLocationPermission]);
 
   const handleForegroundToggle = async () => {
-    console.log("👆 Foreground toggle pressed");
     try {
       const { status: initialStatus, canAskAgain } =
         await Location.getForegroundPermissionsAsync();
@@ -329,25 +330,29 @@ const ProfileScreen = () => {
     }
   };
 
-  useEffect(() => {
-    const loadTheme = async () => {
-      const storedTheme = await authStorage.getTheme();
-      if (storedTheme) {
-        setTheme(storedTheme);
-        setColorScheme(storedTheme);
-      } else {
-        setTheme("system");
-        setColorScheme("system");
-      }
-    };
-    loadTheme();
-  }, []);
+  // useEffect(() => {
+  //   const loadTheme = async () => {
+  //     const storedTheme = await authStorage.getTheme();
+  //     if (storedTheme) {
+  //       setTheme(storedTheme);
+  //       // @ts-ignore - nativewind supports 'system'
+  //       if (storedTheme) setColorScheme(storedTheme);
+  //     } else {
+  //       setTheme("system");
+  //       // @ts-ignore - nativewind supports 'system'
+  //       setColorScheme("system");
+  //     }
+  //   };
+  //   loadTheme();
+  // }, [setColorScheme]);
 
-  const handleThemeChange = (newTheme: themeType) => {
-    setTheme(newTheme);
-    setColorScheme(newTheme);
-    authStorage.storeTheme(newTheme);
-  };
+  // const handleThemeChange = (newTheme: themeType) => {
+  //   if (newTheme === theme) return;
+  //   setTheme(newTheme);
+  //   // @ts-ignore - nativewind supports 'system'
+  //   if (newTheme) setColorScheme(newTheme);
+  //   authStorage.storeTheme(newTheme);
+  // };
 
   const handleStoreRedirect = () => {
     if (user?.user_metadata?.user_type === "RESTAURANT_VENDOR") {
@@ -505,14 +510,14 @@ const ProfileScreen = () => {
             <View className="flex-row gap-3">
               <View
                 className={`px-4 py-2 rounded-xl ${
-                  theme === "system" ? "bg-brand-primary" : "bg-input"
+                  theme === "unspecified" ? "bg-brand-primary" : "bg-input"
                 }`}
               >
                 <Text
                   className={`text-sm font-poppins-medium ${
-                    theme === "system" ? "text-white" : "text-muted"
+                    theme === "unspecified" ? "text-white" : "text-muted"
                   }`}
-                  onPress={() => handleThemeChange("system")}
+                  onPress={() => setThemeOption("unspecified")}
                 >
                   System
                 </Text>
@@ -526,7 +531,7 @@ const ProfileScreen = () => {
                   className={`text-sm font-poppins-medium ${
                     theme === "light" ? "text-white" : "text-muted"
                   }`}
-                  onPress={() => handleThemeChange("light")}
+                  onPress={() => setThemeOption("light")}
                 >
                   Light
                 </Text>
@@ -540,7 +545,7 @@ const ProfileScreen = () => {
                   className={`text-sm font-poppins-medium ${
                     theme === "dark" ? "text-white" : "text-muted"
                   }`}
-                  onPress={() => handleThemeChange("dark")}
+                  onPress={() => setThemeOption("dark")}
                 >
                   Dark
                 </Text>

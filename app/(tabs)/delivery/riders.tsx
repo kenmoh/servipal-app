@@ -13,24 +13,18 @@ import Rider from "@/components/Rider";
 import { useToast } from "@/components/ToastProvider";
 import { AppButton } from "@/components/ui/app-button";
 import { HEADER_BG_DARK, HEADER_BG_LIGHT } from "@/constants/theme";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useRiderStore } from "@/store/rider-store";
 import { useUserStore } from "@/store/userStore";
 import { RiderResponse } from "@/types/user-types";
 import { supabase } from "@/utils/supabase";
-import Feather from '@expo/vector-icons/Feather';
-import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
+import Feather from "@expo/vector-icons/Feather";
+import FontAwesome5 from "@expo/vector-icons/FontAwesome5";
 import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
 import * as Sentry from "@sentry/react-native";
 import { FlashList } from "@shopify/flash-list";
 import { useLocalSearchParams } from "expo-router";
-import {
-  Alert,
-  FlatList,
-  Image,
-  Text,
-  useColorScheme,
-  View,
-} from "react-native";
+import { Alert, FlatList, Image, Text, View } from "react-native";
 
 // Helper: Calculate distance in meters (Haversine)
 const getDistanceMeters = (
@@ -96,7 +90,6 @@ const RidersScreen = () => {
     [],
   );
 
-
   const handleRiderPress = useCallback(
     (rider: RiderResponse) => {
       const isPaid = paymentStatus === "successful" || paymentStatus === "PAID";
@@ -158,8 +151,6 @@ const RidersScreen = () => {
     }
   }, [selectedRider]);
 
-
-
   const handleLayoutComplete = useCallback(() => {
     setIsLayoutComplete(true);
   }, []);
@@ -186,7 +177,9 @@ const RidersScreen = () => {
       return { status, isLocationEnabled };
     } catch (error) {
       console.error("Permission check failed:", error);
-      Sentry.captureException(error, { tags: { action: "check_location_permission" } });
+      Sentry.captureException(error, {
+        tags: { action: "check_location_permission" },
+      });
       setLocationPermission(false);
       return { status: "undetermined", isLocationEnabled: false };
     }
@@ -281,7 +274,9 @@ const RidersScreen = () => {
             }
           } catch (err) {
             console.error("[Location] Update failed:", err);
-            Sentry.captureException(err, { tags: { action: "location_update" } });
+            Sentry.captureException(err, {
+              tags: { action: "location_update" },
+            });
           }
         },
       );
@@ -305,7 +300,7 @@ const RidersScreen = () => {
     isFetching,
   } = useQuery({
     queryKey: ["riders", user?.id],
-    queryFn: async () => getNearbyRiders(user?.id!),
+    queryFn: async () => getNearbyRiders(),
     enabled: !!user?.id,
     staleTime: 1000 * 30, // 30 seconds
     gcTime: 1000 * 60 * 5, // 5 minutes
@@ -328,7 +323,11 @@ const RidersScreen = () => {
         },
         (payload) => {
           console.log("[Realtime] Rider changed:", payload.eventType);
-          Sentry.addBreadcrumb({ category: "realtime", message: `Rider changed: ${payload.eventType}`, level: "info" });
+          Sentry.addBreadcrumb({
+            category: "realtime",
+            message: `Rider changed: ${payload.eventType}`,
+            level: "info",
+          });
           // Invalidate to refetch with fresh distance calculations
           queryClient.invalidateQueries({ queryKey: ["riders", user?.id] });
         },
@@ -401,7 +400,6 @@ const RidersScreen = () => {
           backgroundColor: BG_COLOR,
           shadowColor: "orange",
         }}
-      
       >
         <BottomSheetView style={{ flex: 1 }} className="bg-background">
           {selectedRider && (
@@ -473,7 +471,6 @@ const RidersScreen = () => {
           )}
         </BottomSheetView>
       </BottomSheet>
-     
     </View>
   );
 };

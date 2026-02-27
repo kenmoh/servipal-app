@@ -1,8 +1,9 @@
 import LoadingIndicator from "@/components/LoadingIndicator";
 import { HEADER_BG_DARK, HEADER_BG_LIGHT } from "@/constants/theme";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 import { createMaterialTopTabNavigator } from "@react-navigation/material-top-tabs";
 import { withLayoutContext } from "expo-router";
-import { Dimensions, StyleSheet, useColorScheme, View } from "react-native";
+import { Dimensions, StyleSheet, View } from "react-native";
 
 const MarketPlaceTabs = withLayoutContext(
   createMaterialTopTabNavigator().Navigator,

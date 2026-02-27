@@ -3,21 +3,33 @@ import ProductDetailWrapper from "@/components/ProductDetailWrapper";
 import { useToast } from "@/components/ToastProvider";
 import { AppButton } from "@/components/ui/app-button";
 import { useUserStore } from "@/store/userStore";
-import { OrderStatus } from "@/types/product-types";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
 import React from "react";
 import { ActivityIndicator, Text, TouchableOpacity, View } from "react-native";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+type OrderStatus =
+  | "PENDING"
+  | "SHIPPED"
+  | "DELIVERED"
+  | "COMPLETED"
+  | "CANCELLED"
+  | "REJECTED"
+  | "RETURNED"
+  | "DISPUTED";
 
 interface ActionButton {
   label: string;
   newStatus: OrderStatus;
   variant?: "fill" | "outline" | "ghost";
   color?: string;
-  width?: string;
   isPrimary: boolean;
-  confirmMessage?: string;
 }
+
+// ─── State Machine ────────────────────────────────────────────────────────────
+// paymentStatus check is case-insensitive to guard against API casing differences
 
 function getAvailableActions(
   orderStatus: OrderStatus,
@@ -25,11 +37,12 @@ function getAvailableActions(
   role: "CUSTOMER" | "VENDOR",
 ): ActionButton[] {
   const actions: ActionButton[] = [];
+  const isPaid = paymentStatus?.toUpperCase() === "SUCCESS";
 
   if (role === "VENDOR") {
     switch (orderStatus) {
       case "PENDING":
-        if (paymentStatus === "SUCCESS") {
+        if (isPaid) {
           actions.push({
             label: "Mark as Shipped",
             newStatus: "SHIPPED",
@@ -42,7 +55,6 @@ function getAvailableActions(
           variant: "outline",
           color: "#EF4444",
           isPrimary: false,
-          confirmMessage: "Are you sure you want to cancel this order?",
         });
         break;
 
@@ -61,16 +73,13 @@ function getAvailableActions(
         });
         break;
 
-      case "REJECTED":
       case "CANCELLED":
-        // After shipping, vendor marks item returned (received back)
-        if (orderStatus === "CANCELLED" || orderStatus === "REJECTED") {
-          actions.push({
-            label: "Confirm Item Returned",
-            newStatus: "RETURNED",
-            isPrimary: true,
-          });
-        }
+      case "REJECTED":
+        actions.push({
+          label: "Confirm Item Returned",
+          newStatus: "RETURNED",
+          isPrimary: true,
+        });
         break;
 
       case "RETURNED":
@@ -78,9 +87,10 @@ function getAvailableActions(
           label: "Release Payment",
           newStatus: "COMPLETED",
           isPrimary: true,
-          confirmMessage:
-            "Confirm item returned and release payment to your wallet?",
         });
+        break;
+
+      default:
         break;
     }
   }
@@ -94,7 +104,6 @@ function getAvailableActions(
           variant: "outline",
           color: "#EF4444",
           isPrimary: false,
-          confirmMessage: "Are you sure you want to cancel this order?",
         });
         break;
 
@@ -120,8 +129,6 @@ function getAvailableActions(
           variant: "outline",
           color: "#EF4444",
           isPrimary: false,
-          confirmMessage:
-            "Reject this item? You will need to return it to the vendor.",
         });
         actions.push({
           label: "Dispute",
@@ -131,13 +138,16 @@ function getAvailableActions(
           isPrimary: false,
         });
         break;
+
+      default:
+        break;
     }
   }
 
   return actions;
 }
 
-// ─── Status Display Helpers ───────────────────────────────────────────────────
+// ─── Status Helpers ───────────────────────────────────────────────────────────
 
 const STATUS_LABELS: Record<OrderStatus, string> = {
   PENDING: "Pending",
@@ -196,12 +206,18 @@ const STATUS_COLORS: Record<
   },
 };
 
+const formatPrice = (price: number) =>
+  new Intl.NumberFormat("en-NG", {
+    style: "currency",
+    currency: "NGN",
+  }).format(price);
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 const ProductDetail = () => {
   const { user } = useUserStore();
   const { orderId } = useLocalSearchParams<{ orderId: string }>();
-  const { showSuccess, showError, showWarning } = useToast();
+  const { showSuccess, showError } = useToast();
   const queryClient = useQueryClient();
 
   const { data, isLoading, refetch } = useQuery({
@@ -216,7 +232,6 @@ const ProductDetail = () => {
     refetch();
   };
 
-  // Single mutation for all status updates
   const statusMutation = useMutation({
     mutationFn: ({
       newStatus,
@@ -224,37 +239,29 @@ const ProductDetail = () => {
     }: {
       newStatus: OrderStatus;
       cancelReason?: string;
-    }) =>
-      updateOrderStatus({
-        orderId: orderId!,
-        newStatus,
-        cancelReason,
-      }),
+    }) => updateOrderStatus({ orderId: orderId!, newStatus, cancelReason }),
     onSuccess: (_, variables) => {
-      const successMessages: Partial<Record<OrderStatus, string>> = {
+      const messages: Partial<Record<OrderStatus, string>> = {
         SHIPPED: "Order marked as shipped",
         DELIVERED: "Order marked as delivered",
-        COMPLETED: "Order completed successfully",
+        COMPLETED: "Order completed. Payment released.",
         CANCELLED: "Order has been cancelled",
         REJECTED: "Item rejected",
         RETURNED: "Item return confirmed",
         DISPUTED: "Dispute raised successfully",
       };
-      showSuccess(
-        "Success",
-        successMessages[variables.newStatus] ?? "Order updated",
-      );
+      showSuccess("Success", messages[variables.newStatus] ?? "Order updated");
       invalidate();
     },
     onError: (error: any) =>
-      showError("Error", error.message ?? "Failed to update order"),
+      showError("Error", error?.message ?? "Failed to update order"),
   });
 
   const handleAction = (action: ActionButton) => {
     statusMutation.mutate({ newStatus: action.newStatus });
   };
 
-  // ─── Render ──────────────────────────────────────────────────────────────
+  // ─── Loading / Empty ──────────────────────────────────────────────────────
 
   if (isLoading) {
     return (
@@ -266,7 +273,7 @@ const ProductDetail = () => {
 
   if (!data) {
     return (
-      <View className="flex-1 justify-center items-center bg-background">
+      <View className="flex-1 justify-center items-center bg-background px-6">
         <Text className="text-sm text-primary font-poppins-bold mb-6">
           Order not found
         </Text>
@@ -280,27 +287,30 @@ const ProductDetail = () => {
     );
   }
 
-  const isBuyer = user?.id === data.customer_id;
   const isVendor = user?.id === data.vendor_id;
+  const isBuyer = user?.id === data.customer_id;
   const role: "CUSTOMER" | "VENDOR" = isVendor ? "VENDOR" : "CUSTOMER";
 
-  const orderStatus = data.order_status as OrderStatus;
+  const orderStatus = (data.order_status as OrderStatus) ?? "PENDING";
   const statusStyle = STATUS_COLORS[orderStatus] ?? STATUS_COLORS.PENDING;
+  const statusLabel = STATUS_LABELS[orderStatus] ?? String(orderStatus);
 
-  const actions = getAvailableActions(orderStatus, data.payment_status, role);
+  const actions = getAvailableActions(
+    orderStatus,
+    data.payment_status ?? "",
+    role,
+  );
   const primaryAction = actions.find((a) => a.isPrimary);
   const secondaryActions = actions.filter((a) => !a.isPrimary);
-
   const hasActions = actions.length > 0;
 
-  const formatPrice = (price: number) =>
-    new Intl.NumberFormat("en-NG", {
-      style: "currency",
-      currency: "NGN",
-    }).format(price);
+  const item = data.items?.[0];
+  const itemQuantity = Number(item?.quantity ?? 1);
+  const itemPrice = Number(item?.price ?? 0);
+  const shippingCost = Number(data.shipping_cost ?? 0);
 
   return (
-    <ProductDetailWrapper images={data.items[0]?.images!}>
+    <ProductDetailWrapper images={item?.images ?? []}>
       <View
         className="flex-1 bg-background rounded-t-[40px] -mt-10 pt-8 px-5"
         style={{ paddingBottom: hasActions ? 100 : 32 }}
@@ -308,13 +318,16 @@ const ProductDetail = () => {
         {/* Header */}
         <View className="flex-row justify-between items-start mb-2 mt-2">
           <View className="flex-1 pr-4">
-            <Text className="text-2xl font-poppins-bold text-slate-900 dark:text-white leading-tight capitalize">
-              {data.items[0]?.name}
+            <Text
+              className="text-2xl font-poppins-bold text-slate-900 dark:text-white leading-tight capitalize"
+              numberOfLines={2}
+            >
+              {String(item?.name ?? "")}
             </Text>
             <View className="flex-row items-center gap-2 mt-2">
               <View className="bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full">
                 <Text className="text-xs text-slate-600 dark:text-slate-300 font-poppins-medium">
-                  Order #{data.order_number}
+                  {"Order #" + String(data.order_number ?? "")}
                 </Text>
               </View>
               {isBuyer && orderStatus === "COMPLETED" && (
@@ -324,9 +337,9 @@ const ProductDetail = () => {
                     router.push({
                       pathname: "/review/[id]",
                       params: {
-                        id: data.items[0]?.id,
+                        id: item?.id,
                         reviewType: "PRODUCT",
-                        itemId: data.items[0]?.id,
+                        itemId: item?.id,
                         revieweeId: user?.id,
                         orderId: data.id,
                         orderType: "PRODUCT",
@@ -343,48 +356,54 @@ const ProductDetail = () => {
           </View>
           <View className="items-end">
             <Text className="text-2xl font-poppins-bold text-orange-600 dark:text-orange-500">
-              {formatPrice(Number(data.grand_total))}
+              {formatPrice(Number(data.grand_total ?? 0))}
             </Text>
             <Text className="text-[10px] text-slate-400 font-poppins-light mt-1">
-              {data.items[0]?.quantity}{" "}
-              {data.items[0]?.quantity > 1 ? "items" : "item"}
+              {String(itemQuantity) +
+                " " +
+                (itemQuantity > 1 ? "items" : "item")}
             </Text>
           </View>
         </View>
 
         {/* Status Badges */}
         <View className="flex-row gap-3 my-6">
-          {/* Payment Status */}
           <View
-            className={`flex-1 px-4 py-3 rounded-2xl border ${
-              data.payment_status === "SUCCESS"
+            className={
+              "flex-1 px-4 py-3 rounded-2xl border " +
+              (data.payment_status?.toUpperCase() === "SUCCESS"
                 ? "bg-green-50 border-green-100 dark:bg-green-900/20 dark:border-green-900/40"
-                : "bg-amber-50 border-amber-100 dark:bg-amber-900/20 dark:border-amber-900/40"
-            }`}
+                : "bg-amber-50 border-amber-100 dark:bg-amber-900/20 dark:border-amber-900/40")
+            }
           >
             <Text className="text-[10px] uppercase tracking-wider font-poppins-medium text-slate-500 dark:text-slate-400 mb-1">
               Payment
             </Text>
             <Text
-              className={`font-poppins-bold text-sm capitalize ${
-                data.payment_status === "SUCCESS"
+              className={
+                "font-poppins-bold text-sm capitalize " +
+                (data.payment_status?.toUpperCase() === "SUCCESS"
                   ? "text-green-700 dark:text-green-400"
-                  : "text-amber-700 dark:text-amber-400"
-              }`}
+                  : "text-amber-700 dark:text-amber-400")
+              }
             >
-              {data.payment_status}
+              {String(data.payment_status ?? "").toLowerCase()}
             </Text>
           </View>
 
-          {/* Order Status */}
           <View
-            className={`flex-1 px-4 py-3 rounded-2xl border ${statusStyle.bg} ${statusStyle.border}`}
+            className={
+              "flex-1 px-4 py-3 rounded-2xl border " +
+              statusStyle.bg +
+              " " +
+              statusStyle.border
+            }
           >
             <Text className="text-[10px] uppercase tracking-wider font-poppins-medium text-slate-500 dark:text-slate-400 mb-1">
               Status
             </Text>
-            <Text className={`font-poppins-bold text-sm ${statusStyle.text}`}>
-              {STATUS_LABELS[orderStatus]}
+            <Text className={"font-poppins-bold text-sm " + statusStyle.text}>
+              {statusLabel}
             </Text>
           </View>
         </View>
@@ -392,7 +411,7 @@ const ProductDetail = () => {
         {/* Disputed Banner */}
         {orderStatus === "DISPUTED" && (
           <View className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800/40 rounded-2xl p-4 mb-6 flex-row items-center gap-3">
-            <Text className="text-2xl">⚠️</Text>
+            <Text className="text-2xl">{"⚠️"}</Text>
             <View className="flex-1">
               <Text className="text-orange-800 dark:text-orange-300 font-poppins-bold text-sm">
                 Order Under Dispute
@@ -408,7 +427,7 @@ const ProductDetail = () => {
         {/* Return Flow Banner */}
         {orderStatus === "RETURNED" && (
           <View className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800/40 rounded-2xl p-4 mb-6 flex-row items-center gap-3">
-            <Text className="text-2xl">📦</Text>
+            <Text className="text-2xl">{"📦"}</Text>
             <View className="flex-1">
               <Text className="text-purple-800 dark:text-purple-300 font-poppins-bold text-sm">
                 {isVendor ? "Item Returned by Buyer" : "Return in Progress"}
@@ -416,7 +435,7 @@ const ProductDetail = () => {
               <Text className="text-purple-600 dark:text-purple-400 font-poppins text-xs mt-1">
                 {isVendor
                   ? "Confirm receipt and release payment to complete the return."
-                  : "Vendor is confirming your return. Funds will be released once confirmed."}
+                  : "Vendor is confirming your return. Funds released once confirmed."}
               </Text>
             </View>
           </View>
@@ -428,45 +447,45 @@ const ProductDetail = () => {
             Item Details
           </Text>
           <View className="flex-row flex-wrap gap-6">
-            {data.items[0]?.selected_color && (
-              <View>
-                <Text className="text-[10px] text-slate-400 font-poppins-medium mb-2 uppercase">
-                  Colors
-                </Text>
-                <View className="flex-row gap-2">
-                  {data.items[0].selected_color.map(
-                    (color: string, i: number) => (
+            {Array.isArray(item?.selected_color) &&
+              item.selected_color.length > 0 && (
+                <View>
+                  <Text className="text-[10px] text-slate-400 font-poppins-medium mb-2 uppercase">
+                    Colors
+                  </Text>
+                  <View className="flex-row gap-2">
+                    {item.selected_color.map((color: string, i: number) => (
                       <View
                         key={i}
-                        className="w-8 h-8 rounded-full border border-slate-200 dark:border-slate-700 shadow-sm"
-                        style={{ backgroundColor: color }}
+                        className="w-8 h-8 rounded-full border border-slate-200 dark:border-slate-700"
+                        style={{ backgroundColor: String(color ?? "#ccc") }}
                       />
-                    ),
-                  )}
+                    ))}
+                  </View>
                 </View>
-              </View>
-            )}
-            {data.items[0]?.selected_size && (
-              <View>
-                <Text className="text-[10px] text-slate-400 font-poppins-medium mb-2 uppercase">
-                  Sizes
-                </Text>
-                <View className="flex-row gap-2">
-                  {data.items[0].selected_size.map(
-                    (size: string, i: number) => (
+              )}
+            {Array.isArray(item?.selected_size) &&
+              item.selected_size.length > 0 && (
+                <View>
+                  <Text className="text-[10px] text-slate-400 font-poppins-medium mb-2 uppercase">
+                    Sizes
+                  </Text>
+                  <View className="flex-row gap-2">
+                    {item.selected_size.map((size: string, i: number) => (
                       <View
                         key={i}
                         className="h-8 min-w-[32px] px-3 items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-800"
                       >
                         <Text className="font-poppins-semibold text-xs text-slate-700 dark:text-slate-300">
-                          {size.trim().toUpperCase()}
+                          {String(size ?? "")
+                            .trim()
+                            .toUpperCase()}
                         </Text>
                       </View>
-                    ),
-                  )}
+                    ))}
+                  </View>
                 </View>
-              </View>
-            )}
+              )}
           </View>
         </View>
 
@@ -476,22 +495,24 @@ const ProductDetail = () => {
             {isVendor ? "Buyer Instructions" : "Order Notes"}
           </Text>
           <Text className="text-sm text-slate-600 dark:text-slate-400 font-poppins-light leading-6">
-            {data.additional_info || "No additional instructions provided."}
+            {String(
+              data.additional_info || "No additional instructions provided.",
+            )}
           </Text>
         </View>
 
         {/* Delivery Info */}
-        {data.delivery_address && (
+        {!!data.delivery_address && (
           <View className="bg-input rounded-2xl p-4 mb-6">
             <Text className="text-sm font-poppins-bold text-slate-900 dark:text-white mb-3">
               Delivery Info
             </Text>
             <Text className="text-sm text-slate-600 dark:text-slate-400 font-poppins-light">
-              📍 {data.delivery_address}
+              {"📍 " + String(data.delivery_address)}
             </Text>
-            {data.delivery_option && (
+            {!!data.delivery_option && (
               <Text className="text-xs text-slate-400 font-poppins-medium mt-1 uppercase">
-                {data.delivery_option.replace("_", " ")}
+                {String(data.delivery_option).replace(/_/g, " ")}
               </Text>
             )}
           </View>
@@ -505,42 +526,44 @@ const ProductDetail = () => {
           <View className="gap-3">
             <View className="flex-row justify-between">
               <Text className="text-slate-500 font-poppins text-xs">
-                Item Total ({data.items[0]?.quantity}x)
+                {"Item Total (" + String(itemQuantity) + "x)"}
               </Text>
               <Text className="text-slate-700 dark:text-slate-300 font-poppins-medium text-xs">
-                {formatPrice(
-                  Number(data.items[0]?.price) * data.items[0]?.quantity,
-                )}
+                {formatPrice(itemPrice * itemQuantity)}
               </Text>
             </View>
-            {data.shipping_cost && Number(data.shipping_cost) > 0 && (
+
+            {shippingCost > 0 && (
               <View className="flex-row justify-between">
                 <Text className="text-slate-500 font-poppins text-xs">
                   Shipping
                 </Text>
                 <Text className="text-slate-700 dark:text-slate-300 font-poppins-medium text-xs">
-                  {formatPrice(Number(data.shipping_cost))}
+                  {formatPrice(shippingCost)}
                 </Text>
               </View>
             )}
+
             <View className="h-[1px] bg-slate-200 dark:bg-slate-700 my-1" />
+
             {isBuyer && (
               <View className="flex-row justify-between items-center">
                 <Text className="text-slate-900 dark:text-white font-poppins-bold text-sm">
                   Total Amount
                 </Text>
                 <Text className="text-orange-600 dark:text-orange-500 font-poppins-bold text-lg">
-                  {formatPrice(Number(data.grand_total))}
+                  {formatPrice(Number(data.grand_total ?? 0))}
                 </Text>
               </View>
             )}
+
             {isVendor && (
               <View className="flex-row justify-between items-center bg-green-50 dark:bg-green-900/10 p-3 rounded-xl">
                 <Text className="text-green-800 dark:text-green-400 font-poppins-bold text-sm">
                   Your Payout
                 </Text>
                 <Text className="text-green-700 dark:text-green-400 font-poppins-bold text-lg">
-                  {formatPrice(Number(data.amount_due_vendor))}
+                  {formatPrice(Number(data.amount_due_vendor ?? 0))}
                 </Text>
               </View>
             )}
@@ -548,27 +571,25 @@ const ProductDetail = () => {
         </View>
       </View>
 
-      {/* ── Floating Action Bar ── */}
+      {/* ── Floating Action Bar ─────────────────────────────────────────────── */}
       {hasActions && (
         <View className="absolute bottom-0 left-0 right-0 bg-background border-t border-slate-100 dark:border-slate-800 px-4 py-4 pb-8">
           <View className="flex-row items-center gap-3">
-            {/* Secondary actions */}
             {secondaryActions.map((action) => (
               <AppButton
                 key={action.newStatus}
                 text={action.label}
                 variant={action.variant ?? "outline"}
-                // width={secondaryActions.length > 1 ? "30%" : "35%"}
+                width={secondaryActions.length > 1 ? "28%" : "35%"}
                 borderRadius={50}
                 color={action.color ?? "#EF4444"}
                 borderColor={action.color ?? "#EF4444"}
-                textStyle={{ color: action.color ?? "#EF4444" }}
+                textStyle={{ color: action.color ?? "#EF4444", fontSize: 12 }}
                 onPress={() => handleAction(action)}
                 disabled={statusMutation.isPending}
               />
             ))}
 
-            {/* Primary action */}
             {primaryAction && (
               <View className="flex-1">
                 <AppButton
@@ -585,6 +606,10 @@ const ProductDetail = () => {
                   disabled={statusMutation.isPending}
                 />
               </View>
+            )}
+
+            {!primaryAction && secondaryActions.length > 0 && (
+              <View className="flex-1" />
             )}
           </View>
         </View>

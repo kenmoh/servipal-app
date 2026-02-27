@@ -1,7 +1,7 @@
 import Feather from "@expo/vector-icons/Feather";
 import { FlashList } from "@shopify/flash-list";
 import React, { useCallback, useEffect, useState } from "react";
-import { StyleSheet, Text, useColorScheme, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 
 import { searchNearbyRestaurants } from "@/api/user";
 import LoadingIndicator from "@/components/LoadingIndicator";
@@ -14,6 +14,7 @@ import HDivider from "@/components/HDivider";
 import RefreshButton from "@/components/RefreshButton";
 import { useUserStore } from "@/store/userStore";
 import { UserProfile } from "@/types/user-types";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 
 const RestaurantScreen = () => {
   const theme = useColorScheme();

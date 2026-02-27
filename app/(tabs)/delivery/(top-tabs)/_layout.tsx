@@ -1,14 +1,9 @@
 import React from "react";
-import {
-  ActivityIndicator,
-  Dimensions,
-  StyleSheet,
-  useColorScheme,
-  View,
-} from "react-native";
+import { ActivityIndicator, Dimensions, StyleSheet, View } from "react-native";
 
 import { HEADER_BG_DARK, HEADER_BG_LIGHT } from "@/constants/theme";
-// import { useUserStore } from "@/store/userStore";
+import { useColorScheme } from "@/hooks/use-color-scheme";
+import { useUserStore } from "@/store/userStore";
 import { createMaterialTopTabNavigator } from "@react-navigation/material-top-tabs";
 import { withLayoutContext } from "expo-router";
 
@@ -21,6 +16,13 @@ const TabLoadingFallback = () => (
 
 const TopTab = () => {
   const theme = useColorScheme();
+  const { profile } = useUserStore();
+  const showAllTabs = ![
+    "LAUNDRY_VENDOR",
+    "CUSTOMER",
+    "RESTAURANT_VENDOR",
+  ].includes(profile?.user_type!);
+
   return (
     <Tab
       initialRouteName="index"
@@ -35,7 +37,7 @@ const TopTab = () => {
         tabBarLabelStyle: {
           textAlign: "center",
           fontFamily: "Poppins-Medium",
-          fontSize: 11,
+          fontSize: showAllTabs ? 16 : 12,
           textTransform: "none",
           margin: 0,
         },
@@ -71,23 +73,15 @@ const TopTab = () => {
       />
 
       <Tab.Screen
-        // redirect={
-        //   userType === "DISPATCH" ||
-        //   userType === "RIDER" ||
-        //   userType === "LAUNDRY_VENDOR"
-        // }
+        redirect={showAllTabs}
         name="food"
         options={{
           tabBarLabel: "Food",
         }}
       />
       <Tab.Screen
-        // redirect={
-        //   userType === "DISPATCH" ||
-        //   userType === "RIDER" ||
-        //   userType === "RESTAURANT_VENDOR"
-        // }
         name="laundry"
+        redirect={showAllTabs}
         options={{
           tabBarLabel: "Laundry",
         }}

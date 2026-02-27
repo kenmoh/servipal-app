@@ -3,13 +3,14 @@ import EmptyList from "@/components/EmptyList";
 import LoadingIndicator from "@/components/LoadingIndicator";
 import ReviewCard from "@/components/ReviewCard";
 import { HEADER_BG_DARK, HEADER_BG_LIGHT } from "@/constants/theme";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useUserStore } from "@/store/userStore";
 import { Review } from "@/types/review-types";
 import { FlashList } from "@shopify/flash-list";
 import { useQuery } from "@tanstack/react-query";
 import { Stack, useLocalSearchParams } from "expo-router";
 import React from "react";
-import { RefreshControl, useColorScheme, View } from "react-native";
+import { RefreshControl, View } from "react-native";
 
 const reviews = () => {
   const { id } = useLocalSearchParams<{ id: string }>();

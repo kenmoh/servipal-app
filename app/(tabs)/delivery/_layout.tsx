@@ -1,8 +1,10 @@
 import { HEADER_BG_DARK, HEADER_BG_LIGHT } from "@/constants/theme";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 import EvilIcons from "@expo/vector-icons/EvilIcons";
 import Fontisto from "@expo/vector-icons/Fontisto";
 import { router, Stack } from "expo-router";
-import { TouchableOpacity, useColorScheme, View } from "react-native";
+
+import { TouchableOpacity, View } from "react-native";
 
 const DeliveryLayout = () => {
   const theme = useColorScheme();

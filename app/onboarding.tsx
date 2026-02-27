@@ -1,13 +1,6 @@
 import { LinearGradient } from "expo-linear-gradient";
 import { useRef, useState } from "react";
-import {
-    Image,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    useColorScheme,
-    View,
-} from "react-native";
+import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Animated, { FadeInUp } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Swiper from "react-native-swiper";
@@ -19,6 +12,7 @@ import { useUserStore } from "@/store/userStore";
 import { AntDesign } from "@expo/vector-icons";
 import { router } from "expo-router";
 
+import { useColorScheme } from "@/hooks/use-color-scheme";
 import type { ColorValue } from "react-native";
 
 const gradients: ReadonlyArray<

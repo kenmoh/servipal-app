@@ -8,7 +8,6 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  useColorScheme,
   View,
 } from "react-native";
 
@@ -37,6 +36,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
 
 import { blurhash } from "@/constants/state";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 import { getDeliveryButtonConfig } from "@/utils/deliveryButtonConfig";
 import { Image } from "expo-image";
 import { Controller, useForm } from "react-hook-form";
@@ -338,7 +338,11 @@ const ItemDetails = () => {
     if (!id || !isMountedRef.current) return;
 
     console.log("🔌 Setting up Realtime for order:", id);
-    Sentry.addBreadcrumb({ category: "realtime", message: `Setting up Realtime for delivery order: ${id}`, level: "info" });
+    Sentry.addBreadcrumb({
+      category: "realtime",
+      message: `Setting up Realtime for delivery order: ${id}`,
+      level: "info",
+    });
     const channel = supabase
       .channel(`delivery_order_${id}`)
       .on(

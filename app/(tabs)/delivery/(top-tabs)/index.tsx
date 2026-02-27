@@ -5,6 +5,7 @@ import FAB from "@/components/FAB";
 import HDivider from "@/components/HDivider";
 import LoadingIndicator from "@/components/LoadingIndicator";
 import StatCard from "@/components/StatCard";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useUserStore } from "@/store/userStore";
 import { DeliveryOrder } from "@/types/delivey-types";
 import Feather from "@expo/vector-icons/Feather";
@@ -14,8 +15,9 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { FlashList } from "@shopify/flash-list";
 import { useQuery } from "@tanstack/react-query";
 import { router } from "expo-router";
+
 import React, { useCallback, useMemo } from "react";
-import { useColorScheme, View } from "react-native";
+import { View } from "react-native";
 
 const UserOrders = () => {
   const { user } = useUserStore();

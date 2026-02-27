@@ -4,6 +4,7 @@ import StarRatingInput from "@/components/StarRatingInput";
 import { useToast } from "@/components/ToastProvider";
 import { AppButton } from "@/components/ui/app-button";
 import { AppTextInput } from "@/components/ui/app-text-input";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useUserStore } from "@/store/userStore";
 import { ReviewInsert } from "@/types/review-types";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -11,13 +12,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import React from "react";
 import { Controller, useForm } from "react-hook-form";
-import {
-  ActivityIndicator,
-  ScrollView,
-  Text,
-  useColorScheme,
-  View,
-} from "react-native";
+import { ActivityIndicator, ScrollView, Text, View } from "react-native";
 import { z } from "zod";
 
 const reviewSchema = z.object({

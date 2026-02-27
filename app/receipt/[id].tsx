@@ -5,7 +5,6 @@ import {
   Pressable,
   ScrollView,
   Text,
-  useColorScheme,
   View,
 } from "react-native";
 
@@ -18,6 +17,7 @@ import LoadingIndicator from "@/components/LoadingIndicator";
 import { useToast } from "@/components/ToastProvider";
 import { AppButton } from "@/components/ui/app-button";
 import { HEADER_BG_DARK, HEADER_BG_LIGHT } from "@/constants/theme";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useUserStore } from "@/store/userStore";
 import { DetailResponse, OrderItem } from "@/types/order-types";
 import { getButtonConfig } from "@/utils/button-config";

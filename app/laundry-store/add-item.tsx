@@ -1,11 +1,6 @@
 import AppPicker from "@/components/AppPicker";
 import React, { useEffect } from "react";
-import {
-  ActivityIndicator,
-  ScrollView,
-  useColorScheme,
-  View,
-} from "react-native";
+import { ActivityIndicator, ScrollView, View } from "react-native";
 
 import { fetchCategories } from "@/api/food";
 import {
@@ -27,6 +22,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 
 const schema = z.object({
   name: z.string().min(1, "Name is a required field"),

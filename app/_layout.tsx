@@ -1,3 +1,4 @@
+import { ThemeTransitionOverlay } from "@/components/ThemeTransitionOverlay ";
 import ToastProvider from "@/components/ToastProvider";
 import { HEADER_BG_DARK, HEADER_BG_LIGHT } from "@/constants/theme";
 import "@/global.css";
@@ -47,8 +48,7 @@ const queryClient = new QueryClient({
 export default Sentry.wrap(function RootLayout() {
   const colorScheme = useColorScheme();
   const BG_COLOR = colorScheme === "dark" ? HEADER_BG_DARK : HEADER_BG_LIGHT;
-  const { user, hydrate, hasHydrated, isFirstLaunch, initialize } =
-    useUserStore();
+  const { user, hydrate, initialize } = useUserStore();
 
   const [loaded] = useFonts({
     "Poppins-Bold": require("../assets/fonts/Poppins-Bold.ttf"),
@@ -306,6 +306,7 @@ export default Sentry.wrap(function RootLayout() {
                     />
                   </Stack.Protected>
                 </Stack>
+                <ThemeTransitionOverlay />
                 <StatusBar style="auto" />
               </ToastProvider>
             </BottomSheetModalProvider>

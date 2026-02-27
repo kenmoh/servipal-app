@@ -15,6 +15,7 @@ import {
   INPUT_BG_DARK,
   INPUT_BG_LIGHT,
 } from "@/constants/theme";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useOrderStore } from "@/store/orderStore";
 import { useRiderStore } from "@/store/rider-store";
 import { useUserStore } from "@/store/userStore";
@@ -33,7 +34,6 @@ import {
   FlatList,
   Image,
   Text,
-  useColorScheme,
   View,
 } from "react-native";
 
@@ -252,7 +252,11 @@ const RidersScreen = () => {
         },
         (payload) => {
           console.log("[Realtime] Rider changed:", payload.eventType);
-          Sentry.addBreadcrumb({ category: "realtime", message: `Rider changed: ${payload.eventType}`, level: "info" });
+          Sentry.addBreadcrumb({
+            category: "realtime",
+            message: `Rider changed: ${payload.eventType}`,
+            level: "info",
+          });
           // Invalidate to refetch with fresh distance calculations
           queryClient.invalidateQueries({ queryKey: ["riders", user?.id] });
         },

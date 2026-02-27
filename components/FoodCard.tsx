@@ -75,34 +75,6 @@ const FoodCard = ({
       className="my-1 p-2 bg-input rounded-md w-[95%] self-center"
     >
       {/* Edit/Delete buttons for owner */}
-      {isOwner && (
-        <View className="flex-row absolute top-3 right-3 gap-5 z-10">
-          <Pressable
-            onPress={() =>
-              router.push({
-                pathname: "/store/add-menu",
-                params: {
-                  id: item.id,
-                  name: item.name,
-                  description: item.description,
-                  price: item.price,
-                  images: JSON.stringify(item.images),
-                  item_type: item.restaurant_item_type,
-                },
-              })
-            }
-            hitSlop={10}
-            style={({ pressed }) => [
-              {
-                opacity: pressed ? 0.5 : 1,
-                transform: [{ scale: pressed ? 0.95 : 1 }],
-              },
-            ]}
-          >
-            <Ionicons name="create-outline" color="gray" size={18} />
-          </Pressable>
-        </View>
-      )}
       <View className="flex-row gap-4">
         <View className="w-20 h-20 overflow-hidden rounded-lg">
           <Image
