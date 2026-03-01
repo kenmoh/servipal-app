@@ -14,6 +14,7 @@ import { useEffect } from "react";
 import { View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
+import { defineLocationTask } from "@/utils/location-tracking";
 
 Sentry.init({
   dsn: "https://945bccd1ed4b5bcb5eab8cf7e3c776fa@o4505603287023616.ingest.us.sentry.io/4510143988629504",
@@ -30,6 +31,9 @@ Sentry.init({
 
   spotlight: __DEV__,
 });
+
+// Register background location task at module load
+defineLocationTask();
 
 export const unstable_settings = {
   anchor: "(tabs)",

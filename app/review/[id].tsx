@@ -46,7 +46,6 @@ const ReviewPage = () => {
       orderType: "DELIVERY" | "FOOD" | "LAUNDRY" | "PRODUCT";
     }>();
   const queryClient = useQueryClient();
-  const { user } = useUserStore();
   const theme = useColorScheme();
   const { showError, showSuccess } = useToast();
 

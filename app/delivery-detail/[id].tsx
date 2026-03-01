@@ -152,7 +152,7 @@ const ItemDetails = () => {
       reason?: string;
       riderId?: string;
     }) => updateDeliveryStatus(txRef, newStatus, riderId, reason),
-    onSuccess: async () => {
+    onSuccess: async (_, { newStatus }) => {
       // Invalidate and refetch
       refetch();
       queryClient.invalidateQueries({ queryKey: ["delivery-order", id] });
@@ -169,15 +169,9 @@ const ItemDetails = () => {
       });
 
       // Handle tracking
-      if (
-        data?.delivery_status === "PICKED_UP" ||
-        data?.delivery_status === "ACCEPTED"
-      ) {
+      if (newStatus === "PICKED_UP" || newStatus === "ACCEPTED") {
         startDeliveryTracking(data?.id!, user?.id!);
-      } else if (
-        data?.delivery_status === "DELIVERED" ||
-        data?.delivery_status === "COMPLETED"
-      ) {
+      } else if (newStatus === "DELIVERED" || newStatus === "COMPLETED") {
         stopDeliveryTracking();
         useLocationStore.getState().clearRiderLocation();
       }
@@ -793,14 +787,17 @@ const ItemDetails = () => {
             className="self-center"
           >
             <Image
-              source={data?.package_image_url!}
+              source={
+                data?.package_image_url
+                  ? { uri: data.package_image_url }
+                  : undefined
+              }
               placeholder={blurhash}
               contentFit="cover"
               transition={100}
               style={{
                 width: "100%",
-                height: IMAGE_HEIGHT,
-                resizeMode: "cover",
+                height: "100%",
               }}
             />
           </View>

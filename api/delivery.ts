@@ -384,35 +384,58 @@ export const getDeliveryDetailsById = async (
  * @param lat - Current latitude
  * @param lng - Current longitude
  */
+// api/delivery.ts
 export const updateDeliveryCoords = async (
   deliveryId: string,
   lat: number,
   lng: number,
-): Promise<void> => {
-  try {
-    const {
-      data: { session },
-      error: sessionError,
-    } = await supabase.auth.getSession();
+) => {
+  const {
+    data: { session },
+    error: sessionError,
+  } = await supabase.auth.getSession();
 
-    if (sessionError || !session) {
-      throw new Error("User not authenticated");
-    }
-
-    const { error } = await supabase.rpc("update_delivery_coords", {
-      p_delivery_id: deliveryId,
-      p_rider_id: session.user.id,
-      p_lat: lat,
-      p_lng: lng,
-    });
-
-    if (error) {
-      throw new Error(error.message || "Failed to update location");
-    }
-  } catch (error) {
-    throw error;
+  if (sessionError || !session) {
+    throw new Error("User not authenticated");
   }
+  const { data, error } = await supabase.rpc("update_rider_location", {
+    p_delivery_id: deliveryId,
+    p_rider_id: (await supabase.auth.getUser()).data.user?.id,
+    p_lat: lat,
+    p_lng: lng,
+  });
+  if (error) throw error;
+  return data;
 };
+// export const updateDeliveryCoords = async (
+//   deliveryId: string,
+//   lat: number,
+//   lng: number,
+// ): Promise<void> => {
+//   try {
+//     const {
+//       data: { session },
+//       error: sessionError,
+//     } = await supabase.auth.getSession();
+
+//     if (sessionError || !session) {
+//       throw new Error("User not authenticated");
+//     }
+
+//     const { error } = await supabase.rpc("update_delivery_coords", {
+//       p_delivery_id: deliveryId,
+//       p_rider_id: session.user.id,
+//       p_lat: lat,
+//       p_lng: lng,
+//     });
+
+//     if (error) {
+//       throw new Error(error.message || "Failed to update location");
+//     }
+//   } catch (error) {
+//     throw error;
+//   }
+// };
 
 /**
  * Initiates a delivery request by sending package details to the backend.

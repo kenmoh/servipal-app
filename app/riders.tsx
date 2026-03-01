@@ -71,7 +71,7 @@ const RidersScreen = () => {
   const { showError, showSuccess, showInfo } = useToast();
   const { txRef, paymentStatus } = useLocalSearchParams<{
     txRef: string;
-    paymentStatus: "successful" | "cancelled" | "PAID";
+    paymentStatus: "successful" | "cancelled" | "PAID" | "success";
   }>();
 
   const theme = useColorScheme();
@@ -106,7 +106,10 @@ const RidersScreen = () => {
       return order;
     },
     enabled:
-      !!txRef && (paymentStatus === "successful" || paymentStatus === "PAID"),
+      !!txRef &&
+      (paymentStatus === "successful" ||
+        paymentStatus === "PAID" ||
+        paymentStatus === "success"),
     refetchInterval: (query) => {
       if (query.state.data) return false;
       return 1000;
@@ -116,7 +119,10 @@ const RidersScreen = () => {
 
   const handleRiderPress = useCallback(
     (rider: RiderResponse) => {
-      const isPaid = paymentStatus === "successful" || paymentStatus === "PAID";
+      const isPaid =
+        paymentStatus === "successful" ||
+        paymentStatus === "PAID" ||
+        paymentStatus === "success";
 
       if (!txRef || !isPaid) {
         Alert.alert(

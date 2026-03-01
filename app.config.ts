@@ -85,12 +85,14 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       "expo-location",
       {
+        isIosBackgroundLocationEnabled: true,
+        isAndroidBackgroundLocationEnabled: true,
         locationAlwaysAndWhenInUsePermission:
           "Allow $(PRODUCT_NAME) to access your location to find the best services and display riders closest to you",
         locationWhenInUsePermission:
           "Allow $(PRODUCT_NAME) to access your location to find the best services and display riders closest to you",
         backgroundLocationPermission:
-          "Allow $(PRODUCT_NAME) to access your location in the background",
+          "Allow $(PRODUCT_NAME) to track your location in the background during active deliveries.",
       },
     ],
     "expo-secure-store",
