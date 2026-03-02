@@ -1,4 +1,5 @@
 import { ProductResponse } from "@/types/product-types";
+import FontAwesome from "@expo/vector-icons/FontAwesome";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { router } from "expo-router";
 import React from "react";
@@ -22,6 +23,21 @@ const ProductCard = ({ product }: { product: ProductResponse }) => {
         productId: product.id,
       },
     });
+  };
+
+  const fullStars = Math.floor(product?.review_stats?.average_rating);
+  const hasHalfStar = product?.review_stats?.average_rating - fullStars >= 0.5;
+
+  const getStarName = (star: number): "star" | "star-half-o" | "star-o" => {
+    if (star <= fullStars) return "star";
+    if (star === fullStars + 1 && hasHalfStar) return "star-half-o";
+    return "star-o";
+  };
+
+  const getStarColor = (star: number) => {
+    if (star <= fullStars) return "#FBBF24";
+    if (star === fullStars + 1 && hasHalfStar) return "#FBBF24";
+    return "#D1D5DB";
   };
 
   return (
@@ -76,21 +92,32 @@ const ProductCard = ({ product }: { product: ProductResponse }) => {
         </View>
 
         {/* Footer / Sold Count */}
-        {product.total_sold > 0 && (
-          <View className="flex-row items-center mt-2 bg-secondary/10 px-2 py-1 rounded-md self-start">
-            <Text className="text-secondary text-[10px] font-poppins-medium">
-              {product.total_sold} sold
-            </Text>
-            {product.review_stats.rating_distribution.map((rating) => (
-              <Text
-                key={rating.rating}
-                className="text-secondary text-[10px] font-poppins-medium"
-              >
-                {rating.rating} stars
+        <View className="flex-row items-center justify-between mt-2">
+          {product.total_sold > 0 && (
+            <View className="bg-secondary/10  py-1 rounded-md">
+              <Text className="text-secondary text-[10px] font-poppins-medium">
+                {product.total_sold} sold
               </Text>
-            ))}
-          </View>
-        )}
+            </View>
+          )}
+
+          {/* Stars — independent of total_sold */}
+          {product?.review_stats?.average_rating > 0 && (
+            <View className="flex-row items-center gap-0.5">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <FontAwesome
+                  key={star}
+                  name={getStarName(star)}
+                  size={10}
+                  color={getStarColor(star)}
+                />
+              ))}
+              <Text className="text-secondary text-[10px] font-poppins ml-1">
+                {product.review_stats.average_rating.toFixed(1)}
+              </Text>
+            </View>
+          )}
+        </View>
       </View>
     </TouchableOpacity>
   );
