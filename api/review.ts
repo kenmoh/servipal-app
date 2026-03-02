@@ -1,7 +1,7 @@
 import {
+  ItemReview,
   Review,
   ReviewInsert,
-  ReviewSummaryStats,
   UserReview,
 } from "@/types/review-types";
 import { supabase } from "@/utils/supabase";
@@ -24,7 +24,9 @@ export const ReviewsService = {
 
     if (error) {
       console.log(error.message);
-      Sentry.captureException(error, { tags: { action: "fetch_user_reviews" } });
+      Sentry.captureException(error, {
+        tags: { action: "fetch_user_reviews" },
+      });
       throw new Error(error.message);
     }
 
@@ -42,13 +44,16 @@ export const ReviewsService = {
 
     if (error) {
       console.log(error.message);
-      Sentry.captureException(error, { tags: { action: "get_user_reviews_by_id" } });
+      Sentry.captureException(error, {
+        tags: { action: "get_user_reviews_by_id" },
+      });
       throw new Error(error.message);
     }
 
     return data as UserReview;
   },
 
+  // get_item_reviews
   async fetchReviews({
     item_id,
     reviewee_id,
@@ -95,6 +100,26 @@ export const ReviewsService = {
     // Map the response to ensure nested profile data is correctly typed if needed
     // Supabase returns the joined data in the structure requested
     return data as any as UserReview;
+  },
+
+  /**
+   * Fetch reviews for a product item
+   */
+
+  async fetchItemReviews(itemId: string): Promise<ItemReview> {
+    const { data, error } = await supabase.rpc("get_item_reviews", {
+      p_item_id: itemId,
+    });
+
+    if (error) {
+      console.log(error.message);
+      Sentry.captureException(error, {
+        tags: { action: "fetch_item_reviews" },
+      });
+      throw new Error(error.message);
+    }
+
+    return data as ItemReview;
   },
 
   /**

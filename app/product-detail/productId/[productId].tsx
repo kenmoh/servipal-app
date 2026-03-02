@@ -48,7 +48,7 @@ const ProductDetail = () => {
 
   const { data: reviewSummary } = useQuery({
     queryKey: ["review-summary", productId],
-    queryFn: () => ReviewsService.fetchReviewSummary({ item_id: productId }),
+    queryFn: () => ReviewsService.fetchItemReviews(productId!),
     enabled: !!productId,
   });
 
@@ -111,10 +111,22 @@ const ProductDetail = () => {
   }
 
   const handleContinueToPurchase = () => {
-    if (selectedColors.length > 0 && selectedColors.length !== quantity) {
+    if (availableSizes.length > 0 && selectedSizes.length === 0) {
       Alert.alert(
         "Selection Required",
-        `Please select exactly ${quantity} color${quantity > 1 ? "s" : ""} to match your quantity.`,
+        "Please select at least one size to proceed.",
+      );
+      return;
+    }
+
+    if (
+      product.colors.length > 0 &&
+      selectedColors.length !== 1 &&
+      selectedColors.length !== quantity
+    ) {
+      Alert.alert(
+        "Selection Required",
+        `Please select either 1 color for all items, or exactly ${quantity} colors (one for each item).`,
       );
       return;
     }
@@ -154,11 +166,11 @@ const ProductDetail = () => {
               <View className="flex-row items-center bg-orange-50 dark:bg-orange-900/30 px-2 py-1 rounded-full">
                 <Ionicons name="star" size={14} color="#F97316" />
                 <Text className="text-orange-600 dark:text-orange-400 font-poppins-medium text-xs ml-1">
-                  {reviewSummary?.average_rating?.toFixed(1) || "0.0"}
+                  {reviewSummary?.stats?.average_rating?.toFixed(1) || "0.0"}
                 </Text>
               </View>
               <Text className="text-slate-400 font-poppins-light text-xs ml-1">
-                ({reviewSummary?.total_reviews || 0} Reviews)
+                ({reviewSummary?.stats?.total_reviews || 0} Reviews)
               </Text>
             </TouchableOpacity>
           </View>
@@ -227,7 +239,7 @@ const ProductDetail = () => {
                   Available Colors
                 </Text>
                 <Text className="text-xs text-slate-400 font-poppins-light">
-                  Selected {selectedColors.length} of {quantity}
+                  Selected {selectedColors.length} (Max {quantity})
                 </Text>
               </View>
               <View className="flex-row gap-2">
@@ -282,9 +294,14 @@ const ProductDetail = () => {
         {availableSizes.length > 0 && (
           <View className="mb-6">
             <View className="flex-row justify-between items-center mb-3">
-              <Text className="text-sm font-poppins-bold text-slate-900 dark:text-white">
-                Choose Size
-              </Text>
+              <View>
+                <Text className="text-sm font-poppins-bold text-slate-900 dark:text-white">
+                  Choose Size
+                </Text>
+                <Text className="text-xs text-slate-400 font-poppins-light">
+                  Selected {selectedSizes.length} of {quantity}
+                </Text>
+              </View>
               <TouchableOpacity onPress={clearSizes}>
                 <Text className="text-[10px] font-poppins-medium text-slate-400">
                   Clear All

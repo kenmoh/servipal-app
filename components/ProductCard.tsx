@@ -71,7 +71,7 @@ const ProductCard = ({ product }: { product: ProductResponse }) => {
             className="text-secondary text-xs font-poppins flex-1"
             numberOfLines={1}
           >
-            Store Name Here
+            {product.store_name}
           </Text>
         </View>
 
@@ -81,6 +81,14 @@ const ProductCard = ({ product }: { product: ProductResponse }) => {
             <Text className="text-secondary text-[10px] font-poppins-medium">
               {product.total_sold} sold
             </Text>
+            {product.review_stats.rating_distribution.map((rating) => (
+              <Text
+                key={rating.rating}
+                className="text-secondary text-[10px] font-poppins-medium"
+              >
+                {rating.rating} stars
+              </Text>
+            ))}
           </View>
         )}
       </View>

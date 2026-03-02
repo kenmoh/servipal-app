@@ -26,12 +26,7 @@ const ReviewList = ({ itemId, revieweeId, dispatchId }: ReviewListProps) => {
 
   const { data: summary, isLoading: isSummaryLoading } = useQuery({
     queryKey: ["review-summary", itemId, revieweeId, dispatchId],
-    queryFn: () =>
-      ReviewsService.fetchReviewSummary({
-        item_id: itemId,
-        reviewee_id: revieweeId,
-        dispatch_id: dispatchId,
-      }),
+    queryFn: () => ReviewsService.fetchItemReviews(itemId!),
   });
 
   const isLoading = isReviewsLoading || isSummaryLoading;

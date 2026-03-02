@@ -1,3 +1,5 @@
+import { ReviewSummaryStats } from "./review-types";
+
 export interface CreateProduct {
   name: string;
   description: string;
@@ -19,6 +21,8 @@ export interface ProductResponse extends CreateProduct {
   in_stock: boolean;
   total_sold: number;
   is_deleted: boolean;
+  store_name: string;
+  review_stats: ReviewSummaryStats;
   created_at: Date;
   updated_at: Date;
 }

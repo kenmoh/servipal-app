@@ -7,9 +7,7 @@ export interface ProductImage {
   item_id: string;
 }
 
-export interface Product extends ProductResponse {
-
-}
+export interface Product extends ProductResponse {}
 
 export interface PurchaseData {
   quantity: number;
@@ -100,10 +98,21 @@ export const usePurchaseStore = create<PurchaseState>((set, get) => ({
     }),
 
   setQuantity: (quantity) => {
-    const maxQuantity = get().product?.stock || 0;
+    const { product, purchase } = get();
+    const maxQuantity = product?.stock || 0;
     const validQuantity = Math.max(1, Math.min(quantity, maxQuantity));
+
+    // Maintain selection invariants: selections cannot exceed quantity
+    const newSizes = purchase.sizes.slice(0, validQuantity);
+    const newColors = purchase.colors.slice(0, validQuantity);
+
     set((state) => ({
-      purchase: { ...state.purchase, quantity: validQuantity },
+      purchase: {
+        ...state.purchase,
+        quantity: validQuantity,
+        sizes: newSizes,
+        colors: newColors,
+      },
       error:
         quantity > maxQuantity ? `Maximum quantity is ${maxQuantity}` : null,
     }));
@@ -126,12 +135,21 @@ export const usePurchaseStore = create<PurchaseState>((set, get) => ({
     if (!availableSizes.includes(size)) return;
 
     const { purchase } = get();
+    const isSelected = purchase.sizes.includes(size);
+    const newSizes = isSelected
+      ? purchase.sizes.filter((s) => s !== size)
+      : [...purchase.sizes, size];
+
+    // Hierarchical rule: Sizes drive quantity
+    const newQuantity = newSizes.length || 1;
+
     set((state) => ({
       purchase: {
         ...state.purchase,
-        sizes: purchase.sizes.includes(size)
-          ? purchase.sizes.filter((s) => s !== size)
-          : [...purchase.sizes, size],
+        sizes: newSizes,
+        quantity: newQuantity,
+        // Ensure colors don't exceed the new quantity (driven by sizes)
+        colors: state.purchase.colors.slice(0, newQuantity),
       },
     }));
   },
@@ -184,12 +202,31 @@ export const usePurchaseStore = create<PurchaseState>((set, get) => ({
     const { purchase, product } = get();
     if (!product?.colors.includes(color)) return;
 
+    const isSelected = purchase.colors.includes(color);
+    const availableSizesCount = (product?.sizes || []).length;
+    const currentQuantity = purchase.quantity;
+
+    // Rule: We can't have more colors than quantity (which is driven by sizes if they exist)
+    if (
+      !isSelected &&
+      availableSizesCount > 0 &&
+      purchase.colors.length >= currentQuantity
+    ) {
+      // Option: We could replace the last color or just block it. Let's block it for now as per "cannot have 1 size with 3 colors"
+      return;
+    }
+
+    const newColors = isSelected
+      ? purchase.colors.filter((c) => c !== color)
+      : [...purchase.colors, color];
+
     set((state) => ({
       purchase: {
         ...state.purchase,
-        colors: purchase.colors.includes(color)
-          ? purchase.colors.filter((c) => c !== color)
-          : [...purchase.colors, color],
+        colors: newColors,
+        // If NO sizes exist, colors drive the quantity
+        quantity:
+          availableSizesCount > 0 ? currentQuantity : newColors.length || 1,
       },
     }));
   },
@@ -233,7 +270,7 @@ export const usePurchaseStore = create<PurchaseState>((set, get) => ({
       (state) => ({
         purchase: { ...state.purchase, colors: [...product.colors] },
       }),
-      false
+      false,
     );
   },
 

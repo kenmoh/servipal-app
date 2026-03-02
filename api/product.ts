@@ -226,44 +226,24 @@ export const getProduct = async (id: string): Promise<ProductResponse> => {
  * @param filters Optional filters to apply
  * @returns Array of products
  */
+
 export const getProducts = async (
   filters?: ProductFilters,
 ): Promise<ProductResponse[]> => {
   try {
-    let query = supabase.from("product_items").select("*");
-
-    // Apply filters
-    if (filters?.category_id) {
-      query = query.eq("category_id", filters.category_id);
-    }
-
-    if (filters?.vendor_id) {
-      query = query.eq("vendor_id", filters.vendor_id);
-    }
-
-    if (filters?.product_type) {
-      query = query.eq("product_type", filters.product_type);
-    }
-
-    if (filters?.in_stock !== undefined) {
-      query = query.eq("in_stock", filters.in_stock);
-    }
-
-    // By default, exclude deleted products unless explicitly requested
-    if (!filters?.include_deleted) {
-      query = query.eq("is_deleted", false);
-    }
-
-    // Order by created_at descending
-    query = query.order("created_at", { ascending: false });
-
-    const { data: products, error } = await query;
+    const { data, error } = await supabase.rpc("get_products", {
+      p_category_id: filters?.category_id ?? null,
+      p_vendor_id: filters?.vendor_id ?? null,
+      p_product_type: filters?.product_type ?? null,
+      p_in_stock: filters?.in_stock ?? null,
+      p_include_deleted: filters?.include_deleted ?? false,
+    });
 
     if (error) {
       throw new Error(error.message || "Failed to fetch products");
     }
 
-    return (products || []) as ProductResponse[];
+    return (data || []) as ProductResponse[];
   } catch (error) {
     if (error instanceof Error) {
       throw new Error(`Error fetching products: ${error.message}`);
@@ -271,6 +251,51 @@ export const getProducts = async (
     throw new Error("An unexpected error occurred while fetching products");
   }
 };
+// export const getProducts = async (
+//   filters?: ProductFilters,
+// ): Promise<ProductResponse[]> => {
+//   try {
+//     let query = supabase.from("product_items").select("*");
+
+//     // Apply filters
+//     if (filters?.category_id) {
+//       query = query.eq("category_id", filters.category_id);
+//     }
+
+//     if (filters?.vendor_id) {
+//       query = query.eq("vendor_id", filters.vendor_id);
+//     }
+
+//     if (filters?.product_type) {
+//       query = query.eq("product_type", filters.product_type);
+//     }
+
+//     if (filters?.in_stock !== undefined) {
+//       query = query.eq("in_stock", filters.in_stock);
+//     }
+
+//     // By default, exclude deleted products unless explicitly requested
+//     if (!filters?.include_deleted) {
+//       query = query.eq("is_deleted", false);
+//     }
+
+//     // Order by created_at descending
+//     query = query.order("created_at", { ascending: false });
+
+//     const { data: products, error } = await query;
+
+//     if (error) {
+//       throw new Error(error.message || "Failed to fetch products");
+//     }
+
+//     return (products || []) as ProductResponse[];
+//   } catch (error) {
+//     if (error instanceof Error) {
+//       throw new Error(`Error fetching products: ${error.message}`);
+//     }
+//     throw new Error("An unexpected error occurred while fetching products");
+//   }
+// };
 
 /**
  * Get all products for a specific vendor

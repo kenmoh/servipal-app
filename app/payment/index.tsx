@@ -61,7 +61,7 @@ const payment = () => {
   const redirect = (data: WalletPaymentResponse | RedirectParams) => {
     showSuccess(
       "Payment Successful",
-      "Your payment was successful. Please select a rider.",
+      `${serviceType === "DELIVERY" ? "Your payment was successful. Please select a rider." : "Your payment was successful."}`,
     );
 
     if (serviceType === "DELIVERY") {

@@ -92,6 +92,11 @@ export interface UserReview {
   reviews: Review[];
 }
 
+export interface ItemReview {
+  stats: ReviewSummaryStats;
+  reviews: Review[];
+}
+
 export interface ReviewInsert {
   order_id?: string;
   order_type?: "DELIVERY" | "FOOD" | "LAUNDRY" | "PRODUCT";

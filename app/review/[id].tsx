@@ -5,7 +5,6 @@ import { useToast } from "@/components/ToastProvider";
 import { AppButton } from "@/components/ui/app-button";
 import { AppTextInput } from "@/components/ui/app-text-input";
 import { useColorScheme } from "@/hooks/use-color-scheme";
-import { useUserStore } from "@/store/userStore";
 import { ReviewInsert } from "@/types/review-types";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -37,11 +36,12 @@ const RATINGS = [
 ];
 
 const ReviewPage = () => {
-  const { revieweeId, id, dispatchId, itemId, orderType } =
+  const { revieweeId, id, dispatchId, orderId, itemId, orderType } =
     useLocalSearchParams<{
       revieweeId: string;
       id: string;
       dispatchId: string;
+      orderId: string;
       itemId: string;
       orderType: "DELIVERY" | "FOOD" | "LAUNDRY" | "PRODUCT";
     }>();
@@ -79,7 +79,7 @@ const ReviewPage = () => {
 
   const onSubmit = (data: ReviewFormData) => {
     const reviewData: ReviewInsert = {
-      order_id: id || undefined,
+      order_id: orderId || undefined,
       item_id: itemId || undefined,
       reviewee_id: revieweeId,
       dispatch_id: dispatchId || undefined,

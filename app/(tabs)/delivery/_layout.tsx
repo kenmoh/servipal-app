@@ -2,6 +2,7 @@ import { HEADER_BG_DARK, HEADER_BG_LIGHT } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import EvilIcons from "@expo/vector-icons/EvilIcons";
 import Fontisto from "@expo/vector-icons/Fontisto";
+import { Image } from "expo-image";
 import { router, Stack } from "expo-router";
 
 import { TouchableOpacity, View } from "react-native";
@@ -40,6 +41,14 @@ const DeliveryLayout = () => {
         options={{
           title: "ServiPal",
           headerShadowVisible: false,
+          headerLeft: () => (
+            <TouchableOpacity className="w-12 h-12 flex items-center justify-center">
+              <Image
+                source={require("@/assets/images/android-icon.png")}
+                style={{ width: "100%", height: "100%" }}
+              />
+            </TouchableOpacity>
+          ),
         }}
       />
     </Stack>
