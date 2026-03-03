@@ -1,4 +1,5 @@
 import { initiateProductPayment } from "@/api/product";
+import RadioButton from "@/components/RadioButton";
 import { AppButton } from "@/components/ui/app-button";
 import { HEADER_BG_DARK, HEADER_BG_LIGHT } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
@@ -9,14 +10,12 @@ import { navigateToPayment } from "@/utils/payment-utils";
 import { Ionicons } from "@expo/vector-icons";
 import Feather from "@expo/vector-icons/Feather";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { Stack, useRouter } from "expo-router";
 import React, { useEffect } from "react";
 import {
   ActivityIndicator,
   Alert,
   Image,
-  KeyboardAvoidingView,
-  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -24,16 +23,21 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 
 const PurchaseSummary = () => {
-  const { productId } = useLocalSearchParams<{ productId: string }>();
   const theme = useColorScheme();
   const router = useRouter();
   const { user } = useUserStore();
   const queryClient = useQueryClient();
-
-  const { product, quantity, selectedSizes, selectedColors, additionalInfo } =
-    usePurchaseSelectors();
+  const {
+    product,
+    quantity,
+    selectedSizes,
+    selectedColors,
+    additionalInfo,
+    deliveryOption,
+  } = usePurchaseSelectors();
 
   const {
     setAdditionalInfo,
@@ -41,6 +45,7 @@ const PurchaseSummary = () => {
     validatePurchase,
     incrementQuantity,
     decrementQuantity,
+    setDeliveryOption,
   } = usePurchaseActions();
 
   // Redirect if no product data
@@ -93,14 +98,14 @@ const PurchaseSummary = () => {
       sizes: selectedSizes,
       colors: selectedColors,
       images: product.images || [],
-      delivery_option: "VENDOR_DELIVERY",
+      delivery_option: deliveryOption,
       delivery_address: additionalInfo,
       additional_info: "",
     };
 
     Alert.alert(
       "Confirm Purchase",
-      `Place order for ${formatPrice(Number(product?.price) * quantity)}?`,
+      `Place order for ${formatPrice(totalPrice)}?`,
       [
         { text: "Review", style: "cancel" },
         {
@@ -120,7 +125,15 @@ const PurchaseSummary = () => {
     }).format(price);
   };
 
-  const unitPrice = product ? Number(product.price) : 0;
+  const unitPrice = Number(product?.price || 0);
+  const shippingCost =
+    deliveryOption === "VENDOR_DELIVERY"
+      ? Number(product?.shipping_cost || 0)
+      : 0;
+
+  // Ensure we have a valid quantity
+  const currentQuantity = Math.max(1, quantity || 1);
+  const totalPrice = unitPrice * currentQuantity + shippingCost;
 
   if (!product) {
     return (
@@ -151,8 +164,8 @@ const PurchaseSummary = () => {
         }}
       />
       <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={{ flex: 1 }}
+        behavior="padding"
         className="bg-background"
       >
         <ScrollView
@@ -322,6 +335,29 @@ const PurchaseSummary = () => {
               </View>
             </View>
 
+            {/* Delivery Method Selection */}
+            <View className="bg-input rounded-3xl p-5 border border-slate-100 dark:border-slate-800">
+              <View className="flex-row items-center mb-4">
+                <Feather name="truck" size={18} color="#F97316" />
+                <Text className="text-slate-900 dark:text-white font-poppins-bold text-sm ml-2">
+                  Delivery Method
+                </Text>
+              </View>
+
+              <View className="gap-2">
+                <RadioButton
+                  label="Vendor Delivery"
+                  selected={deliveryOption === "VENDOR_DELIVERY"}
+                  onPress={() => setDeliveryOption("VENDOR_DELIVERY")}
+                />
+                <RadioButton
+                  label="Pickup from Store"
+                  selected={deliveryOption === "PICKUP"}
+                  onPress={() => setDeliveryOption("PICKUP")}
+                />
+              </View>
+            </View>
+
             {/* Delivery Information */}
             <View className="bg-input rounded-3xl p-5 border border-slate-100 dark:border-slate-800">
               <View className="flex-row items-center mb-4">
@@ -368,7 +404,7 @@ const PurchaseSummary = () => {
                 </Text>
               </View>
 
-              <View className="space-y-3">
+              <View className="gap-3">
                 <View className="flex-row justify-between items-center">
                   <Text className="text-xs text-slate-400 font-poppins-medium">
                     Subtotal ({quantity} items)
@@ -381,8 +417,12 @@ const PurchaseSummary = () => {
                   <Text className="text-xs text-slate-400 font-poppins-medium">
                     Shipping Fee
                   </Text>
-                  <Text className="text-[10px] text-green-500 font-poppins-bold uppercase">
-                    Calculated at Payment
+                  <Text
+                    className={`text-xs font-poppins-medium ${deliveryOption === "PICKUP" ? "text-green-500" : "text-slate-900 dark:text-slate-200"}`}
+                  >
+                    {deliveryOption === "PICKUP"
+                      ? "Free"
+                      : formatPrice(Number(product.shipping_cost || 0))}
                   </Text>
                 </View>
                 <View className="h-[1px] bg-background my-1" />
@@ -391,7 +431,7 @@ const PurchaseSummary = () => {
                     Order Total
                   </Text>
                   <Text className="text-xl font-poppins-bold text-orange-600 dark:text-orange-500">
-                    {formatPrice(unitPrice * quantity)}
+                    {formatPrice(totalPrice)}
                   </Text>
                 </View>
               </View>
@@ -410,19 +450,18 @@ const PurchaseSummary = () => {
               </Text>
             </View>
           </View>
+          {/* Confirmation Button */}
+          <View className="bg-background border-t border-slate-100 dark:border-slate-800 px-6 py-4">
+            <AppButton
+              text="Confirm & Pay"
+              onPress={handlePurchase}
+              disabled={buyMutation.isPending}
+              borderRadius={50}
+              height={50}
+              icon={<Feather name="credit-card" size={20} color="white" />}
+            />
+          </View>
         </ScrollView>
-
-        {/* Floating Action Button */}
-        <View className="absolute bottom-0 left-0 right-0 bg-background border-t border-slate-100 dark:border-slate-800 px-6 py-4 pb-10 blur-xl">
-          <AppButton
-            text="Confirm & Pay"
-            onPress={handlePurchase}
-            disabled={buyMutation.isPending}
-            borderRadius={50}
-            height={50}
-            icon={<Feather name="credit-card" size={20} color="white" />}
-          />
-        </View>
       </KeyboardAvoidingView>
     </>
   );

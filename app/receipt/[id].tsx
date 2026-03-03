@@ -665,7 +665,7 @@ const ReceiptPage = () => {
           )}
       </View>
       <View className="flex-row gap-1 justify-between my-3 mx-auto">
-        {showButtons && (
+        {showButtons && !data?.order?.has_review && (
           <AppButton
             text="Leave a Review"
             width={"45%"}
@@ -689,7 +689,7 @@ const ReceiptPage = () => {
         )}
         <AppButton
           text="Raise Dispute"
-          width={showButtons ? "45%" : "90%"}
+          width={showButtons && !data?.order?.has_review ? "45%" : "90%"}
           borderRadius={50}
           variant="outline"
           onPress={() =>

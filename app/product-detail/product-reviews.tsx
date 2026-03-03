@@ -13,8 +13,6 @@ const ProductReviews = () => {
     enabled: !!productId,
   });
 
-  console.log(data);
-
   return (
     <View className="flex-1 bg-background p-5">
       <Text>Product Reviews</Text>

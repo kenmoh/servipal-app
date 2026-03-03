@@ -330,7 +330,20 @@ const ProductDetail = () => {
                   {"Order #" + String(data.order_number ?? "")}
                 </Text>
               </View>
-              {isBuyer && orderStatus === "COMPLETED" && (
+              <TouchableOpacity
+                className="bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full border border-slate-200 dark:border-slate-700"
+                onPress={() =>
+                  router.push({
+                    pathname: "/product-detail/product-receipt",
+                    params: { orderId: data.id },
+                  })
+                }
+              >
+                <Text className="text-slate-600 dark:text-slate-300 font-poppins-medium text-xs">
+                  View Receipt
+                </Text>
+              </TouchableOpacity>
+              {isBuyer && orderStatus === "COMPLETED" && !data?.has_review && (
                 <TouchableOpacity
                   className="bg-orange-50 dark:bg-orange-900/20 px-3 py-1 rounded-full border border-orange-100 dark:border-orange-800/30"
                   onPress={() =>

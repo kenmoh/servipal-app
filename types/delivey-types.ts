@@ -47,6 +47,7 @@ export interface DeliveryOrder {
   delivery_status: DeliveryOrderStatus;
   payment_status: PaymentStatus;
   package_name: string;
+  has_review: boolean;
   pickup_coordinates?: [number, number];
   dropoff_coordinates?: [number, number];
   last_known_rider_coordinates?: [number, number];

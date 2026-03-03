@@ -132,6 +132,7 @@ export interface ProductOrder {
   payment_status: PaymentStatus;
   escrow_status: EscrowStatus;
   order_type: string;
+  has_review: boolean;
   cancel_reason: string | null;
   dispute_id: string | null;
   created_at: string;

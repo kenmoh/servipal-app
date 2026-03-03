@@ -32,7 +32,6 @@ const orders = () => {
     }, []),
   );
 
-  console.log(data);
   const handleRefresh = useCallback(() => {
     refetch();
   }, [refetch]);

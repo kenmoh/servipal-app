@@ -617,68 +617,60 @@ const ItemDetails = () => {
             </View>
 
             {/* Additional Action Buttons */}
-            <View className="flex-row w-full self-center justify-between mt-4 mb-8 gap-2">
-              {data?.rider_id !== user?.id && (
+            <View className="w-full self-center justify-between mt-4 mb-8 gap-2">
+              {data?.sender_id === user?.id &&
+                !data?.has_review &&
+                data?.delivery_status === "COMPLETED" && (
+                  <AppButton
+                    text="Review"
+                    borderRadius={50}
+                    color="orange"
+                    width="100%"
+                    onPress={showReview}
+                    variant={"fill"}
+                  />
+                )}
+
+              <View className="flex-row justify-between">
                 <AppButton
-                  text="Review"
+                  text="Dispute"
+                  color={"red"}
                   borderRadius={50}
-                  color="orange"
-                  width="32%"
-                  onPress={showReview}
+                  borderColor="red"
+                  width={"48%"}
+                  onPress={() => {
+                    router.push({
+                      pathname: "/report/[id]",
+                      params: {
+                        id: id as string,
+                        orderType: "DELIVERY",
+                        respondentId: data?.rider_id,
+                      },
+                    });
+                  }}
                   disabled={data?.delivery_status !== "COMPLETED"}
                   variant={
                     data?.delivery_status !== "COMPLETED" ? "outline" : "fill"
                   }
                 />
-              )}
 
-              <AppButton
-                text="Dispute"
-                color={"orange"}
-                borderRadius={50}
-                width="32%"
-                onPress={() => {
-                  router.push({
-                    pathname: "/report/[id]",
-                    params: {
-                      id: id as string,
-                      orderType: "DELIVERY",
-                      respondentId: data?.rider_id,
-                    },
-                  });
-                }}
-                disabled={
-                  !(
-                    data?.delivery_status === "COMPLETED" ||
-                    data?.delivery_status === "DELIVERED"
-                  )
-                }
-                variant={
-                  !(
-                    data?.delivery_status === "COMPLETED" ||
-                    data?.delivery_status === "DELIVERED"
-                  )
-                    ? "outline"
-                    : "fill"
-                }
-              />
-
-              {user?.user_metadata?.user_type !== "RIDER" &&
-                user?.user_metadata?.user_type !== "DISPATCH" && (
-                  <AppButton
-                    text="Receipt"
-                    color={"orange"}
-                    borderRadius={50}
-                    variant="outline"
-                    width={"32%"}
-                    onPress={() => {
-                      router.push({
-                        pathname: "/receipt/delivery-receipt/[id]",
-                        params: { id: id as string },
-                      });
-                    }}
-                  />
-                )}
+                {user?.user_metadata?.user_type !== "RIDER" &&
+                  user?.user_metadata?.user_type !== "DISPATCH" && (
+                    <AppButton
+                      text="Receipt"
+                      color={"orange"}
+                      borderRadius={50}
+                      variant="outline"
+                      width={"48%"}
+                      onPress={() => {
+                        router.push({
+                          pathname: "/receipt/delivery-receipt/[id]",
+                          params: { id: id as string },
+                        });
+                      }}
+                    />
+                  )}
+              </View>
             </View>
           </View>
         </DeliveryWrapper>

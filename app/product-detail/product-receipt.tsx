@@ -1,21 +1,21 @@
-import React from "react";
-import { Dimensions, Pressable, ScrollView, Text, View } from "react-native";
-
-import { getDeliveryDetailsById } from "@/api/delivery";
+import { getOrderDetails } from "@/api/product";
 import LoadingIndicator from "@/components/LoadingIndicator";
 import { useToast } from "@/components/ToastProvider";
+import { AppButton } from "@/components/ui/app-button";
 import { HEADER_BG_DARK, HEADER_BG_LIGHT } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useUserStore } from "@/store/userStore";
-import { DeliveryOrder } from "@/types/delivey-types";
+import { ProductOrder, ProductOrderItem } from "@/types/product-types";
 import Feather from "@expo/vector-icons/Feather";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import * as Print from "expo-print";
-import { Stack, useLocalSearchParams } from "expo-router";
+import { router, Stack, useLocalSearchParams } from "expo-router";
 import * as Sharing from "expo-sharing";
+import React from "react";
+import { Dimensions, Pressable, ScrollView, Text, View } from "react-native";
 
-const DeliveryReceiptPage = () => {
+const ProductReceiptPage = () => {
   const screenWidth = Dimensions.get("window").width;
   const theme = useColorScheme();
   const { user } = useUserStore();
@@ -28,26 +28,24 @@ const DeliveryReceiptPage = () => {
   const TEXT_SECONDARY = isDark ? "text-gray-400" : "text-gray-600";
   const BORDER_COLOR = isDark ? "border-gray-700" : "border-gray-200";
 
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { orderId } = useLocalSearchParams<{
+    orderId: string;
+  }>();
 
-  const { data, isLoading } = useQuery<DeliveryOrder>({
-    queryKey: ["delivery-order", id],
-    queryFn: () => getDeliveryDetailsById(id),
-    enabled: !!id,
+  const { data, isLoading } = useQuery<ProductOrder>({
+    queryKey: ["product-order", orderId],
+    queryFn: () => getOrderDetails(orderId!),
+    enabled: !!orderId,
   });
 
   const generateReceiptHTML = () => {
     if (!data) return "";
 
-    const truncateText = (text: string, maxLength: number = 150) => {
-      if (!text) return "";
-      if (text.length <= maxLength) return text;
-      return text.substring(0, maxLength) + "...";
-    };
-
-    const deliveryFee = Number(data.delivery_fee || 0);
-    const amountDueDispatch = Number(data.amount_due_dispatch || 0);
-    const total = Number(data.total_price || deliveryFee);
+    const itemsTotal =
+      data.items?.reduce((acc, item) => acc + item.price * item.quantity, 0) ||
+      0;
+    const shippingCost = Number(data.shipping_cost || 0);
+    const total = Number(data.grand_total || itemsTotal + shippingCost);
 
     return `
             <html>
@@ -87,13 +85,6 @@ const DeliveryReceiptPage = () => {
                             letter-spacing: -0.5px;
                         }
 
-                        .business-name {
-                            font-size: 18px;
-                            font-weight: 600;
-                            color: #333;
-                            margin-top: 5px;
-                        }
-                        
                         .order-meta {
                             text-align: center;
                             font-size: 14px;
@@ -191,49 +182,76 @@ const DeliveryReceiptPage = () => {
                     <div class="container">
                         <div class="header">
                             <h1>ServiPal</h1>
-                            <div class="business-name">Delivery Service</div>
-                            <div class="order-meta">Order #ORDN-${data.order_number}</div>
+                            <div class="order-meta">Order #${data.order_number}</div>
                         </div>
                         
                         <div class="section">
                             <div class="line-item">
-                                <span class="label">Package</span>
-                                <span class="value">${data.package_name || "Parcel"}</span>
-                            </div>
-                            <div class="line-item">
                                 <span class="label">Payment Status</span>
-                                <span class="status status-${data.payment_status === "PAID" ? "PAID" : "UNPAID"}">
-                                    ${data.payment_status?.toUpperCase() || "PENDING"}
+                                <span class="status status-${data.payment_status === "SUCCESS" ? "paid" : "unpaid"}">
+                                    ${data.payment_status?.toUpperCase()}
                                 </span>
                             </div>
                             <div class="line-item">
                                 <span class="label">Date</span>
-                                <span class="value">${format(new Date(), "PPP")}</span>
+                                <span class="value">${format(new Date(data.created_at || ""), "PPP")}</span>
                             </div>
                         </div>
 
+                        ${
+                          data.items && data.items.length > 0
+                            ? `
+                            <div class="section">
+                                <h2>Items</h2>
+                                ${data.items
+                                  .map(
+                                    (item) => `
+                                    <div class="line-item">
+                                        <span>${item.quantity}X ${item.name}${item.selected_size ? ` (${item.selected_size.join(", ")})` : ""}</span>
+                                        <span class="value">₦${Number(item.price * item.quantity).toFixed(2)}</span>
+                                    </div>
+                                  `,
+                                  )
+                                  .join("")}
+                            </div>
+                        `
+                            : ""
+                        }
+
                         <div class="section total-block">
                             <div class="line-item">
-                                <span class="label">Delivery Fee</span>
-                                <span class="value">₦${deliveryFee.toFixed(2)}</span>
+                                <span class="label">Subtotal</span>
+                                <span class="value">₦${itemsTotal.toFixed(2)}</span>
                             </div>
+                            ${
+                              shippingCost > 0
+                                ? `
+                                <div class="line-item">
+                                    <span class="label">Shipping Cost</span>
+                                    <span class="value">₦${shippingCost.toFixed(2)}</span>
+                                </div>
+                            `
+                                : ""
+                            }
                             <div class="grand-total">
                                 <span>Total</span>
                                 <span>₦${total.toFixed(2)}</span>
                             </div>
                         </div>
 
+                        ${
+                          data.delivery_address
+                            ? `
                         <div class="section">
                             <h2>Delivery Details</h2>
                             <div class="address-box">
-                                <strong style="display:block; margin-bottom:4px; font-size:11px; color:#999;">PICKUP</strong>
-                                ${truncateText(data.pickup_location || "")}
-                            </div>
-                            <div class="address-box">
-                                <strong style="display:block; margin-bottom:4px; font-size:11px; color:#999;">DROP-OFF</strong>
-                                ${truncateText(data.destination || "")}
+                                <strong style="display:block; margin-bottom:4px; font-size:11px; color:#999;">SHIPPING ADDRESS</strong>
+                                ${data.delivery_address}
                             </div>
                         </div>
+                        `
+                            : ""
+                        }
                         
                         <div class="footer">
                             <p>Thank you for choosing ServiPal!</p>
@@ -244,34 +262,6 @@ const DeliveryReceiptPage = () => {
             </html>
         `;
   };
-
-  // const handleDownload = async () => {
-  //   try {
-  //     const html = generateReceiptHTML();
-
-  //     const { uri } = await Print.printToFileAsync({
-  //       html,
-  //       width: screenWidth,
-  //       height: screenWidth * 1.4,
-  //       base64: false,
-  //     });
-
-  //     const receiptsDir = new Directory(Paths.document, "servipal-receipts");
-  //     if (!receiptsDir.exists) {
-  //       receiptsDir.create({ intermediates: true });
-  //     }
-
-  //     const fileName = `SERVIPAL-DELIVERY-${data?.order_number}-${Date.now()}.pdf`;
-  //     const sourceFile = new File(uri);
-  //     const destinationFile = new File(receiptsDir, fileName);
-
-  //     sourceFile.copy(destinationFile);
-
-  //     showSuccess("Success", "Receipt downloaded");
-  //   } catch (error) {
-  //     showError("Error", "Failed to download receipt");
-  //   }
-  // };
 
   const handleShare = async () => {
     try {
@@ -285,11 +275,12 @@ const DeliveryReceiptPage = () => {
       if (await Sharing.isAvailableAsync()) {
         await Sharing.shareAsync(uri, {
           mimeType: "application/pdf",
-          dialogTitle: `Delivery Receipt #${data?.order_number}`,
+          dialogTitle: `Receipt #${data?.order_number}`,
           UTI: "com.adobe.pdf",
         });
       }
     } catch (error) {
+      console.error(error);
       showError("Error", "Failed to share receipt");
     }
   };
@@ -297,8 +288,12 @@ const DeliveryReceiptPage = () => {
   if (isLoading) return <LoadingIndicator />;
   if (!data) return null;
 
-  const deliveryFee = Number(data.delivery_fee || 0);
-  const total = Number(data.total_price || deliveryFee);
+  const itemsTotal =
+    data.items?.reduce((acc, item) => acc + item.price * item.quantity, 0) || 0;
+  const shippingCost = Number(data.shipping_cost || 0);
+  const total = Number(data.grand_total || itemsTotal + shippingCost);
+
+  const isCustomer = user?.id === data.customer_id;
 
   return (
     <ScrollView
@@ -308,11 +303,10 @@ const DeliveryReceiptPage = () => {
     >
       <Stack.Screen
         options={{
-          title: "Delivery Receipt",
+          title: "Product Receipt",
           headerTintColor: theme === "dark" ? "#eee" : "#000",
           headerShadowVisible: false,
           headerTitleStyle: { fontFamily: "Poppins-Medium" },
-          headerStyle: { backgroundColor: BG_COLOR },
           headerRight: () => (
             <View className="flex-row items-center gap-5">
               <Pressable
@@ -325,16 +319,6 @@ const DeliveryReceiptPage = () => {
                   color={theme === "dark" ? "#eee" : "black"}
                 />
               </Pressable>
-              {/* <Pressable
-                onPress={handleDownload}
-                className="bg-slate-600/10 p-2.5 rounded-full active:opacity-50"
-              >
-                <Feather
-                  name="download"
-                  size={20}
-                  color={theme === "dark" ? "#eee" : "black"}
-                />
-              </Pressable> */}
             </View>
           ),
         }}
@@ -345,83 +329,91 @@ const DeliveryReceiptPage = () => {
         {/* Header */}
         <View className="items-center mb-8">
           <View className="w-16 h-16 bg-orange-500/10 rounded-full items-center justify-center mb-4">
-            <Feather name="package" size={32} color="#FF8C00" />
+            <Feather name="file-text" size={32} color="#FF8C00" />
           </View>
           <Text className={`text-2xl font-poppins-bold ${TEXT_PRIMARY}`}>
-            {data.package_name || "Parcel Receipt"}
+            Product Receipt
           </Text>
           <Text className={`text-sm ${TEXT_SECONDARY} mt-1`}>
-            Order #ORDN-{data.order_number}
+            Order #{data.order_number}
           </Text>
         </View>
 
         {/* Status Section */}
         <View className={`py-4 border-y ${BORDER_COLOR} mb-8 gap-4`}>
           <View className="flex-row justify-between items-center">
-            <Text className={`${TEXT_SECONDARY} font-poppins`}>Type</Text>
-            <Text className={`${TEXT_PRIMARY} font-poppins-medium`}>
-              {data.delivery_type}
-            </Text>
-          </View>
-          <View className="flex-row justify-between items-center">
             <Text className={`${TEXT_SECONDARY} font-poppins`}>
               Payment Status
             </Text>
             <View
-              className={`${data.payment_status === "PAID" ? "bg-green-500/10" : "bg-red-500/10"} px-4 py-1.5 rounded-full`}
+              className={`${data.payment_status === "SUCCESS" ? "bg-green-500/10" : "bg-red-500/10"} px-4 py-1.5 rounded-full`}
             >
               <Text
-                className={`${data.payment_status === "PAID" ? "text-green-600" : "text-red-600"} text-xs font-poppins-semibold uppercase`}
+                className={`${data.payment_status === "FAILED" || data.payment_status === "REFUNDED" ? "text-red-600" : "text-green-600"} text-xs font-poppins-semibold uppercase`}
               >
                 {data.payment_status || "Pending"}
               </Text>
             </View>
           </View>
           <View className="flex-row justify-between items-center">
-            <Text className={`${TEXT_SECONDARY} font-poppins`}>Status</Text>
+            <Text className={`${TEXT_SECONDARY} font-poppins`}>Date</Text>
             <Text className={`${TEXT_PRIMARY} font-poppins-medium`}>
-              {data.delivery_status}
+              {format(new Date(data.created_at || ""), "MMM dd, yyyy")}
             </Text>
           </View>
         </View>
 
-        {/* Details */}
-        <View className="mb-8">
-          <Text
-            className={`${TEXT_PRIMARY} font-poppins-bold uppercase text-[10px] tracking-[2px] mb-4`}
-          >
-            Package Details
-          </Text>
-          <View className="flex-row justify-between items-center py-2">
-            <Text className={`${TEXT_SECONDARY} font-poppins`}>
-              Package Name
+        {/* Order Items */}
+        {data.items && data.items.length > 0 && (
+          <View className="mb-8">
+            <Text
+              className={`${TEXT_PRIMARY} font-poppins-bold uppercase text-[10px] tracking-[2px] mb-4`}
+            >
+              Product Items
             </Text>
-            <Text className={`${TEXT_PRIMARY} font-poppins-medium`}>
-              {data.package_name}
-            </Text>
-          </View>
-          {data.additional_info && (
-            <View className="flex-row justify-between items-start py-2">
-              <Text className={`${TEXT_SECONDARY} font-poppins`}>Info</Text>
-              <Text
-                className={`${TEXT_PRIMARY} font-poppins-medium flex-1 text-right ml-4`}
+            {data.items.map((item: ProductOrderItem) => (
+              <View
+                className="flex-row justify-between items-center py-2"
+                key={item.id}
               >
-                {data.additional_info}
-              </Text>
-            </View>
-          )}
-        </View>
+                <View className="flex-1 mr-4">
+                  <Text className={`${TEXT_PRIMARY} font-poppins-medium`}>
+                    {item.quantity}x {item.name}
+                  </Text>
+                  {(item.selected_size || item.selected_color) && (
+                    <Text className="text-[10px] text-gray-400 mt-0.5 uppercase">
+                      {item.selected_size?.join(", ") || ""}
+                      {item.selected_size && item.selected_color ? " | " : ""}
+                      {item.selected_color?.join(", ") || ""}
+                    </Text>
+                  )}
+                </View>
+                <Text className={`${TEXT_PRIMARY} font-poppins-semibold`}>
+                  ₦{Number(item.price * item.quantity).toFixed(2)}
+                </Text>
+              </View>
+            ))}
+          </View>
+        )}
 
         {/* Totals */}
         <View className={`pt-6 border-t ${BORDER_COLOR} gap-3`}>
           <View className="flex-row justify-between">
-            <Text className={`${TEXT_SECONDARY} font-poppins`}>
-              Delivery Fee
-            </Text>
+            <Text className={`${TEXT_SECONDARY} font-poppins`}>Subtotal</Text>
             <Text className={`${TEXT_PRIMARY} font-poppins-medium`}>
-              ₦{deliveryFee.toFixed(2)}
+              ₦{itemsTotal.toFixed(2)}
             </Text>
           </View>
+          {shippingCost > 0 && (
+            <View className="flex-row justify-between">
+              <Text className={`${TEXT_SECONDARY} font-poppins`}>
+                Shipping Cost
+              </Text>
+              <Text className={`${TEXT_PRIMARY} font-poppins-medium`}>
+                ₦{shippingCost.toFixed(2)}
+              </Text>
+            </View>
+          )}
           <View className="flex-row justify-between items-center mt-2 group">
             <Text className={`${TEXT_PRIMARY} text-xl font-poppins-bold`}>
               Total Amount
@@ -432,55 +424,87 @@ const DeliveryReceiptPage = () => {
           </View>
         </View>
 
-        {/* Delivery Path */}
-        <View className={`mt-8 pt-8 border-t ${BORDER_COLOR}`}>
-          <Text
-            className={`${TEXT_PRIMARY} font-poppins-bold uppercase text-[10px] tracking-[2px] mb-4`}
-          >
-            Route Details
-          </Text>
+        {/* Delivery Details */}
+        {data.delivery_address && (
+          <View className={`mt-8 pt-8 border-t ${BORDER_COLOR}`}>
+            <Text
+              className={`${TEXT_PRIMARY} font-poppins-bold uppercase text-[10px] tracking-[2px] mb-4`}
+            >
+              Delivery Details
+            </Text>
 
-          <View className="gap-6">
-            <View>
-              <Text className="text-[10px] text-gray-400 font-poppins-bold uppercase mb-2">
-                Origin (Pickup)
-              </Text>
-              <View
-                className={`p-4 rounded-xl ${isDark ? "bg-gray-700/30" : "bg-gray-50"} border ${BORDER_COLOR}`}
-              >
-                <Text
-                  className={`${TEXT_PRIMARY} text-xs leading-5 font-poppins`}
-                  numberOfLines={2}
-                >
-                  {data.pickup_location}
+            <View className="gap-6">
+              <View>
+                <Text className="text-[10px] text-gray-400 font-poppins-bold uppercase mb-2">
+                  Shipping Address
                 </Text>
-              </View>
-            </View>
-
-            <View>
-              <Text className="text-[10px] text-gray-400 font-poppins-bold uppercase mb-2">
-                Destination (Drop-off)
-              </Text>
-              <View
-                className={`p-4 rounded-xl ${isDark ? "bg-gray-700/30" : "bg-gray-50"} border ${BORDER_COLOR}`}
-              >
-                <Text
-                  className={`${TEXT_PRIMARY} text-xs leading-5 font-poppins`}
-                  numberOfLines={2}
+                <View
+                  className={`p-4 rounded-xl ${isDark ? "bg-gray-700/30" : "bg-gray-50"} border ${BORDER_COLOR}`}
                 >
-                  {data.destination}
-                </Text>
+                  <Text
+                    className={`${TEXT_PRIMARY} text-xs leading-5 font-poppins`}
+                    numberOfLines={2}
+                  >
+                    {data.delivery_address}
+                  </Text>
+                </View>
               </View>
             </View>
           </View>
-        </View>
+        )}
+      </View>
+
+      {/* Action Buttons */}
+      <View className="flex-row gap-4 justify-between my-8 mx-auto w-[90%]">
+        {isCustomer &&
+          !data.has_review &&
+          data.order_status === "COMPLETED" && (
+            <AppButton
+              text="Leave a Review"
+              width={"48%"}
+              borderRadius={50}
+              onPress={() =>
+                router.push({
+                  pathname: "/review/[id]",
+                  params: {
+                    id: data.items?.[0]?.product_id,
+                    reviewType: "PRODUCT",
+                    itemId: data.items?.[0]?.product_id,
+                    revieweeId: data.vendor_id,
+                    orderId: data.id,
+                    orderType: "PRODUCT",
+                  },
+                })
+              }
+            />
+          )}
+        <AppButton
+          text="Raise Dispute"
+          width={
+            isCustomer && !data.has_review && data.order_status === "COMPLETED"
+              ? "48%"
+              : "100%"
+          }
+          borderRadius={50}
+          variant="outline"
+          onPress={() =>
+            router.push({
+              pathname: "/report/[id]",
+              params: {
+                id: data.id,
+                orderType: "PRODUCT",
+                revieweeId: data.vendor_id,
+              },
+            })
+          }
+        />
       </View>
 
       <Text className="text-center text-[10px] text-gray-500 mt-10 font-poppins tracking-widest uppercase">
-        ServiPal • Delivery Service
+        ServiPal • Marketplace Services
       </Text>
     </ScrollView>
   );
 };
 
-export default DeliveryReceiptPage;
+export default ProductReceiptPage;

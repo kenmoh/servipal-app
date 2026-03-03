@@ -61,6 +61,7 @@ export interface UnifiedOrderResponse {
   order_items: OrderItem[];
   vendor_pickup_dropoff_charge?: number;
   dispute_id?: string;
+  has_review: boolean;
   created_at: string;
   updated_at: string;
 }

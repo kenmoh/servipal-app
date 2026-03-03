@@ -14,6 +14,7 @@ export interface PurchaseData {
   sizes: string[];
   colors: string[];
   additional_info: string;
+  delivery_option: "VENDOR_DELIVERY" | "PICKUP";
 }
 
 export interface PurchaseState {
@@ -21,7 +22,6 @@ export interface PurchaseState {
   purchase: PurchaseData;
   isLoading: boolean;
   error: string | null;
-  totalPrice: number;
   isValidPurchase: boolean;
   setProduct: (product: Product) => void;
   clearProduct: () => void;
@@ -31,6 +31,7 @@ export interface PurchaseState {
   toggleSize: (size: string) => void;
   toggleColor: (color: string) => void;
   setAdditionalInfo: (info: string) => void;
+  setDeliveryOption: (option: "VENDOR_DELIVERY" | "PICKUP") => void;
   resetPurchase: () => void;
   validatePurchase: () => { isValid: boolean; errors: string[] };
   getServerSizes: () => string;
@@ -49,6 +50,7 @@ const initialPurchaseData: PurchaseData = {
   sizes: [],
   colors: [],
   additional_info: "",
+  delivery_option: "VENDOR_DELIVERY",
 };
 
 export const usePurchaseStore = create<PurchaseState>((set, get) => ({
@@ -56,18 +58,6 @@ export const usePurchaseStore = create<PurchaseState>((set, get) => ({
   purchase: initialPurchaseData,
   isLoading: false,
   error: null,
-
-  get totalPrice() {
-    const { product, purchase } = get();
-    if (!product) return 0;
-
-    const price =
-      typeof product.price === "string"
-        ? Number(product.price)
-        : Number(product.price);
-
-    return price * purchase.quantity;
-  },
 
   get isValidPurchase() {
     const { product, purchase } = get();
@@ -274,9 +264,14 @@ export const usePurchaseStore = create<PurchaseState>((set, get) => ({
     );
   },
 
-  setAdditionalInfo: (info) =>
+  setAdditionalInfo: (info: string) =>
     set((state) => ({
       purchase: { ...state.purchase, additional_info: info },
+    })),
+
+  setDeliveryOption: (option) =>
+    set((state) => ({
+      purchase: { ...state.purchase, delivery_option: option },
     })),
 
   resetPurchase: () =>
@@ -326,8 +321,8 @@ export const usePurchaseSelectors = () => {
     selectedSizes: store.purchase.sizes,
     selectedColors: store.purchase.colors,
     additionalInfo: store.purchase.additional_info,
+    deliveryOption: store.purchase.delivery_option,
     availableSizes,
-    totalPrice: store.totalPrice,
     isValidPurchase: store.isValidPurchase,
     isLoading: store.isLoading,
     error: store.error,
@@ -352,6 +347,7 @@ export const usePurchaseActions = () => {
     toggleSize: store.toggleSize,
     toggleColor: store.toggleColor,
     setAdditionalInfo: store.setAdditionalInfo,
+    setDeliveryOption: store.setDeliveryOption,
     resetPurchase: store.resetPurchase,
     addColor: store.addColor,
     removeColor: store.removeColor,

@@ -7,15 +7,14 @@ import { searchNearbyLaundry } from "@/api/user";
 import LoadingIndicator from "@/components/LoadingIndicator";
 import StoreCard from "@/components/StoreCard";
 import { AppTextInput } from "@/components/ui/app-text-input";
-import * as Sentry from "@sentry/react-native";
 import { useQuery } from "@tanstack/react-query";
 import * as Location from "expo-location";
 
 import HDivider from "@/components/HDivider";
 import RefreshButton from "@/components/RefreshButton";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useUserStore } from "@/store/userStore";
 import { UserProfile } from "@/types/user-types";
-import { useColorScheme } from "@/hooks/use-color-scheme";
 
 const LaundryScreen = () => {
   const theme = useColorScheme();
@@ -34,8 +33,6 @@ const LaundryScreen = () => {
     queryFn: () => searchNearbyLaundry(searchQuery),
     enabled: !!user?.id,
   });
-
-  if (__DEV__) console.log("data", data);
 
   const handleRefresh = useCallback(() => {
     refetch();

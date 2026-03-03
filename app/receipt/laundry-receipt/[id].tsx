@@ -410,7 +410,7 @@ const LaundryReceiptPage = () => {
                   color={theme === "dark" ? "#eee" : "black"}
                 />
               </Pressable>
-              <Pressable
+              {/* <Pressable
                 onPress={handleDownload}
                 className="bg-slate-600/10 p-2.5 rounded-full active:opacity-50"
               >
@@ -419,7 +419,7 @@ const LaundryReceiptPage = () => {
                   size={20}
                   color={theme === "dark" ? "#eee" : "black"}
                 />
-              </Pressable>
+              </Pressable> */}
             </View>
           ),
         }}
@@ -644,10 +644,10 @@ const LaundryReceiptPage = () => {
             )}
         </View>
         <View className="flex-row gap-6  mt-2">
-          {showReviewButton && (
+          {showReviewButton && !data?.order?.has_review && (
             <AppButton
               text="Leave a Review"
-              width={"42.5%"}
+              width={!data?.order?.has_review ? "42.5%" : "90%"}
               borderRadius={50}
               disabled={
                 data?.order?.order_status === "CANCELLED" ||
@@ -668,7 +668,9 @@ const LaundryReceiptPage = () => {
           )}
           <AppButton
             text="Raise Dispute"
-            width={showReviewButton ? "42.5%" : "90%"}
+            width={
+              showReviewButton && !data?.order?.has_review ? "42.5%" : "90%"
+            }
             borderRadius={50}
             variant="outline"
             onPress={() =>
@@ -685,7 +687,7 @@ const LaundryReceiptPage = () => {
         </View>
       </View>
       <Text className="text-center text-[10px] text-gray-500 mt-10 font-poppins tracking-widest uppercase">
-        ServiPal Laundry • Premium Care
+        ServiPal Laundry • Laundry Service
       </Text>
     </ScrollView>
   );
