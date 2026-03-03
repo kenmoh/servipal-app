@@ -680,7 +680,8 @@ const ReceiptPage = () => {
                 pathname: "/review/[id]",
                 params: {
                   id: order.id,
-                  orderType: "FOOD",
+                  orderId: order.id,
+                  orderType: orderType,
                   revieweeId: order.vendor_id,
                 },
               })

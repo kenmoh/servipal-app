@@ -353,7 +353,7 @@ const ProductDetail = () => {
                         id: item?.id,
                         reviewType: "PRODUCT",
                         itemId: item?.id,
-                        revieweeId: user?.id,
+                        revieweeId: data.vendor_id,
                         orderId: data.id,
                         orderType: "PRODUCT",
                       },

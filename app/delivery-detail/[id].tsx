@@ -409,6 +409,7 @@ const ItemDetails = () => {
         id: data?.id as string,
         revieweeId: data?.rider_id as string,
         dispatchId: data?.dispatch_id as string,
+        orderId: data?.id as string,
         orderType: "DELIVERY",
       },
     });

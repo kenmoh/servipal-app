@@ -659,6 +659,7 @@ const LaundryReceiptPage = () => {
                   pathname: "/review/[id]",
                   params: {
                     id: order.id,
+                    orderId: order.id,
                     orderType: "LAUNDRY",
                     revieweeId: order.vendor_id,
                   },

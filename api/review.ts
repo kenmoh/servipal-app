@@ -142,21 +142,10 @@ export const ReviewsService = {
       .single();
 
     if (error) {
-      if (error.code === "23505") {
-        // Parse constraint name to give specific error
-        const constraint = error.details?.match(/Key \(([^)]+)\)/)?.[1];
+      console.log(error);
+    }
 
-        if (constraint?.includes("order_id")) {
-          throw new Error("You have already reviewed this order");
-        } else if (constraint?.includes("dispatch_id")) {
-          throw new Error("You have already reviewed this dispatch");
-        } else if (constraint?.includes("item_id")) {
-          throw new Error("You have already reviewed this item");
-        }
-
-        // Fallback generic message
-        throw new Error("You have already submitted a review for this order");
-      }
+    if (error) {
       throw new Error(error.message);
     }
 
