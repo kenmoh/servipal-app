@@ -31,7 +31,7 @@ const SignIn = () => {
     <View className="flex-1 w-full bg-background items-center ">
       {/* Header */}
       <View className="w-[90%] mb-10">
-        <Text className="font-bold text-[20px] text-primary">
+        <Text className="font-poppins-semibold text-[20px] text-primary">
           Welcome back!
         </Text>
         <Text className="font-normal text-[12px] text-primary mt-1">

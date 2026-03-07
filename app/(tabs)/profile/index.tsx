@@ -9,16 +9,14 @@ import {
 } from "@/hooks/status-toggle";
 import { useTheme } from "@/hooks/theme-toggle";
 import { useUserStore } from "@/store/userStore";
-import { ImageUrl } from "@/types/user-types";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import * as Sentry from "@sentry/react-native";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import Constants from "expo-constants";
 import * as Linking from "expo-linking";
 import * as Location from "expo-location";
 import { router } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
-import { useColorScheme } from "nativewind";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -32,12 +30,10 @@ import {
   View,
 } from "react-native";
 
-type themeType = "dark" | "light" | "system";
 const BACKDROP_IMAGE_HEIGHT = Dimensions.get("window").height * 0.18;
 const BACKDROP_IMAGE_WIDTH = Dimensions.get("window").width;
 
 const ProfileScreen = () => {
-  const { setColorScheme } = useColorScheme();
   const {
     user,
     signOut,
@@ -46,7 +42,7 @@ const ProfileScreen = () => {
     backdropImageUrl,
     isIosBackgroundLocationEnabled,
     isAndroidBackgroundLocationEnabled,
-    locationAlwaysAndWhenInUsePermission,
+
     locationWhenInUsePermission,
     checkLocationPermission,
   } = useUserStore();
@@ -54,10 +50,6 @@ const ProfileScreen = () => {
   const [isOnline, setIsOnline] = useState(profile?.is_online ?? false);
   const [canPickup, setCanPickup] = useState(
     profile?.can_pickup_and_dropoff ?? false,
-  );
-  const [profileUri, setProfileUri] = useState<ImageUrl | null | string>(null);
-  const [backdropUri, setBackdropUri] = useState<ImageUrl | null | string>(
-    null,
   );
 
   const { showSuccess, showError } = useToast();
@@ -67,6 +59,8 @@ const ProfileScreen = () => {
   const toggleOnlineMutation = useToggleOnlineStatus();
 
   const { setThemeOption, theme } = useTheme();
+
+  const queryClient = useQueryClient();
 
   // Sync with profile changes
   useEffect(() => {
@@ -83,8 +77,8 @@ const ProfileScreen = () => {
     mutationFn: (imageData: ImageData) =>
       uploadImage(imageData, "profile_image_url"),
     onSuccess: (result) => {
-      setProfileUri(result.publicUrl);
       showSuccess("Success", "Profile picture updated!");
+      queryClient.invalidateQueries({ queryKey: ["vendorProfile", user?.id] });
     },
     onError: (error: any) => {
       showError(
@@ -103,16 +97,10 @@ const ProfileScreen = () => {
     mutationFn: (imageData: ImageData) =>
       uploadImage(imageData, "backdrop_image_url"),
     onSuccess: (result) => {
-      Sentry.addBreadcrumb({
-        category: "profile",
-        message: "Backdrop image uploaded",
-        level: "info",
-      });
-      setBackdropUri(result.publicUrl);
+      queryClient.invalidateQueries({ queryKey: ["vendorProfile", user?.id] });
       showSuccess("Success", "Backdrop image updated!");
     },
     onError: (error: any) => {
-      console.error("❌ Backdrop upload failed:", error);
       Sentry.captureException(error, { tags: { action: "upload_backdrop" } });
       showError(
         "Upload Failed",
@@ -122,12 +110,10 @@ const ProfileScreen = () => {
   });
 
   const handleProfileImageSelect = (imageData: ImageData) => {
-    setProfileUri(imageData.uri);
     uploadProfileImageMutation(imageData);
   };
 
   const handleBackdropImageSelect = (imageData: ImageData) => {
-    setBackdropUri(imageData.uri);
     uploadBackdropImageMutation(imageData);
   };
 

@@ -1,7 +1,7 @@
 import HDivider from "@/components/HDivider";
 import { useToast } from "@/components/ToastProvider";
 import Ionicons from "@expo/vector-icons/Ionicons";
-// import * as Clipboard from "expo-clipboard";
+import * as Clipboard from "expo-clipboard";
 import { useLocalSearchParams } from "expo-router";
 import React from "react";
 import { Pressable, Text, View } from "react-native";
@@ -21,21 +21,20 @@ const TransactionDetailScreen = () => {
     paymentStatus: string;
   }>();
 
-  // const copyToClipboard = async (data: string) => {
-  //   await Clipboard.setStringAsync(data);
-  //   showSuccess("Copied to clipboard");
-  // };
+  const copyToClipboard = async () => {
+    await Clipboard.setStringAsync(params?.txRef!);
+    showSuccess("SUCCESS", `Copied ${params?.txRef} to clipboard`);
+  };
 
   return (
     <View className="flex-1 bg-background px-4 py-6">
       <View className="bg-profile-card rounded-2xl border  border-border-subtle  border-1 p-4">
-        <TransactionValue label="Ref" value={params?.date} />
         <HDivider />
         <TransactionValue
           label="Ref"
           value={params?.txRef || ""}
           showIcon
-          onPress={() => showSuccess("Copied to clipboard", params?.txRef, 500)}
+          onPress={copyToClipboard}
         />
         <HDivider />
         <TransactionValue label="Amount" value={`₦ ${params?.amount || ""}`} />

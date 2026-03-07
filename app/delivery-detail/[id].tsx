@@ -715,43 +715,35 @@ const ItemDetails = () => {
               )}
             />
           </View>
-          <View className="mb-5">
+          <View className="mb-6 gap-4">
             <Controller
-              control={control}
               name="cancelReason"
-              render={({ field: { onChange, value } }) => (
-                <View className="w-[90%] self-center">
-                  <AppTextInput
-                    value={value}
-                    onChange={onChange}
-                    placeholder="Please describe the reason for cancellation..."
-                    className="bg-input"
-                    multiline
-                    style={{
-                      alignSelf: "center",
-                      width: "100%",
-                    }}
-                  />
-                  <Text className="font-poppins-light text-red-400 text-xs">
-                    {errors.cancelReason?.message}
-                  </Text>
-                </View>
+              control={control}
+              render={({ field: { onChange, onBlur, value } }) => (
+                <AppTextInput
+                  label={"Cancel Reason"}
+                  placeholder="Cancel Reason"
+                  onBlur={onBlur}
+                  onChangeText={onChange}
+                  value={value}
+                  errorMessage={errors.cancelReason?.message}
+                />
               )}
             />
-          </View>
 
-          <AppButton
-            text="Cancel Delivery"
-            width={"90%"}
-            onPress={openAlert}
-            color="#ef4444"
-            icon={
-              updateDeliveryMutation.isPending && (
-                <ActivityIndicator color="#fff" />
-              )
-            }
-            disabled={updateDeliveryMutation.isPending}
-          />
+            <AppButton
+              text="Cancel Delivery"
+              width={"100%"}
+              onPress={openAlert}
+              color="#ef4444"
+              icon={
+                updateDeliveryMutation.isPending && (
+                  <ActivityIndicator color="#fff" />
+                )
+              }
+              disabled={updateDeliveryMutation.isPending}
+            />
+          </View>
         </BottomSheetView>
       </BottomSheet>
 

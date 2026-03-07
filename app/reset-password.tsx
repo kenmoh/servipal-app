@@ -109,7 +109,6 @@ const RecoverPassword = () => {
                     width={"90%"}
                     onChangeText={onChange}
                     value={value}
-                    keyboardType="email-address"
                     errorMessage={errors.accessToken?.message}
                     editable={false}
                   />

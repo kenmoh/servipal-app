@@ -3,6 +3,7 @@ import { HEADER_BG_DARK, HEADER_BG_LIGHT } from "@/constants/theme";
 import "@/global.css";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useUserStore } from "@/store/userStore";
+import { defineLocationTask } from "@/utils/location-tracking";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import * as Sentry from "@sentry/react-native";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -14,7 +15,6 @@ import { useEffect } from "react";
 import { View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
-import { defineLocationTask } from "@/utils/location-tracking";
 
 Sentry.init({
   dsn: "https://945bccd1ed4b5bcb5eab8cf7e3c776fa@o4505603287023616.ingest.us.sentry.io/4510143988629504",
@@ -241,6 +241,12 @@ export default Sentry.wrap(function RootLayout() {
                       options={{
                         title: "Change Password",
                         animation: "fade_from_bottom",
+                        headerShown: true,
+                        headerShadowVisible: false,
+                        headerTintColor:
+                          colorScheme === "dark"
+                            ? HEADER_BG_LIGHT
+                            : HEADER_BG_DARK,
                       }}
                     />
                     <Stack.Screen

@@ -11,10 +11,10 @@ import {
   WalletResponse,
 } from "@/types/user-types";
 import { apiClient } from "@/utils/client";
-
 import { supabase } from "@/utils/supabase";
 import * as Sentry from "@sentry/react-native";
 import { ApiResponse } from "apisauce";
+import { fetch } from "expo/fetch";
 import { ErrorResponse } from "./auth";
 
 const BASE_URL = "/users";
@@ -36,8 +36,9 @@ export async function fetchProfileWithReviews(
   });
 
   if (error) {
-    console.error("Failed to fetch user profile:", error);
-    Sentry.captureException(error, { tags: { action: "fetch_profile_with_reviews" } });
+    Sentry.captureException(error, {
+      tags: { action: "fetch_profile_with_reviews" },
+    });
   }
 
   return data as UserProfile;
@@ -57,82 +58,92 @@ export const fetchProfile = async (userId: string): Promise<UserProfile> => {
 // Image upload
 export type ImageFieldType = "profile_image_url" | "backdrop_image_url";
 
+export interface ImageData {
+  uri: string;
+  name: string;
+  type: string;
+  size?: number;
+}
+
 export const uploadImage = async (
   imageData: ImageData,
   fieldType: ImageFieldType,
 ): Promise<{ publicUrl: string }> => {
   try {
-    // Check session
     const {
       data: { session },
-      error: sessionError,
     } = await supabase.auth.getSession();
 
-    if (sessionError || !session) {
-      throw new Error("User not authenticated");
-    }
+    if (!session) throw new Error("User not authenticated");
 
     const userId = session.user.id;
-    const fileExtension = imageData.name.split(".").pop() || "jpg";
+    const uri = imageData.uri;
 
-    // Different paths based on image type
+    if (/^https?:\/\//i.test(uri)) {
+      return { publicUrl: uri };
+    }
+
+    const fileExt = imageData.name?.split(".").pop()?.toLowerCase() || "jpg";
     const fileName = fieldType === "profile_image_url" ? "profile" : "backdrop";
-    const filePath = `${userId}/${fileName}.${fileExtension}`;
+    const filePath = `${userId}/${fileName}.${fileExt}`;
 
-    // Fetch image as ArrayBuffer
-    const response = await fetch(imageData.uri);
-
+    const response = await fetch(uri);
     if (!response.ok) {
       throw new Error(`Failed to fetch image: ${response.status}`);
     }
 
-    // Convert to ArrayBuffer
     const arrayBuffer = await response.arrayBuffer();
-    const uint8Array = new Uint8Array(arrayBuffer);
+    const bytes = new Uint8Array(arrayBuffer);
 
-    // Upload using Uint8Array
-    const { data, error: uploadError } = await supabase.storage
+    const { error: uploadError } = await supabase.storage
       .from("profile-images")
-      .upload(filePath, uint8Array, {
+      .upload(filePath, bytes, {
         contentType: imageData.type || "image/jpeg",
         upsert: true,
-        cacheControl: "3600",
       });
 
     if (uploadError) {
-      throw new Error(uploadError.message || "Failed to upload image");
+      Sentry.captureException(uploadError, {
+        tags: { action: "fetch_profile_with_reviews" },
+      });
+      throw uploadError;
     }
 
-    // Get public URL
-    const { data: urlData } = supabase.storage
+    const { data: publicData } = supabase.storage
       .from("profile-images")
       .getPublicUrl(filePath);
 
-    const publicUrl = urlData.publicUrl;
+    if (!publicData?.publicUrl) {
+      throw new Error("Failed to get public URL");
+    }
 
-    // Update the appropriate field in profiles table
+    const timestamp = Date.now();
+    const publicUrl = `${publicData.publicUrl}?t=${timestamp}`;
+
+    // Update profile
     const { error: updateError } = await supabase
       .from("profiles")
-      .update({ [fieldType]: publicUrl })
+      .update({
+        [fieldType]: publicUrl,
+        updated_at: new Date().toISOString(),
+      })
       .eq("id", userId);
 
     if (updateError) {
-      console.warn(`Failed to update ${fieldType}:`, updateError);
-      Sentry.captureException(updateError, { tags: { action: "update_image_field", field: fieldType } });
-    } else {
-      console.log(`${fieldType} updated successfully`);
-      Sentry.addBreadcrumb({ category: "api.user", message: `${fieldType} updated successfully`, level: "info" });
+      Sentry.captureException(uploadError, {
+        tags: { action: "fetch_profile_with_reviews" },
+      });
+      throw updateError;
     }
 
     return { publicUrl };
-  } catch (error) {
+  } catch (error: any) {
+    Sentry.captureException(error, {
+      tags: { action: "fetch_profile_with_reviews" },
+    });
     throw error;
   }
 };
-
-interface NotificationTokenResponse {
-  notification_token: string;
-}
 
 export const fetchRider = async (riderId: string): Promise<RiderResponse> => {
   try {

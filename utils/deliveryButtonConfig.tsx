@@ -118,11 +118,10 @@ export const getDeliveryButtonConfig = (
       case "CANCELLED":
         return {
           primary: {
-            text: "Cancelled",
-            icon: <AntDesign name="close-circle" size={20} color="white" />,
-            color: "#6b7280",
-            nextStatus: null,
-            disabled: true,
+            text: "Assign Rider",
+            icon: <Feather name="user-plus" size={20} color="white" />,
+            color: "orange",
+            nextStatus: "ASSIGNED",
           },
           secondary: null,
         };

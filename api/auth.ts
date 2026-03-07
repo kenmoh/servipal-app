@@ -1,4 +1,5 @@
 import { apiClient } from "@/utils/client";
+import { supabase } from "@/utils/supabase";
 
 export interface RecoverPassword {
   email: string;
@@ -10,6 +11,7 @@ export interface ResetPassword {
 export interface ChangePassword {
   currentPassword: string;
   newPassword: string;
+  confirmPassword: string;
 }
 
 export interface Contact {
@@ -60,5 +62,30 @@ export const resetPassword = async (
     access_token: accessToken,
     new_password: newPassword,
   });
+  return response.data;
+};
+
+export const changeCurrentUserPassword = async (data: ChangePassword) => {
+  const { data: session, error } = await supabase.auth.getSession();
+
+  if (error) {
+    throw error;
+  }
+  if (!session.session?.access_token || !session.session?.user?.id) {
+    throw new Error("No session found");
+  }
+  const response = await apiClient.post(
+    `${AUTH_URL}/change-password`,
+    {
+      current_password: data.currentPassword,
+      new_password: data.newPassword,
+      confirm_password: data.confirmPassword,
+    },
+    {
+      headers: {
+        Authorization: `Bearer ${session.session?.access_token}`,
+      },
+    },
+  );
   return response.data;
 };
