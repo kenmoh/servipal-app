@@ -12,9 +12,9 @@ import * as Location from "expo-location";
 
 import HDivider from "@/components/HDivider";
 import RefreshButton from "@/components/RefreshButton";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useUserStore } from "@/store/userStore";
 import { UserProfile } from "@/types/user-types";
-import { useColorScheme } from "@/hooks/use-color-scheme";
 
 const RestaurantScreen = () => {
   const theme = useColorScheme();

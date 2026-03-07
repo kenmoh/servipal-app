@@ -287,7 +287,6 @@ export const useUserStore = create<UserStore>((set, get) => ({
       set({ isFirstLaunch: isFirst });
       return isFirst;
     } catch (error) {
-      console.error("❌ Error checking first launch:", error);
       Sentry.captureException(error, {
         tags: { action: "check_first_launch" },
       });
@@ -301,7 +300,6 @@ export const useUserStore = create<UserStore>((set, get) => ({
       await SecureStore.setItemAsync(FIRST_LAUNCH_KEY, "true");
       set({ isFirstLaunch: false });
     } catch (error) {
-      console.error("❌ Error setting first launch complete:", error);
       Sentry.captureException(error, {
         tags: { action: "set_first_launch_complete" },
       });
@@ -310,7 +308,6 @@ export const useUserStore = create<UserStore>((set, get) => ({
 
   // 🔑 Location Permission Check
   checkLocationPermission: async () => {
-    console.log("🔄 Checking location permissions...");
     Sentry.addBreadcrumb({
       category: "location",
       message: "Checking location permissions",
@@ -357,17 +354,6 @@ export const useUserStore = create<UserStore>((set, get) => ({
           level: "warning",
         });
 
-        // Request permission if not granted
-        if (currentFgStatus !== "granted") {
-          const { status: newStatus } =
-            await Location.requestForegroundPermissionsAsync();
-          if (newStatus !== "granted") {
-            set({ locationPermissionGranted: false });
-            await updatePermissionFlags();
-            return false;
-          }
-        }
-
         if (!isLocationEnabled) {
           set({ locationPermissionGranted: false });
           await updatePermissionFlags();
@@ -394,6 +380,7 @@ export const useUserStore = create<UserStore>((set, get) => ({
             message: "Requesting background location permission for rider",
             level: "info",
           });
+
           const { status: newBgStatus } =
             await Location.requestBackgroundPermissionsAsync();
 

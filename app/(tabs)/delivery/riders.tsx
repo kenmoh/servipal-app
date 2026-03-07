@@ -75,20 +75,9 @@ const RidersScreen = () => {
     longitude: number;
   } | null>(null);
 
-  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const bottomSheetRef = useRef<BottomSheet>(null);
-  const listRef = useRef<FlatList>(null);
-  const ITEM_HEIGHT = 138;
-  const lastSentLocation = useRef<{ lat: number; lng: number } | null>(null);
 
-  const getItemLayout = useCallback(
-    (data: any, index: number) => ({
-      length: ITEM_HEIGHT,
-      offset: ITEM_HEIGHT * index,
-      index,
-    }),
-    [],
-  );
+  const lastSentLocation = useRef<{ lat: number; lng: number } | null>(null);
 
   const handleRiderPress = useCallback(
     (rider: RiderResponse) => {
@@ -442,7 +431,7 @@ const RidersScreen = () => {
                 </View>
                 <View className="items-center">
                   <Text className="text-xl font-poppins-bold text-primary">
-                    {selectedRider?.average_rating}
+                    {selectedRider?.reviews.stats.average_rating}
                   </Text>
                   <Text className="font-poppins-light text-muted text-sm">
                     Rating
