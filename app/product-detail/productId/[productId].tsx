@@ -1,5 +1,6 @@
 import { fetchProduct } from "@/api/product";
 import { buyItem } from "@/api/product-ignore";
+import { ReviewsService } from "@/api/review";
 
 import HDivider from "@/components/HDivider";
 import ProductDetailWrapper from "@/components/ProductDetailWrapper";
@@ -21,7 +22,11 @@ import {
 
 const ProductDetail = () => {
   const router = useRouter();
-  const { productId } = useLocalSearchParams<{ productId: string }>();
+  const { productId, averageRating, totalReviews } = useLocalSearchParams<{
+    productId: string;
+    totalReviews: string;
+    averageRating: string;
+  }>();
   const {
     setProduct,
     clearProduct,
@@ -42,6 +47,12 @@ const ProductDetail = () => {
       if (!productId) throw new Error("Product ID is required");
       return fetchProduct(productId);
     },
+    enabled: !!productId,
+  });
+
+  const { data: reviewSummary } = useQuery({
+    queryKey: ["review-summary", productId],
+    queryFn: () => ReviewsService.fetchItemReviews(productId!),
     enabled: !!productId,
   });
 
@@ -159,13 +170,11 @@ const ProductDetail = () => {
               <View className="flex-row items-center bg-orange-50 dark:bg-orange-900/30 px-2 py-1 rounded-full">
                 <Ionicons name="star" size={14} color="#F97316" />
                 <Text className="text-orange-600 dark:text-orange-400 font-poppins-medium text-xs ml-1">
-                  {/* {reviewSummary?.stats?.average_rating?.toFixed(1) || "0.0"} */}
-                  {data?.review_stats?.average_rating}
+                  {Number(averageRating).toFixed(1) || "0.0"}
                 </Text>
               </View>
               <Text className="text-slate-400 font-poppins-light text-xs ml-1">
-                {/* ({reviewSummary?.stats?.total_reviews || 0} Reviews) */}
-                {data?.review_stats?.total_reviews}
+                ({totalReviews || 0} Reviews)
               </Text>
             </TouchableOpacity>
           </View>

@@ -21,6 +21,8 @@ const ProductCard = ({ product }: { product: ProductResponse }) => {
       pathname: "/product-detail/productId/[productId]",
       params: {
         productId: product.id,
+        averageRating: product.review_stats.average_rating,
+        totalReviews: product.review_stats.total_reviews,
       },
     });
   };

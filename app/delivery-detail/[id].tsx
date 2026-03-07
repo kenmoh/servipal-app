@@ -79,7 +79,7 @@ const ItemDetails = () => {
     refetchOnMount: true,
     enabled: !!id && id !== "[id]",
   });
-
+  console.log(data?.delivery_status);
   // Coordinate normalization: ensure [lat, lng]
   const normalizeCoords = (coords: any): [number, number] | null => {
     if (!coords || !Array.isArray(coords) || coords.length < 2) return null;
