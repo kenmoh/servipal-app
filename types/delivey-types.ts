@@ -8,6 +8,7 @@ export type DeliveryOrderStatus =
   | "DELIVERED"
   | "COMPLETED"
   | "CANCELLED"
+  | "RETURNED"
   | "DECLINED";
 
 export type PaymentStatus = "PENDING" | "PAID" | "FAILED" | "REFUNDED" | null;
@@ -48,6 +49,7 @@ export interface DeliveryOrder {
   payment_status: PaymentStatus;
   package_name: string;
   has_review: boolean;
+  cancelled_by: "CUSTOMER" | null;
   pickup_coordinates?: [number, number];
   dropoff_coordinates?: [number, number];
   last_known_rider_coordinates?: [number, number];

@@ -22,7 +22,8 @@ export interface DualButtonConfig {
 
 export const getDeliveryButtonConfig = (
   currentStatus: DeliveryOrderStatus,
-  userRole: "SENDER" | "RIDER",
+  userRole: "CUSTOMER" | "RIDER",
+  cancelledBy?: "CUSTOMER" | null,
 ): DualButtonConfig => {
   // ============================================================
   // DEFAULTS
@@ -43,9 +44,9 @@ export const getDeliveryButtonConfig = (
   };
 
   // ============================================================
-  // SENDER BUTTONS
+  // CUSTOMER BUTTONS
   // ============================================================
-  if (userRole === "SENDER") {
+  if (userRole === "CUSTOMER") {
     switch (currentStatus) {
       case "PENDING":
         return {
@@ -64,14 +65,14 @@ export const getDeliveryButtonConfig = (
 
       case "ASSIGNED":
         return {
-          primary: null, // Waiting for rider to accept
-          secondary: null, // Moved to top custom button
+          primary: null,
+          secondary: null,
         };
 
       case "ACCEPTED":
         return {
           primary: null,
-          secondary: null, // Moved to top custom button
+          secondary: null,
         };
 
       case "PICKED_UP":
@@ -116,12 +117,35 @@ export const getDeliveryButtonConfig = (
         };
 
       case "CANCELLED":
+        if (cancelledBy === "CUSTOMER") {
+          return {
+            primary: {
+              text: "Complete & Release Payment",
+              icon: <AntDesign name="check-circle" size={20} color="white" />,
+              color: "#059669",
+              nextStatus: "COMPLETED",
+            },
+            secondary: null,
+          };
+        }
         return {
           primary: {
             text: "Assign Rider",
             icon: <Feather name="user-plus" size={20} color="white" />,
             color: "orange",
             nextStatus: "ASSIGNED",
+          },
+          secondary: null,
+        };
+
+      case "RETURNED":
+        return {
+          primary: {
+            text: "Completed",
+            icon: <AntDesign name="check" size={20} color="white" />,
+            color: "#6b7280",
+            nextStatus: null,
+            disabled: true,
           },
           secondary: null,
         };
@@ -150,7 +174,7 @@ export const getDeliveryButtonConfig = (
             color: "#ef4444",
             textColor: "#ef4444",
             variant: "outline",
-            nextStatus: "DECLINED", // UI needs to handle DECLINE action
+            nextStatus: "DECLINED",
           },
         };
 
@@ -218,10 +242,24 @@ export const getDeliveryButtonConfig = (
         };
 
       case "CANCELLED":
+        if (cancelledBy === "CUSTOMER") {
+          return {
+            primary: {
+              text: "Mark as Returned",
+              icon: <AntDesign name="check-circle" size={20} color="white" />,
+              color: "#8b5cf6",
+              nextStatus: "RETURNED",
+            },
+            secondary: null,
+          };
+        }
+        return defaultConfig;
+
+      case "RETURNED":
         return {
           primary: {
-            text: "Cancelled",
-            icon: <AntDesign name="close-circle" size={20} color="white" />,
+            text: "Waiting for Confirmation",
+            icon: <Feather name="clock" size={20} color="white" />,
             color: "#6b7280",
             nextStatus: null,
             disabled: true,

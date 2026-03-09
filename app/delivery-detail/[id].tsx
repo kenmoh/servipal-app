@@ -79,7 +79,6 @@ const ItemDetails = () => {
     refetchOnMount: true,
     enabled: !!id && id !== "[id]",
   });
-  console.log(data?.delivery_status);
   // Coordinate normalization: ensure [lat, lng]
   const normalizeCoords = (coords: any): [number, number] | null => {
     if (!coords || !Array.isArray(coords) || coords.length < 2) return null;
@@ -111,7 +110,6 @@ const ItemDetails = () => {
 
   const {
     control,
-    handleSubmit,
     trigger,
     setValue,
     getValues,
@@ -130,7 +128,7 @@ const ItemDetails = () => {
   );
 
   const showCancel =
-    (user?.id === data?.sender_id || user?.id === data?.rider_id) &&
+    user?.id === data?.sender_id &&
     (data?.delivery_status === "PENDING" ||
       data?.delivery_status === "ASSIGNED" ||
       data?.delivery_status === "ACCEPTED");
@@ -231,12 +229,13 @@ const ItemDetails = () => {
     const isSender = user.id === data.sender_id;
     const isRider = user.id === data.rider_id;
 
-    const userRole = isSender ? "SENDER" : isRider ? "RIDER" : null;
+    const userRole = isSender ? "CUSTOMER" : isRider ? "RIDER" : null;
     if (!userRole) return null;
 
     const config = getDeliveryButtonConfig(
       data.delivery_status as any,
       userRole,
+      data.cancelled_by as any,
     );
     if (!config) return null;
 
@@ -309,10 +308,8 @@ const ItemDetails = () => {
 
     const warningMessage =
       isPickedUp && isSender
-        ? "⚠️ Package is in transit. Rider will return it and still be paid for the trip."
-        : isSender
-          ? "Are you sure you want to cancel this delivery?"
-          : "Cancelling will affect your completion rate. Continue?";
+        ? "Package is in transit. Rider will return it and still be paid for the trip."
+        : "Are you sure you want to cancel this delivery?";
 
     Alert.alert("Confirm Cancellation", warningMessage, [
       { text: "No", style: "cancel" },
