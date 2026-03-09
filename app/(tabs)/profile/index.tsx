@@ -1,3 +1,4 @@
+import { requestOtp } from "@/api/auth";
 import { ImageData, uploadImage } from "@/api/user";
 import HDivider from "@/components/HDivider";
 import ProfileImagePicker from "@/components/ProfileImagePicker";
@@ -42,7 +43,6 @@ const ProfileScreen = () => {
     backdropImageUrl,
     isIosBackgroundLocationEnabled,
     isAndroidBackgroundLocationEnabled,
-
     locationWhenInUsePermission,
     checkLocationPermission,
   } = useUserStore();
@@ -153,6 +153,20 @@ const ProfileScreen = () => {
   useEffect(() => {
     checkLocationPermission();
   }, [checkLocationPermission]);
+
+  const requestOtpMutation = useMutation({
+    mutationFn: requestOtp,
+    onSuccess: (data) => {
+      if (data.status === "success") {
+        showSuccess("Success", data.message);
+        router.push("/verify-phone");
+      }
+    },
+    onError: (error: any) => {
+      Sentry.captureException(error, { tags: { action: "request_otp" } });
+      showError("Error", error.message || "OTP request failed");
+    },
+  });
 
   const handleForegroundToggle = async () => {
     try {
@@ -464,12 +478,29 @@ const ProfileScreen = () => {
                 name="Update Profile"
                 icon={<Ionicons name="create-outline" size={18} color="gray" />}
               />
+
               <HDivider />
               <AppLink
                 onPress={() => router.push("/change-password")}
                 name="Change Password"
                 icon={<Ionicons name="key-outline" size={18} color="gray" />}
               />
+              {profile?.account_status !== "ACTIVE" && (
+                <>
+                  <HDivider />
+                  <AppLink
+                    onPress={() => requestOtpMutation.mutate()}
+                    name={
+                      requestOtpMutation.isPending
+                        ? "Requesting OTP..."
+                        : "Verify Phone Number"
+                    }
+                    icon={
+                      <Ionicons name="call-outline" size={18} color="gray" />
+                    }
+                  />
+                </>
+              )}
               {user?.user_metadata.user_type === "DISPATCH" && (
                 <>
                   <HDivider />

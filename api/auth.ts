@@ -89,3 +89,54 @@ export const changeCurrentUserPassword = async (data: ChangePassword) => {
   );
   return response.data;
 };
+
+interface OTPResponse {
+  message: string;
+  status: string;
+}
+interface OTPData {
+  otp: string;
+}
+
+export const requestOtp = async (): Promise<OTPResponse> => {
+  const { data: session, error } = await supabase.auth.getSession();
+
+  if (error) {
+    throw error;
+  }
+  if (!session.session?.access_token || !session.session?.user?.id) {
+    throw new Error("No session found");
+  }
+
+  const response = await apiClient.post(`${AUTH_URL}/request-otp`);
+  if (!response.ok) {
+    throw new Error("OTP request failed");
+  }
+  return response.data as OTPResponse;
+};
+
+interface VerifyOTPResponse {
+  message: string;
+  phone_verified: boolean;
+  account_status: string;
+}
+
+export const verifyOTP = async (data: OTPData): Promise<VerifyOTPResponse> => {
+  const { data: session, error } = await supabase.auth.getSession();
+
+  if (error) {
+    throw error;
+  }
+  if (!session.session?.access_token || !session.session?.user?.id) {
+    throw new Error("No session found");
+  }
+
+  const response = await apiClient.post(`${AUTH_URL}/verify-otp`, {
+    otp: data.otp,
+  });
+  if (!response.ok) {
+    console.log(response.problem);
+    throw new Error("OTP verification failed");
+  }
+  return response.data as VerifyOTPResponse;
+};

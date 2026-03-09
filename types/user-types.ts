@@ -18,11 +18,7 @@ export type Role =
   | "RESTAURANT_VENDOR"
   | "LAUNDRY_VENDOR";
 
-export type AccountStatus =
-  | "PENDING"
-  | "CONFIRMED"
-  | "SUSPENDED"
-  | "DEACTIVATED";
+export type AccountStatus = "PENDING" | "ACTIVE" | "SUSPENDED" | "DEACTIVATED";
 
 export type PaymentStatus = "PENDING" | "SUCCESS" | "FAILED" | "CANCELLED";
 
