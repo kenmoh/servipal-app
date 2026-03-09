@@ -236,6 +236,7 @@ const ItemDetails = () => {
       data.delivery_status as any,
       userRole,
       data.cancelled_by as any,
+      data.requires_return,
     );
     if (!config) return null;
 

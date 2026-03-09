@@ -24,6 +24,7 @@ export const getDeliveryButtonConfig = (
   currentStatus: DeliveryOrderStatus,
   userRole: "CUSTOMER" | "RIDER",
   cancelledBy?: "CUSTOMER" | null,
+  requiresReturn?: boolean,
 ): DualButtonConfig => {
   // ============================================================
   // DEFAULTS
@@ -117,7 +118,7 @@ export const getDeliveryButtonConfig = (
         };
 
       case "CANCELLED":
-        if (cancelledBy === "CUSTOMER") {
+        if (cancelledBy === "CUSTOMER" && requiresReturn) {
           return {
             primary: {
               text: "Complete & Release Payment",
