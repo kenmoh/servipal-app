@@ -106,11 +106,12 @@ const DeliveryCard = ({ order }: { order: DeliveryOrder }) => {
                   ? "Picked Up"
                   : order?.delivery_status === "PAID_NEEDS_RIDER"
                     ? "ASSIGN RIDER"
-                    : undefined
+                    : order?.requires_return
+                      ? "RETURNED"
+                      : undefined
             }
             status={order?.delivery_status}
           />
-          {/* <PaymentStatusColor status={order?.payment_status} /> */}
         </View>
       </View>
     </Pressable>

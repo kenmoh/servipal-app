@@ -36,10 +36,9 @@ const RATINGS = [
 ];
 
 const ReviewPage = () => {
-  const { revieweeId, id, dispatchId, orderId, itemId, orderType } =
+  const { revieweeId, dispatchId, orderId, itemId, orderType } =
     useLocalSearchParams<{
       revieweeId: string;
-      id: string;
       dispatchId: string;
       orderId: string;
       itemId: string;
@@ -68,6 +67,7 @@ const ReviewPage = () => {
       // Invalidate queries to refresh lists
       queryClient.invalidateQueries({ queryKey: ["reviews"] });
       queryClient.invalidateQueries({ queryKey: ["review-summary"] });
+      queryClient.invalidateQueries({ queryKey: ["delivery-order", itemId] });
 
       showSuccess("Success", "Review submitted successfully");
       router.back();
@@ -79,7 +79,7 @@ const ReviewPage = () => {
 
   const onSubmit = (data: ReviewFormData) => {
     const reviewData: ReviewInsert = {
-      order_id: orderId || undefined,
+      order_id: orderId,
       item_id: itemId || undefined,
       reviewee_id: revieweeId,
       dispatch_id: dispatchId || undefined,

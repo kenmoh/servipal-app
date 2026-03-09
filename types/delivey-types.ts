@@ -8,8 +8,8 @@ export type DeliveryOrderStatus =
   | "DELIVERED"
   | "COMPLETED"
   | "CANCELLED"
-  | "RETURNED"
-  | "DECLINED";
+  | "DECLINED"
+  | "RETURNED";
 
 export type PaymentStatus = "PENDING" | "PAID" | "FAILED" | "REFUNDED" | null;
 export type EscrowStatus = "PENDING" | "HELD" | "RELEASED" | "REFUNDED" | null;

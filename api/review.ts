@@ -107,12 +107,11 @@ export const ReviewsService = {
    */
 
   async fetchItemReviews(itemId: string): Promise<ItemReview> {
-    const { data, error } = await supabase.rpc("get_item_reviews", {
-      p_item_id: itemId,
+    const { data, error } = await supabase.rpc("get_product_item_reviews", {
+      p_product_id: itemId,
     });
 
     if (error) {
-      console.log(error.message);
       Sentry.captureException(error, {
         tags: { action: "fetch_item_reviews" },
       });

@@ -351,7 +351,6 @@ const ProductDetail = () => {
                       pathname: "/review/[id]",
                       params: {
                         id: item?.id,
-                        reviewType: "PRODUCT",
                         itemId: item?.id,
                         revieweeId: data.vendor_id,
                         orderId: data.id,

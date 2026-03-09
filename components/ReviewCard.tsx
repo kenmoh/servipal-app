@@ -2,10 +2,12 @@ import { Review } from "@/types/review-types";
 import { FontAwesome } from "@expo/vector-icons";
 import { formatDistanceToNow } from "date-fns";
 import { Image } from "expo-image";
-import { Text, View } from "react-native";
+import { StyleSheet, Text, useColorScheme, View } from "react-native";
 import HDivider from "./HDivider";
 
 const ReviewCard = ({ data }: { data: Review }) => {
+  const theme = useColorScheme();
+  const borderColor = theme === "dark" ? "#333" : "#ddd";
   const renderStars = (rating: number) => {
     return Array.from({ length: 5 }).map((_, index) => (
       <FontAwesome
@@ -23,7 +25,10 @@ const ReviewCard = ({ data }: { data: Review }) => {
     : "";
 
   return (
-    <View className="bg-card  p-4 rounded-xl mb-3 border border-border border-slate-200 dark:border-slate-800 w-[95%] self-center">
+    <View
+      style={{ borderColor, borderWidth: StyleSheet.hairlineWidth }}
+      className="bg-card  p-4 rounded-xl mb-3 w-[95%] self-center"
+    >
       <View className="flex-row items-center gap-3 mb-2">
         <View className="rounded-full overflow-hidden h-16 w-16 bg-gray-200">
           <Image

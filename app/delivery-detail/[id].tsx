@@ -5,6 +5,7 @@ import {
   Alert,
   Dimensions,
   Modal,
+  Pressable,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -12,24 +13,23 @@ import {
 } from "react-native";
 
 import { getDeliveryDetailsById, updateDeliveryStatus } from "@/api/delivery";
-import {
-  startDeliveryTracking,
-  stopDeliveryTracking,
-} from "@/utils/location-tracking";
-import { supabase } from "@/utils/supabase";
-import Entypo from "@expo/vector-icons/Entypo";
-
 import DeliveryWrapper from "@/components/DeliveryWrapper";
 import LoadingIndicator from "@/components/LoadingIndicator";
 import RiderProfile from "@/components/RiderProfile";
-import { Status } from "@/components/Status";
 import { useToast } from "@/components/ToastProvider";
 import { AppButton } from "@/components/ui/app-button";
 import { AppTextInput } from "@/components/ui/app-text-input";
 import { HEADER_BG_DARK, HEADER_BG_LIGHT } from "@/constants/theme";
 import { useLocationStore } from "@/store/locationStore";
 import { useUserStore } from "@/store/userStore";
+import {
+  startDeliveryTracking,
+  stopDeliveryTracking,
+} from "@/utils/location-tracking";
+import { supabase } from "@/utils/supabase";
+import Entypo from "@expo/vector-icons/Entypo";
 import Feather from "@expo/vector-icons/Feather";
+import Octicons from "@expo/vector-icons/Octicons";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as Sentry from "@sentry/react-native";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -128,10 +128,7 @@ const ItemDetails = () => {
   );
 
   const showCancel =
-    user?.id === data?.sender_id &&
-    (data?.delivery_status === "PENDING" ||
-      data?.delivery_status === "ASSIGNED" ||
-      data?.delivery_status === "ACCEPTED");
+    user?.id === data?.sender_id && data?.delivery_status !== "COMPLETED";
 
   const queryClient = useQueryClient();
 
@@ -237,6 +234,7 @@ const ItemDetails = () => {
       userRole,
       data.cancelled_by as any,
       data.requires_return,
+      !!data.rider_id,
     );
     if (!config) return null;
 
@@ -412,43 +410,64 @@ const ItemDetails = () => {
       },
     });
   };
+  const showRiderButton =
+    user?.id === data?.sender_id &&
+    data?.rider_id &&
+    data?.delivery_status !== "PENDING" &&
+    data?.delivery_status !== "COMPLETED";
 
   return (
     <>
       {data?.id ? (
         <DeliveryWrapper id={data?.id!} isPickedUp={isPickedUp}>
-          {user?.id === data.sender_id &&
-            data?.rider_id &&
-            data?.delivery_status !== "PENDING" &&
-            data?.delivery_status !== "COMPLETED" && (
-              <View className="self-center w-full justify-center items-center">
-                <AppButton
-                  icon={<Feather name="user" color="orange" size={22} />}
-                  width={"50%"}
-                  variant="outline"
-                  borderRadius={50}
-                  text="Contact Rider"
-                  onPress={viewRiderProfile}
-                />
-              </View>
-            )}
-
           <View className="my-5 w-[95%] self-center bg-background h-[100%] flex-1 px-5">
             <View className="gap-5">
-              <View className="gap-5 items-baseline justify-between flex-row">
-                <Text className="text-primary font-semibold text-[12px] mb-5">
-                  ORDER DETAILS
-                </Text>
-
+              <View className="gap-2 flex-row justify-end">
                 {showCancel && (
-                  <TouchableOpacity onPress={openSheet} className="self-start">
-                    <Text className="text-red-500 self-start bg-red-500/30 rounded-full px-5 py-2 font-poppins-semibold text-sm mb-5">
+                  <Pressable
+                    onPress={openSheet}
+                    className="bg-red-500/30 rounded-full px-4 py-2 flex-row items-center gap-2 active:opacity-75"
+                  >
+                    <Octicons name="x" size={18} color="#ef4444" />
+                    <Text className="text-red-500   font-poppins-semibold text-sm">
                       Cancel
                     </Text>
-                  </TouchableOpacity>
+                  </Pressable>
                 )}
+                <Pressable
+                  onPress={() => {
+                    router.push({
+                      pathname: "/receipt/delivery-receipt/[id]",
+                      params: { id: id as string },
+                    });
+                  }}
+                  className="flex-row gap-2 items-center justify-center bg-slate-700/20 rounded-full px-4 py-2 active:opacity-75"
+                >
+                  <Octicons name="checklist" size={17} color="#aaa" />
+                  <Text className="text-gray-500 font-poppins-semibold text-sm">
+                    Receipt
+                  </Text>
+                </Pressable>
 
-                <Status status={data?.delivery_status} />
+                <Pressable
+                  onPress={() => {
+                    router.push({
+                      pathname: "/report/[id]",
+                      params: {
+                        id: id as string,
+                        orderType: "DELIVERY",
+                        respondentId: data?.rider_id,
+                      },
+                    });
+                  }}
+                  disabled={data?.delivery_status === "ASSIGNED"}
+                  className="flex-row gap-2 items-center justify-center bg-slate-700/20 rounded-full px-4 py-2 active:opacity-75"
+                >
+                  <Octicons name="law" size={18} color="#aaa" />
+                  <Text className="text-gray-500   font-poppins-semibold text-sm">
+                    Dispute
+                  </Text>
+                </Pressable>
               </View>
               <View className="flex-row justify-between">
                 <View className="flex-row gap-3">
@@ -514,6 +533,19 @@ const ItemDetails = () => {
                 <Text className=" mx-7 text-xs text-muted font-poppins-light">
                   {data?.destination}
                 </Text>
+
+                {showRiderButton && (
+                  <Pressable
+                    onPress={viewRiderProfile}
+                    className="mt-3 flex-row gap-3 bg-slate-700/20 rounded-full px-4 py-2 active:opacity-75 items-center justify-center"
+                  >
+                    <Feather name="user" color="orange" size={15} />
+
+                    <Text className="font-poppins-light text-primary text-sm">
+                      Contact Rider
+                    </Text>
+                  </Pressable>
+                )}
               </View>
 
               <View className="flex-row gap-3">
@@ -617,8 +649,8 @@ const ItemDetails = () => {
 
             {/* Additional Action Buttons */}
             <View className="w-full self-center justify-between mt-4 mb-8 gap-2">
-              {data?.sender_id === user?.id &&
-                !data?.has_review &&
+              {!data?.has_review &&
+                data?.sender_id === user?.id &&
                 data?.delivery_status === "COMPLETED" && (
                   <AppButton
                     text="Review"
@@ -629,47 +661,6 @@ const ItemDetails = () => {
                     variant={"fill"}
                   />
                 )}
-
-              <View className="flex-row justify-between">
-                <AppButton
-                  text="Dispute"
-                  color={"red"}
-                  borderRadius={50}
-                  borderColor="red"
-                  width={"48%"}
-                  onPress={() => {
-                    router.push({
-                      pathname: "/report/[id]",
-                      params: {
-                        id: id as string,
-                        orderType: "DELIVERY",
-                        respondentId: data?.rider_id,
-                      },
-                    });
-                  }}
-                  disabled={data?.delivery_status !== "COMPLETED"}
-                  variant={
-                    data?.delivery_status !== "COMPLETED" ? "outline" : "fill"
-                  }
-                />
-
-                {user?.user_metadata?.user_type !== "RIDER" &&
-                  user?.user_metadata?.user_type !== "DISPATCH" && (
-                    <AppButton
-                      text="Receipt"
-                      color={"orange"}
-                      borderRadius={50}
-                      variant="outline"
-                      width={"48%"}
-                      onPress={() => {
-                        router.push({
-                          pathname: "/receipt/delivery-receipt/[id]",
-                          params: { id: id as string },
-                        });
-                      }}
-                    />
-                  )}
-              </View>
             </View>
           </View>
         </DeliveryWrapper>
