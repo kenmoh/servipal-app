@@ -116,6 +116,8 @@ const UpdateProfile = () => {
         phone_number: sanitizedPhone, // Critical fix
         state: profile?.state || "",
         bank_name: profile.bank_name || "",
+        bank_code: profile.bank_code || "",
+        bank_account_number: profile.bank_account_number || "",
 
         store_name: profile.store_name || profile.business_name || "",
         account_holder_name: profile.account_holder_name || "",
@@ -203,6 +205,7 @@ const UpdateProfile = () => {
       phone_number: data.phone_number,
       state: data.state!,
       bank_name: data.bank_name,
+      bank_code: data.bank_code,
       bank_account_number: data.bank_account_number || undefined,
       account_holder_name: data.account_holder_name,
     };

@@ -59,6 +59,7 @@ export interface UserProfile {
   user_type: Role;
   state?: string;
   bank_name?: string;
+  bank_code?: string;
   store_name: string;
   bank_account_number: string;
   profile_image_url?: string;
@@ -91,6 +92,7 @@ export interface UserProfileUpdate {
   state?: string;
   bank_account_number?: string;
   bank_name?: string;
+  bank_code?: string;
   account_holder_name?: string;
   business_registration_number?: string; // FOR RESTAURANT_VENDOR, DISPATCH AND LAUNDRY_VENDOR
   pickup_and_delivery_charge?: number | string; // FOR RESTAURANT_VENDOR AND LAUNDRY_VENDOR
