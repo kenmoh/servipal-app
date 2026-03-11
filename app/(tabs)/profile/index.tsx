@@ -1,5 +1,5 @@
 import { requestOtp } from "@/api/auth";
-import { ImageData, uploadImage } from "@/api/user";
+import { fetchProfileImageUrls, ImageData, uploadImage } from "@/api/user";
 import HDivider from "@/components/HDivider";
 import ProfileImagePicker from "@/components/ProfileImagePicker";
 import { useToast } from "@/components/ToastProvider";
@@ -12,7 +12,7 @@ import { useTheme } from "@/hooks/theme-toggle";
 import { useUserStore } from "@/store/userStore";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import * as Sentry from "@sentry/react-native";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Constants from "expo-constants";
 import * as Linking from "expo-linking";
 import * as Location from "expo-location";
@@ -51,6 +51,13 @@ const ProfileScreen = () => {
   const [canPickup, setCanPickup] = useState(
     profile?.can_pickup_and_dropoff ?? false,
   );
+
+  const { data } = useQuery({
+    queryKey: ["user-profile-image", user?.id],
+    queryFn: fetchProfileImageUrls,
+    refetchOnWindowFocus: true,
+    refetchOnMount: true,
+  });
 
   const { showSuccess, showError } = useToast();
 
@@ -237,7 +244,6 @@ const ProfileScreen = () => {
   };
 
   const handleBackgroundToggle = async () => {
-    console.log("👆 Background toggle pressed");
     try {
       // 1. Check Foreground dependency first
       const { status: fgStatus } =
@@ -254,7 +260,6 @@ const ProfileScreen = () => {
       // 2. Check Background status
       const { status: bgStatus, canAskAgain } =
         await Location.getBackgroundPermissionsAsync();
-      console.log("Current background status:", { bgStatus, canAskAgain });
 
       if (bgStatus === "granted") {
         Alert.alert(
@@ -330,30 +335,6 @@ const ProfileScreen = () => {
     }
   };
 
-  // useEffect(() => {
-  //   const loadTheme = async () => {
-  //     const storedTheme = await authStorage.getTheme();
-  //     if (storedTheme) {
-  //       setTheme(storedTheme);
-  //       // @ts-ignore - nativewind supports 'system'
-  //       if (storedTheme) setColorScheme(storedTheme);
-  //     } else {
-  //       setTheme("system");
-  //       // @ts-ignore - nativewind supports 'system'
-  //       setColorScheme("system");
-  //     }
-  //   };
-  //   loadTheme();
-  // }, [setColorScheme]);
-
-  // const handleThemeChange = (newTheme: themeType) => {
-  //   if (newTheme === theme) return;
-  //   setTheme(newTheme);
-  //   // @ts-ignore - nativewind supports 'system'
-  //   if (newTheme) setColorScheme(newTheme);
-  //   authStorage.storeTheme(newTheme);
-  // };
-
   const handleStoreRedirect = () => {
     if (user?.user_metadata?.user_type === "RESTAURANT_VENDOR") {
       router.push({
@@ -382,7 +363,11 @@ const ProfileScreen = () => {
             height={BACKDROP_IMAGE_HEIGHT}
             borderRadius={0}
             isBackdropImage
-            initialImage={backdropImageUrl || profile?.backdrop_image_url}
+            initialImage={
+              data?.backdrop_image_url ||
+              backdropImageUrl ||
+              profile?.backdrop_image_url
+            }
           />
           {isBackdropUploading && (
             <View className="absolute top-0 left-0 right-0 bottom-0 justify-center items-center bg-black/30">
@@ -398,7 +383,11 @@ const ProfileScreen = () => {
               width={100}
               height={100}
               borderRadius={50}
-              initialImage={profileImageUrl || profile?.profile_image_url}
+              initialImage={
+                data?.profile_image_url ||
+                profileImageUrl ||
+                profile?.profile_image_url
+              }
             />
             {isProfileUploading && (
               <View className="absolute top-0 left-0 right-0 bottom-0 justify-center items-center bg-black/50 rounded-full">

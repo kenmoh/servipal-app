@@ -54,6 +54,31 @@ export const fetchProfile = async (userId: string): Promise<UserProfile> => {
   return data as UserProfile;
 };
 
+interface ProfileImageURL {
+  backdrop_image_url: string;
+  profile_image_url: string;
+  account_status: string;
+}
+
+export const fetchProfileImageUrls = async (): Promise<ProfileImageURL> => {
+  const {
+    data: { session },
+    error: sessionError,
+  } = await supabase.auth.getSession();
+  if (sessionError) {
+    throw Error(sessionError.message);
+  }
+  const userId = session?.user.id;
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("backdrop_image_url, profile_image_url, account_status")
+    .eq("id", userId)
+    .single();
+
+  if (error) throw error;
+  return data as ProfileImageURL;
+};
+
 // Image upload
 export type ImageFieldType = "profile_image_url" | "backdrop_image_url";
 

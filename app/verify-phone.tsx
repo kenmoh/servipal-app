@@ -1,8 +1,9 @@
 import { requestOtp, verifyOTP } from "@/api/auth";
 import { useToast } from "@/components/ToastProvider";
 import { AppButton } from "@/components/ui/app-button";
+import { useUserStore } from "@/store/userStore";
 import * as Sentry from "@sentry/react-native";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
 import React, { useRef, useState } from "react";
 import {
@@ -20,11 +21,16 @@ const VerifyOtp = () => {
   const [focusedIndex, setFocusedIndex] = useState<number | null>(0);
   const inputRefs = useRef<Array<TextInput | null>>([]);
   const { showSuccess, showError } = useToast();
+  const queryClient = useQueryClient();
+  const { profile } = useUserStore();
 
   const verifyMutation = useMutation({
     mutationFn: verifyOTP,
     onSuccess: (data) => {
       if (data?.account_status === "ACTIVE") {
+        queryClient.invalidateQueries({
+          queryKey: ["user-profile-image", profile?.id],
+        });
         showSuccess("Success", "Phone number verified successfully!");
         router.back();
       } else {

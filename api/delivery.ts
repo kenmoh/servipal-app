@@ -409,35 +409,6 @@ export const updateDeliveryCoords = async (
   if (error) throw error;
   return data;
 };
-// export const updateDeliveryCoords = async (
-//   deliveryId: string,
-//   lat: number,
-//   lng: number,
-// ): Promise<void> => {
-//   try {
-//     const {
-//       data: { session },
-//       error: sessionError,
-//     } = await supabase.auth.getSession();
-
-//     if (sessionError || !session) {
-//       throw new Error("User not authenticated");
-//     }
-
-//     const { error } = await supabase.rpc("update_delivery_coords", {
-//       p_delivery_id: deliveryId,
-//       p_rider_id: session.user.id,
-//       p_lat: lat,
-//       p_lng: lng,
-//     });
-
-//     if (error) {
-//       throw new Error(error.message || "Failed to update location");
-//     }
-//   } catch (error) {
-//     throw error;
-//   }
-// };
 
 /**
  * Initiates a delivery request by sending package details to the backend.
