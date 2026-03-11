@@ -5,6 +5,7 @@ import FAB from "@/components/FAB";
 import LaundryCard from "@/components/LaundryCard";
 import LoadingIndicator from "@/components/LoadingIndicator";
 import StoreHeader from "@/components/StoreHeader";
+import { useVerifiedNavigation } from "@/hooks/use-verification";
 import { useCartStore } from "@/store/cartStore";
 import { useUserStore } from "@/store/userStore";
 import { LaundryItemResponse } from "@/types/item-types";
@@ -23,6 +24,7 @@ const LaundryStore = () => {
   const { user } = useUserStore();
   const { cart, addItem, totalCost, removeItem } = useCartStore();
   const [checkedItems, setCheckedItems] = useState<Set<string>>(new Set());
+  const { navigateTo } = useVerifiedNavigation();
 
   const { data, refetch, isFetching } = useQuery({
     queryKey: ["laundryItems", storeId],
@@ -88,7 +90,7 @@ const LaundryStore = () => {
         <View className="absolute bottom-12 right-3">
           <FAB
             icon={<AntDesign name="plus" color={"white"} size={24} />}
-            onPress={() => router.push("/laundry-store/add-item")}
+            onPress={() => navigateTo("/laundry-store/add-item")}
           />
         </View>
       )}

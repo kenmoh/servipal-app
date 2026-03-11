@@ -53,6 +53,7 @@ export interface DeliveryOrder {
   pickup_coordinates?: [number, number];
   dropoff_coordinates?: [number, number];
   last_known_rider_coordinates?: [number, number];
+  had_escrow: boolean;
 }
 
 export interface SendItem {

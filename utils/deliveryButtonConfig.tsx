@@ -7,6 +7,7 @@ export interface DeliveryActionConfig {
   text: string;
   icon: React.ReactNode;
   color: string;
+  borderColor?: string;
   nextStatus: DeliveryOrderStatus | null;
   disabled?: boolean;
   requiresReason?: boolean;
@@ -41,6 +42,7 @@ export const getDeliveryButtonConfig = (
     icon: <AntDesign name="close-circle" size={20} color="#ef4444" />,
     color: "#ef4444",
     textColor: "#ef4444",
+    borderColor: "#ef4444",
     variant: "outline",
     nextStatus: "CANCELLED",
     requiresReason: true,

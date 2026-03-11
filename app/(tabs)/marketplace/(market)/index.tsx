@@ -6,18 +6,19 @@ import LoadingIndicator from "@/components/LoadingIndicator";
 import ProductCard from "@/components/ProductCard";
 import { HEADER_BG_DARK, HEADER_BG_LIGHT } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
+import { useVerifiedNavigation } from "@/hooks/use-verification";
 import { useUserStore } from "@/store/userStore";
 import Feather from "@expo/vector-icons/Feather";
 import BottomSheet, { BottomSheetScrollView } from "@gorhom/bottom-sheet";
 import { FlashList } from "@shopify/flash-list";
 import { useQuery } from "@tanstack/react-query";
-import { router } from "expo-router";
 import React, { useCallback, useRef, useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 const MarketPlace = () => {
   const { user } = useUserStore();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const { navigateTo } = useVerifiedNavigation();
   const theme = useColorScheme();
   const BG_COLOR = theme === "dark" ? HEADER_BG_DARK : HEADER_BG_LIGHT;
   const HANDLE_INDICATOR_STYLE =
@@ -123,7 +124,7 @@ const MarketPlace = () => {
       ) : (
         <FAB
           icon={<Feather name="plus" size={24} color={"white"} />}
-          onPress={() => router.push("/product-detail/add-product")}
+          onPress={() => navigateTo("/product-detail/add-product")}
         />
       )}
 

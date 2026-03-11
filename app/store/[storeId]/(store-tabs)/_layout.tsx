@@ -4,7 +4,7 @@ import { HEADER_BG_DARK, HEADER_BG_LIGHT } from "@/constants/theme";
 import { useUserStore } from "@/store/userStore";
 import AntDesign from "@expo/vector-icons/AntDesign";
 import { createMaterialTopTabNavigator } from "@react-navigation/material-top-tabs";
-import { router, useLocalSearchParams, withLayoutContext } from "expo-router";
+import { useLocalSearchParams, withLayoutContext } from "expo-router";
 // import { Bike, Landmark, MapPin, Menu, Star } from "lucide-react-native";
 import LoadingIndicator from "@/components/LoadingIndicator";
 import React from "react";
@@ -12,6 +12,7 @@ import { Dimensions, StyleSheet, View } from "react-native";
 
 import StoreHeader from "@/components/StoreHeader";
 import { useColorScheme } from "@/hooks/use-color-scheme";
+import { useVerifiedNavigation } from "@/hooks/use-verification";
 
 const StoreTabs = withLayoutContext(createMaterialTopTabNavigator().Navigator);
 
@@ -90,6 +91,7 @@ const Wrapper = ({
   storeId: string;
 }) => {
   const { user } = useUserStore();
+  const { navigateTo } = useVerifiedNavigation();
   const showFAB =
     user?.user_metadata?.user_type === "RESTAURANT_VENDOR" &&
     user?.id === storeId;
@@ -101,11 +103,7 @@ const Wrapper = ({
         <View className="absolute bottom-12 right-3">
           <FAB
             icon={<AntDesign name="menu" color={"white"} />}
-            onPress={() =>
-              router.push({
-                pathname: "/store/add-menu",
-              })
-            }
+            onPress={() => navigateTo("/store/add-menu")}
           />
         </View>
       )}

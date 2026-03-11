@@ -63,7 +63,8 @@ export async function getUserDeliveryOrders(
       payment_status,
       package_name,
       requires_return,
-      has_review
+      has_review,
+      had_escrow
     `,
         { count: "exact" },
       )

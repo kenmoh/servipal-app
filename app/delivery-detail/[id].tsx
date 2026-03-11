@@ -235,6 +235,7 @@ const ItemDetails = () => {
       data.cancelled_by as any,
       data.requires_return,
       !!data.rider_id,
+      data.had_escrow,
     );
     if (!config) return null;
 

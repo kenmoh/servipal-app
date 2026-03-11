@@ -541,21 +541,40 @@ const UpdateProfile = () => {
               )}
             />
 
-            <Controller
-              control={control}
-              name="bank_account_number"
-              render={({ field: { onChange, value } }) => (
-                <AppTextInput
-                  label="Account Number"
-                  value={value || ""}
-                  onChangeText={onChange}
-                  placeholder="10-digit account number"
-                  keyboardType="numeric"
-                  errorMessage={errors.bank_account_number?.message}
-                  editable={!isPending}
-                />
-              )}
-            />
+            <View className="flex-row justify-between">
+              <Controller
+                control={control}
+                name="bank_account_number"
+                render={({ field: { onChange, value } }) => (
+                  <AppTextInput
+                    label="Account Number"
+                    value={value || ""}
+                    width={"47.5%"}
+                    onChangeText={onChange}
+                    placeholder="10-digit account number"
+                    keyboardType="numeric"
+                    errorMessage={errors.bank_account_number?.message}
+                    editable={!isPending}
+                  />
+                )}
+              />
+
+              <Controller
+                control={control}
+                name="bank_code"
+                render={({ field: { onChange, value } }) => (
+                  <AppTextInput
+                    label="Bank Code"
+                    value={value || ""}
+                    width={"47.5%"}
+                    onChangeText={onChange}
+                    placeholder="e.g. 058"
+                    errorMessage={errors.bank_code?.message}
+                    editable={false}
+                  />
+                )}
+              />
+            </View>
 
             {user?.user_metadata?.user_type !== "RIDER" && (
               <Controller

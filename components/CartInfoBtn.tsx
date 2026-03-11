@@ -60,7 +60,7 @@ const CartInfoBtn = ({ orderType, totalItem, onPress }: ViewCartBtnProps) => {
       activeOpacity={0.9}
       style={[
         styles.container,
-        { top: orderType === "FOOD" ? "20%" : "20%" },
+        { top: orderType === "FOOD" ? "10%" : "20%" },
         animatedStyle,
       ]}
     >
