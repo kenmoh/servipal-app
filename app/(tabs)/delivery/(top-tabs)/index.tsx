@@ -5,7 +5,7 @@ import FAB from "@/components/FAB";
 import HDivider from "@/components/HDivider";
 import LoadingIndicator from "@/components/LoadingIndicator";
 import StatCard from "@/components/StatCard";
-import { useColorScheme } from "@/hooks/use-color-scheme";
+import { useVerifiedNavigation } from "@/hooks/use-verification";
 import { useUserStore } from "@/store/userStore";
 import { DeliveryOrder } from "@/types/delivey-types";
 import Feather from "@expo/vector-icons/Feather";
@@ -14,15 +14,13 @@ import FontAwesome5 from "@expo/vector-icons/FontAwesome5";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { FlashList } from "@shopify/flash-list";
 import { useQuery } from "@tanstack/react-query";
-import { router } from "expo-router";
 
 import React, { useCallback, useMemo } from "react";
 import { View } from "react-native";
 
 const UserOrders = () => {
-  const { user } = useUserStore();
-  const theme = useColorScheme();
-
+  const { user, profile } = useUserStore();
+  const { navigateTo } = useVerifiedNavigation();
   const {
     data: allData,
     isLoading,
@@ -161,7 +159,7 @@ const UserOrders = () => {
         />
         {["CUSTOMER", "RESTAURANT_VENDOR", "LAUNDRY_VENDOR"].includes(
           user?.user_metadata?.user_type!,
-        ) && <FAB onPress={() => router.push("/send-package")} />}
+        ) && <FAB onPress={() => navigateTo("/send-package")} />}
       </View>
     </ErrorBoundary>
   );

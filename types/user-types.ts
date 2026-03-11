@@ -52,6 +52,7 @@ export interface UserProfile {
   created_at: string;
   updated_at?: string;
   full_name?: string;
+  account_holder_name?: string;
   business_name?: string;
   phone_number?: string;
   email: string;
@@ -90,6 +91,7 @@ export interface UserProfileUpdate {
   state?: string;
   bank_account_number?: string;
   bank_name?: string;
+  account_holder_name?: string;
   business_registration_number?: string; // FOR RESTAURANT_VENDOR, DISPATCH AND LAUNDRY_VENDOR
   pickup_and_delivery_charge?: number | string; // FOR RESTAURANT_VENDOR AND LAUNDRY_VENDOR
   store_name?: string; // CUSTOMER

@@ -774,4 +774,39 @@ export const registerPushToken = async (
   }
 };
 
-// Reset password
+interface Bank {
+  id: number;
+  name: string;
+  code: string;
+}
+
+export const fetchBanks = async (): Promise<Bank[]> => {
+  try {
+    const response = await apiClient.get("/banks");
+
+    return response.data as Bank[];
+  } catch (error) {
+    throw error;
+  }
+};
+
+interface ResolveBank {
+  account_number: string;
+  account_name: string;
+}
+
+export const resolveBank = async (
+  accountNumber: string,
+  bankCode: string,
+): Promise<ResolveBank> => {
+  try {
+    const response = await apiClient.post(`/banks/resolve`, {
+      account_number: accountNumber,
+      account_bank: bankCode,
+    });
+
+    return response.data as ResolveBank;
+  } catch (error) {
+    throw error;
+  }
+};

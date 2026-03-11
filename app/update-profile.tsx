@@ -1,5 +1,6 @@
-import { updateCurrentUserProfile } from "@/api/user";
+import { fetchBanks, resolveBank, updateCurrentUserProfile } from "@/api/user";
 import AppPicker from "@/components/AppPicker";
+import BankSelectionSheet from "@/components/BankSelectionSheet";
 import CurrentLocationButton from "@/components/CurrentLocationButton";
 import GoogleTextInput from "@/components/GoogleTextInput";
 import LoadingIndicator from "@/components/LoadingIndicator";
@@ -10,8 +11,12 @@ import { states } from "@/constants/state";
 import { useUserStore } from "@/store/userStore";
 import { UserProfileUpdate } from "@/types/user-types";
 import Feather from "@expo/vector-icons/Feather";
+import {
+  BottomSheetModal,
+  BottomSheetModalProvider,
+} from "@gorhom/bottom-sheet";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { router, Stack } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
@@ -40,6 +45,8 @@ const profileUpdateSchema = z.object({
     ),
   state: z.string().optional().nullable(),
   bank_name: z.string().optional(),
+  bank_code: z.string().optional(),
+  account_holder_name: z.string().optional(),
   bank_account_number: z.string().optional().nullable(),
   store_name: z.string().optional(),
   business_name: z.string().optional(),
@@ -59,14 +66,23 @@ const UpdateProfile = () => {
   const { showSuccess, showError } = useToast();
   const [isOpeningPickerVisible, setOpeningPickerVisibility] = useState(false);
   const [isClosingPickerVisible, setClosingPickerVisibility] = useState(false);
+  const bankSheetRef = React.useRef<BottomSheetModal>(null);
 
   const userType = user?.user_metadata?.user_type;
+
+  const { data: banks, isLoading: isLoadingBanks } = useQuery({
+    queryKey: ["banks"],
+    queryFn: () => fetchBanks(),
+    staleTime: 60 * 60 * 1000,
+    gcTime: 60 * 60 * 1000,
+  });
 
   const {
     control,
     handleSubmit,
     reset,
     setValue,
+    watch,
     formState: { errors },
   } = useForm<ProfileUpdateFormData>({
     resolver: zodResolver(profileUpdateSchema),
@@ -75,8 +91,10 @@ const UpdateProfile = () => {
       phone_number: "",
       state: "",
       bank_name: "",
+      bank_code: "",
       bank_account_number: "",
       store_name: "",
+      account_holder_name: "",
       business_name: "",
       business_address: "",
       business_registration_number: "",
@@ -100,6 +118,7 @@ const UpdateProfile = () => {
         bank_name: profile.bank_name || "",
 
         store_name: profile.store_name || profile.business_name || "",
+        account_holder_name: profile.account_holder_name || "",
         business_name: profile.business_name || "",
         business_address: profile.business_address || "",
         business_registration_number:
@@ -112,6 +131,31 @@ const UpdateProfile = () => {
       });
     }
   }, [profile, reset]);
+
+  const bankAccountNumber = watch("bank_account_number");
+  const bankCode = watch("bank_code");
+  const [isResolvingBank, setIsResolvingBank] = useState(false);
+
+  useEffect(() => {
+    const resolveAccount = async () => {
+      if (bankAccountNumber?.length === 10 && bankCode) {
+        setIsResolvingBank(true);
+        try {
+          const result = await resolveBank(bankAccountNumber, bankCode);
+          if (result?.account_name) {
+            setValue("account_holder_name", result.account_name, {
+              shouldValidate: true,
+            });
+          }
+        } catch (error) {
+          console.error("Resolution failed:", error);
+        } finally {
+          setIsResolvingBank(false);
+        }
+      }
+    };
+    resolveAccount();
+  }, [bankAccountNumber, bankCode, setValue]);
 
   const updateMutation = useMutation({
     mutationFn: (data: UserProfileUpdate) => updateCurrentUserProfile(data),
@@ -160,6 +204,7 @@ const UpdateProfile = () => {
       state: data.state!,
       bank_name: data.bank_name,
       bank_account_number: data.bank_account_number || undefined,
+      account_holder_name: data.account_holder_name,
     };
 
     if (userType === "CUSTOMER") {
@@ -192,320 +237,375 @@ const UpdateProfile = () => {
   const isPending = updateMutation.isPending;
 
   return (
-    <View className="flex-1 bg-background">
-      <Stack.Screen
-        options={{
-          headerTitle: "Update Profile",
-          headerTitleAlign: "center",
-        }}
-      />
-      <ScrollView
-        className="flex-1"
-        contentContainerStyle={{ paddingBottom: 300 }}
-        showsVerticalScrollIndicator={false}
-      >
-        <View className="w-[90%] self-center gap-5">
-          <Text className="text-secondary font-poppins-semibold text-base mt-4">
-            Profile Information
-          </Text>
-          {/* COMMON FIELDS */}
-          {user?.user_metadata?.user_type === "CUSTOMER" && (
-            <Controller
-              control={control}
-              name="full_name"
-              render={({ field: { onChange, value } }) => (
-                <AppTextInput
-                  label="Full Name"
-                  value={value}
-                  onChangeText={onChange}
-                  placeholder="Enter your full name"
-                  errorMessage={errors.full_name?.message}
-                  editable={!isPending}
-                />
-              )}
-            />
-          )}
-
-          <Controller
-            control={control}
-            name="phone_number"
-            render={({ field: { onChange, value } }) => (
-              <AppTextInput
-                label="Phone Number"
-                value={value}
-                onChangeText={onChange}
-                placeholder="e.g. 08012345678"
-                keyboardType="phone-pad"
-                errorMessage={errors.phone_number?.message}
-                editable={!isPending}
-              />
-            )}
-          />
-
-          <Controller
-            control={control}
-            name="state"
-            render={({ field: { onChange, value } }) => (
-              <AppPicker
-                label="State"
-                isState
-                items={states || []}
-                onValueChange={onChange}
-                value={value!}
-                width="100%"
-              />
-            )}
-          />
-
-          {/* CUSTOMER SPECIFIC */}
-          {userType === "CUSTOMER" && (
-            <Controller
-              control={control}
-              name="store_name"
-              render={({ field: { onChange, value } }) => (
-                <AppTextInput
-                  label="Store Name (Display Name)"
-                  value={value}
-                  onChangeText={onChange}
-                  placeholder="Your display name"
-                  errorMessage={errors.store_name?.message}
-                  editable={!isPending}
-                />
-              )}
-            />
-          )}
-
-          {/* BUSINESS SPECIFIC */}
-          {(userType === "RESTAURANT_VENDOR" ||
-            userType === "LAUNDRY_VENDOR" ||
-            userType === "DISPATCH") && (
-            <>
+    <BottomSheetModalProvider>
+      <View className="flex-1 bg-background">
+        <Stack.Screen
+          options={{
+            headerTitle: "Update Profile",
+            headerTitleAlign: "center",
+          }}
+        />
+        <ScrollView
+          className="flex-1"
+          contentContainerStyle={{ paddingBottom: 300 }}
+          showsVerticalScrollIndicator={false}
+        >
+          <View className="w-[90%] self-center gap-5">
+            <Text className="text-secondary font-poppins-semibold text-base mt-4">
+              Profile Information
+            </Text>
+            {/* COMMON FIELDS */}
+            {user?.user_metadata?.user_type === "CUSTOMER" && (
               <Controller
                 control={control}
-                name="business_name"
-                render={({ field: { onChange, value } }) => {
-                  const handleChange = (newValue: string) => {
-                    onChange(newValue);
-                    // SYNC TO FULL_NAME AND STORE_NAME IN REAL-TIME
-                    setValue("full_name", newValue, { shouldValidate: true });
-                    setValue("store_name", newValue, { shouldValidate: true });
-                  };
-                  return (
-                    <AppTextInput
-                      label="Business Name"
-                      value={value}
-                      onChangeText={handleChange} // Use synced handler
-                      placeholder="Enter business name"
-                      errorMessage={errors.business_name?.message}
-                      editable={!isPending}
-                    />
-                  );
-                }}
-              />
-
-              <Controller
-                control={control}
-                name="business_address"
-                render={({ field: { onChange, value } }) => (
-                  <View>
-                    <Text className="text-muted font-poppins-medium mb-1.5 ml-1 text-sm">
-                      Business Address
-                    </Text>
-                    <View className="flex-row items-center gap-2">
-                      <View className="flex-1">
-                        <GoogleTextInput
-                          placeholder="Search or enter address"
-                          scrollEnabled={false}
-                          value={value || ""}
-                          onPlaceSelect={(lat, lng, address) => {
-                            onChange(address);
-                          }}
-                          onChangeText={onChange}
-                          error={errors.business_address?.message}
-                        />
-                      </View>
-                      <View>
-                        <CurrentLocationButton
-                          height={56}
-                          width={56}
-                          onLocationSet={(address, coords) => {
-                            onChange(address);
-                          }}
-                        />
-                      </View>
-                    </View>
-                  </View>
-                )}
-              />
-
-              <Controller
-                control={control}
-                name="business_registration_number"
+                name="full_name"
                 render={({ field: { onChange, value } }) => (
                   <AppTextInput
-                    label="Business Reg. Number"
+                    label="Full Name"
                     value={value}
                     onChangeText={onChange}
-                    placeholder="CAC Number"
-                    errorMessage={errors.business_registration_number?.message}
+                    placeholder="Enter your full name"
+                    errorMessage={errors.full_name?.message}
                     editable={!isPending}
                   />
                 )}
               />
-            </>
-          )}
+            )}
 
-          {/* VENDOR SPECIFIC (HOURS & CHARGES) */}
-          {(userType === "RESTAURANT_VENDOR" ||
-            userType === "LAUNDRY_VENDOR") && (
-            <View className="gap-5">
-              <View className="flex-row gap-4">
-                <View className="flex-1">
-                  <Controller
-                    control={control}
-                    name="opening_hours"
-                    render={({ field: { value } }) => (
-                      <Pressable onPress={showOpeningPicker}>
-                        <View pointerEvents="none">
-                          <AppTextInput
-                            label="Opening Time"
-                            value={value}
-                            placeholder="e.g. 08:00 AM"
-                            errorMessage={errors.opening_hours?.message}
-                            editable={false}
-                          />
-                        </View>
-                      </Pressable>
-                    )}
-                  />
-                </View>
-                <View className="flex-1">
-                  <Controller
-                    control={control}
-                    name="closing_hours"
-                    render={({ field: { value } }) => (
-                      <Pressable onPress={showClosingPicker}>
-                        <View pointerEvents="none">
-                          <AppTextInput
-                            label="Closing Time"
-                            value={value}
-                            placeholder="e.g. 09:00 PM"
-                            errorMessage={errors.closing_hours?.message}
-                            editable={false}
-                          />
-                        </View>
-                      </Pressable>
-                    )}
-                  />
-                </View>
-              </View>
+            <Controller
+              control={control}
+              name="phone_number"
+              render={({ field: { onChange, value } }) => (
+                <AppTextInput
+                  label="Phone Number"
+                  value={value}
+                  onChangeText={onChange}
+                  placeholder="e.g. 08012345678"
+                  keyboardType="phone-pad"
+                  errorMessage={errors.phone_number?.message}
+                  editable={!isPending}
+                />
+              )}
+            />
 
-              <DateTimePickerModal
-                isVisible={isOpeningPickerVisible}
-                mode="time"
-                onConfirm={handleConfirmOpening}
-                onCancel={hideOpeningPicker}
-              />
+            <Controller
+              control={control}
+              name="state"
+              render={({ field: { onChange, value } }) => (
+                <AppPicker
+                  label="State"
+                  isState
+                  items={states || []}
+                  onValueChange={onChange}
+                  value={value!}
+                  width="100%"
+                />
+              )}
+            />
 
-              <DateTimePickerModal
-                isVisible={isClosingPickerVisible}
-                mode="time"
-                onConfirm={handleConfirmClosing}
-                onCancel={hideClosingPicker}
-              />
-
+            {/* CUSTOMER SPECIFIC */}
+            {userType === "CUSTOMER" && (
               <Controller
                 control={control}
-                name="pickup_and_delivery_charge"
+                name="store_name"
                 render={({ field: { onChange, value } }) => (
-                  <View>
-                    <View className="flex-row items-center gap-2 mb-1.5 ml-1">
-                      <Text className="text-muted font-poppins-medium text-sm">
-                        Delivery Charge (₦)
-                      </Text>
-                      <Pressable
-                        onPress={() =>
-                          Alert.alert(
-                            "Delivery Charge",
-                            "If you offer delivery, this is where you add your delivery charge. This amount will be added to the customer's total. Enable pickup/delivery to use this feature",
-                          )
-                        }
-                      >
-                        <Feather name="info" size={16} color="#64748b" />
-                      </Pressable>
-                    </View>
-                    <AppTextInput
-                      value={value?.toString()}
-                      onChangeText={onChange}
-                      placeholder="0"
-                      keyboardType="numeric"
-                      errorMessage={errors.pickup_and_delivery_charge?.message}
-                      editable={!isPending}
-                    />
-                  </View>
+                  <AppTextInput
+                    label="Store Name (Display Name)"
+                    value={value}
+                    onChangeText={onChange}
+                    placeholder="Your display name"
+                    errorMessage={errors.store_name?.message}
+                    editable={!isPending}
+                  />
                 )}
               />
+            )}
+
+            {/* BUSINESS SPECIFIC */}
+            {(userType === "RESTAURANT_VENDOR" ||
+              userType === "LAUNDRY_VENDOR" ||
+              userType === "DISPATCH") && (
+              <>
+                <Controller
+                  control={control}
+                  name="business_name"
+                  render={({ field: { onChange, value } }) => {
+                    const handleChange = (newValue: string) => {
+                      onChange(newValue);
+                      // SYNC TO FULL_NAME AND STORE_NAME IN REAL-TIME
+                      setValue("full_name", newValue, { shouldValidate: true });
+                      setValue("store_name", newValue, {
+                        shouldValidate: true,
+                      });
+                    };
+                    return (
+                      <AppTextInput
+                        label="Business Name"
+                        value={value}
+                        onChangeText={handleChange} // Use synced handler
+                        placeholder="Enter business name"
+                        errorMessage={errors.business_name?.message}
+                        editable={!isPending}
+                      />
+                    );
+                  }}
+                />
+
+                <Controller
+                  control={control}
+                  name="business_address"
+                  render={({ field: { onChange, value } }) => (
+                    <View>
+                      <Text className="text-muted font-poppins-medium mb-1.5 ml-1 text-sm">
+                        Business Address
+                      </Text>
+                      <View className="flex-row items-center gap-2">
+                        <View className="flex-1">
+                          <GoogleTextInput
+                            placeholder="Search or enter address"
+                            scrollEnabled={false}
+                            value={value || ""}
+                            onPlaceSelect={(lat, lng, address) => {
+                              onChange(address);
+                            }}
+                            onChangeText={onChange}
+                            error={errors.business_address?.message}
+                          />
+                        </View>
+                        <View>
+                          <CurrentLocationButton
+                            height={56}
+                            width={56}
+                            onLocationSet={(address, coords) => {
+                              onChange(address);
+                            }}
+                          />
+                        </View>
+                      </View>
+                    </View>
+                  )}
+                />
+
+                <Controller
+                  control={control}
+                  name="business_registration_number"
+                  render={({ field: { onChange, value } }) => (
+                    <AppTextInput
+                      label="Business Reg. Number"
+                      value={value}
+                      onChangeText={onChange}
+                      placeholder="CAC Number"
+                      errorMessage={
+                        errors.business_registration_number?.message
+                      }
+                      editable={!isPending}
+                    />
+                  )}
+                />
+              </>
+            )}
+
+            {/* VENDOR SPECIFIC (HOURS & CHARGES) */}
+            {(userType === "RESTAURANT_VENDOR" ||
+              userType === "LAUNDRY_VENDOR") && (
+              <View className="gap-5">
+                <View className="flex-row gap-4">
+                  <View className="flex-1">
+                    <Controller
+                      control={control}
+                      name="opening_hours"
+                      render={({ field: { value } }) => (
+                        <Pressable onPress={showOpeningPicker}>
+                          <View pointerEvents="none">
+                            <AppTextInput
+                              label="Opening Time"
+                              value={value}
+                              placeholder="e.g. 08:00 AM"
+                              errorMessage={errors.opening_hours?.message}
+                              editable={false}
+                            />
+                          </View>
+                        </Pressable>
+                      )}
+                    />
+                  </View>
+                  <View className="flex-1">
+                    <Controller
+                      control={control}
+                      name="closing_hours"
+                      render={({ field: { value } }) => (
+                        <Pressable onPress={showClosingPicker}>
+                          <View pointerEvents="none">
+                            <AppTextInput
+                              label="Closing Time"
+                              value={value}
+                              placeholder="e.g. 09:00 PM"
+                              errorMessage={errors.closing_hours?.message}
+                              editable={false}
+                            />
+                          </View>
+                        </Pressable>
+                      )}
+                    />
+                  </View>
+                </View>
+
+                <DateTimePickerModal
+                  isVisible={isOpeningPickerVisible}
+                  mode="time"
+                  onConfirm={handleConfirmOpening}
+                  onCancel={hideOpeningPicker}
+                />
+
+                <DateTimePickerModal
+                  isVisible={isClosingPickerVisible}
+                  mode="time"
+                  onConfirm={handleConfirmClosing}
+                  onCancel={hideClosingPicker}
+                />
+
+                <Controller
+                  control={control}
+                  name="pickup_and_delivery_charge"
+                  render={({ field: { onChange, value } }) => (
+                    <View>
+                      <View className="flex-row items-center gap-2 mb-1.5 ml-1">
+                        <Text className="text-muted font-poppins-medium text-sm">
+                          Delivery Charge (₦)
+                        </Text>
+                        <Pressable
+                          onPress={() =>
+                            Alert.alert(
+                              "Delivery Charge",
+                              "If you offer delivery, this is where you add your delivery charge. This amount will be added to the customer's total. Enable pickup/delivery to use this feature",
+                            )
+                          }
+                        >
+                          <Feather name="info" size={16} color="#64748b" />
+                        </Pressable>
+                      </View>
+                      <AppTextInput
+                        value={value?.toString()}
+                        onChangeText={onChange}
+                        placeholder="0"
+                        keyboardType="numeric"
+                        errorMessage={
+                          errors.pickup_and_delivery_charge?.message
+                        }
+                        editable={!isPending}
+                      />
+                    </View>
+                  )}
+                />
+              </View>
+            )}
+
+            {/* BANKING INFO */}
+            <View>
+              <Text className="text-secondary font-poppins-semibold text-base mt-4 mb-2">
+                Payout Account Information
+              </Text>
             </View>
-          )}
 
-          {/* BANKING INFO */}
-          <View>
-            <Text className="text-secondary font-poppins-semibold text-base mt-4 mb-2">
-              Payout Account Information
-            </Text>
-          </View>
-
-          <Controller
-            control={control}
-            name="bank_name"
-            render={({ field: { onChange, value } }) => (
-              <AppTextInput
-                label="Bank Name"
-                value={value}
-                onChangeText={onChange}
-                placeholder="Enter bank name"
-                errorMessage={errors.bank_name?.message}
-                editable={!isPending}
-              />
-            )}
-          />
-
-          <Controller
-            control={control}
-            name="bank_account_number"
-            render={({ field: { onChange, value } }) => (
-              <AppTextInput
-                label="Account Number"
-                value={value || ""}
-                onChangeText={onChange}
-                placeholder="10-digit account number"
-                keyboardType="numeric"
-                errorMessage={errors.bank_account_number?.message}
-                editable={!isPending}
-              />
-            )}
-          />
-
-          <View className="mt-5 mb-10">
-            <AppButton
-              text="Update Profile"
-              // onPress={handleSubmit(onSubmit)}
-              onPress={handleSubmit(onSubmit, (errors) => {
-                console.error("❌ Validation failed:", errors);
-                // Show user-friendly error
-                const firstError =
-                  Object.values(errors)[0]?.message ||
-                  "Please fill all required fields";
-                showError("Validation Error", firstError);
-              })}
-              disabled={isPending}
-              icon={isPending ? <ActivityIndicator color="white" /> : undefined}
-              width="100%"
+            <Controller
+              control={control}
+              name="bank_name"
+              render={({ field: { value, onChange } }) => (
+                <Pressable
+                  onPress={() => {
+                    if (!isPending) {
+                      bankSheetRef.current?.present();
+                    }
+                  }}
+                >
+                  <View pointerEvents="none">
+                    <AppTextInput
+                      label="Bank Name"
+                      value={value}
+                      placeholder="Select bank"
+                      errorMessage={errors.bank_name?.message}
+                      editable={false}
+                      icon={
+                        <Feather
+                          name="chevron-down"
+                          size={18}
+                          color="#94a3b8"
+                        />
+                      }
+                    />
+                  </View>
+                </Pressable>
+              )}
             />
+
+            <Controller
+              control={control}
+              name="bank_account_number"
+              render={({ field: { onChange, value } }) => (
+                <AppTextInput
+                  label="Account Number"
+                  value={value || ""}
+                  onChangeText={onChange}
+                  placeholder="10-digit account number"
+                  keyboardType="numeric"
+                  errorMessage={errors.bank_account_number?.message}
+                  editable={!isPending}
+                />
+              )}
+            />
+
+            {user?.user_metadata?.user_type !== "RIDER" && (
+              <Controller
+                control={control}
+                name="account_holder_name"
+                render={({ field: { onChange, value } }) => (
+                  <AppTextInput
+                    label="Account Holder Name"
+                    value={value || ""}
+                    onChangeText={onChange}
+                    placeholder="Enter account holder name"
+                    errorMessage={errors.account_holder_name?.message}
+                    editable={false}
+                    icon={
+                      isResolvingBank ? (
+                        <ActivityIndicator size="small" color="#FF8C00" />
+                      ) : undefined
+                    }
+                  />
+                )}
+              />
+            )}
+
+            <View className="mt-5 mb-10">
+              <AppButton
+                text="Update Profile"
+                // onPress={handleSubmit(onSubmit)}
+                onPress={handleSubmit(onSubmit, (errors) => {
+                  const firstError =
+                    Object.values(errors)[0]?.message ||
+                    "Please fill all required fields";
+                  showError("Validation Error", firstError);
+                })}
+                disabled={isPending}
+                icon={
+                  isPending ? <ActivityIndicator color="white" /> : undefined
+                }
+                width="100%"
+              />
+            </View>
           </View>
-        </View>
-      </ScrollView>
-    </View>
+        </ScrollView>
+
+        <BankSelectionSheet
+          ref={bankSheetRef}
+          banks={banks || []}
+          onSelect={(bank) => {
+            setValue("bank_name", bank.name, { shouldValidate: true });
+            setValue("bank_code", bank.code, { shouldValidate: true });
+          }}
+        />
+      </View>
+    </BottomSheetModalProvider>
   );
 };
 
