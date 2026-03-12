@@ -1,5 +1,6 @@
 import { ReviewsService } from "@/api/review";
 import EmptyList from "@/components/EmptyList";
+import HDivider from "@/components/HDivider";
 import LoadingIndicator from "@/components/LoadingIndicator";
 import ReviewCard from "@/components/ReviewCard";
 import { HEADER_BG_DARK, HEADER_BG_LIGHT } from "@/constants/theme";
@@ -34,6 +35,7 @@ const reviews = () => {
   }
   return (
     <View className="bg-background flex-1">
+      <HDivider />
       <Stack.Screen
         options={{
           title: "Reviews",
@@ -48,6 +50,7 @@ const reviews = () => {
       <FlashList
         data={data?.reviews || []}
         keyExtractor={(item: Review) => item.id.toString()}
+        ItemSeparatorComponent={() => <HDivider width={"90%"} />}
         renderItem={({ item }: { item: Review }) => <ReviewCard data={item} />}
         refreshing={isFetching}
         onRefresh={() => (

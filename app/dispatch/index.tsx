@@ -1,17 +1,18 @@
 import { fetchDispatchRiders } from "@/api/user";
 import FAB from "@/components/FAB";
 import RiderCard from "@/components/RiderCard";
+import { useVerifiedNavigation } from "@/hooks/use-verification";
 import { useUserStore } from "@/store/userStore";
 import { RiderResponse } from "@/types/user-types";
 import { AntDesign } from "@expo/vector-icons";
 import { FlashList } from "@shopify/flash-list";
 import { useQuery } from "@tanstack/react-query";
-import { router } from "expo-router";
 import React from "react";
 import { RefreshControl, StyleSheet, View } from "react-native";
 
 const DispatchRiders = () => {
   const { user } = useUserStore();
+  const { navigateTo } = useVerifiedNavigation();
   const { data, isFetching, refetch } = useQuery({
     queryKey: ["dispatch-riders", user?.id],
     queryFn: fetchDispatchRiders,
@@ -21,7 +22,7 @@ const DispatchRiders = () => {
   return (
     <View className="bg-background flex-1">
       <FlashList
-        data={data || []}
+        data={data?.riders || []}
         keyExtractor={(item) => item.id}
         contentContainerStyle={{ paddingHorizontal: 12, paddingBottom: 24 }}
         showsVerticalScrollIndicator={false}
@@ -32,12 +33,14 @@ const DispatchRiders = () => {
         refreshing={isFetching}
         onRefresh={refetch}
       />
-      <View className="absolute bottom-10 right-0">
-        <FAB
-          icon={<AntDesign name="user-add" color={"white"} size={24} />}
-          onPress={() => router.push({ pathname: "/dispatch/add-rider" })}
-        />
-      </View>
+      {
+        <View className="absolute bottom-10 right-0">
+          <FAB
+            icon={<AntDesign name="user-add" color={"white"} size={24} />}
+            onPress={() => navigateTo("/dispatch/add-rider")}
+          />
+        </View>
+      }
     </View>
   );
 };

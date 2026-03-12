@@ -1,5 +1,6 @@
 import {
   CreateRiderData,
+  DispatchRidersResponse,
   LocationCoordinates,
   NearbyVendorsResponse,
   RiderResponse,
@@ -182,9 +183,8 @@ export const fetchRider = async (riderId: string): Promise<RiderResponse> => {
     }
 
     // Fetch rider using rpc
-    const { data, error } = await await supabase.rpc("get_rider_with_reviews", {
+    const { data, error } = await await supabase.rpc("get_rider_by_id", {
       rider_id: riderId,
-      review_limit: 25,
     });
 
     if (error) {
@@ -200,6 +200,38 @@ export const fetchRider = async (riderId: string): Promise<RiderResponse> => {
     throw error;
   }
 };
+
+// export const fetchRider = async (riderId: string): Promise<RiderResponse> => {
+//   try {
+//     // Get current session
+//     const {
+//       data: { session },
+//       error: sessionError,
+//     } = await supabase.auth.getSession();
+
+//     if (sessionError || !session) {
+//       throw new Error("User not authenticated");
+//     }
+
+//     // Fetch rider using rpc
+//     const { data, error } = await await supabase.rpc("get_rider_with_reviews", {
+//       rider_id: riderId,
+//       review_limit: 25,
+//     });
+
+//     if (error) {
+//       throw new Error(error.message || "Failed to fetch profile");
+//     }
+
+//     if (!data) {
+//       throw new Error("Profile not found");
+//     }
+
+//     return data as RiderResponse;
+//   } catch (error) {
+//     throw error;
+//   }
+// };
 
 export const getCurrentUserProfile = async (): Promise<UserProfile> => {
   try {
@@ -275,38 +307,72 @@ export const updateCurrentUserProfile = async (
   }
 };
 
-export const fetchDispatchRiders = async (): Promise<RiderResponse[]> => {
-  try {
-    // 1. Get current authenticated user (should be a dispatcher)
-    const {
-      data: { session },
-      error: sessionError,
-    } = await supabase.auth.getSession();
+// export const fetchDispatchRiders = async (): Promise<RiderResponse[]> => {
+//   try {
+//     // 1. Get current authenticated user (should be a dispatcher)
+//     const {
+//       data: { session },
+//       error: sessionError,
+//     } = await supabase.auth.getSession();
 
-    if (sessionError || !session) {
-      throw new Error("User not authenticated");
+//     if (sessionError || !session) {
+//       throw new Error("User not authenticated");
+//     }
+
+//     const dispatcherId = session.user.id;
+
+//     // Call the RPC function
+//     const { data: riders, error: fetchError } = await supabase.rpc(
+//       "get_my_dispatch_riders",
+//       {
+//         dispatch_user_id: dispatcherId,
+//       },
+//     );
+
+//     if (fetchError) {
+//       throw new Error(fetchError.message || "Failed to load riders");
+//     }
+
+//     return riders as RiderResponse[];
+//   } catch (error) {
+//     throw error;
+//   }
+// };
+
+export const fetchDispatchRiders =
+  async (): Promise<DispatchRidersResponse> => {
+    try {
+      // 1. Get current authenticated user (should be a dispatcher)
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession();
+
+      if (sessionError || !session) {
+        throw new Error("User not authenticated");
+      }
+
+      const dispatcherId = session.user.id;
+
+      // Call the RPC function
+      const { data: riders, error: fetchError } = await supabase.rpc(
+        "get_riders_by_dispatcher",
+        {
+          dispatcher_uuid: dispatcherId,
+          page_size: 20,
+          page_offset: 0,
+        },
+      );
+
+      if (fetchError) {
+        throw new Error(fetchError.message || "Failed to load riders");
+      }
+
+      return riders as DispatchRidersResponse;
+    } catch (error) {
+      throw error;
     }
-
-    const dispatcherId = session.user.id;
-
-    // Call the RPC function
-    const { data: riders, error: fetchError } = await supabase.rpc(
-      "get_my_dispatch_riders",
-      {
-        dispatch_user_id: dispatcherId,
-      },
-    );
-
-    if (fetchError) {
-      throw new Error(fetchError.message || "Failed to load riders");
-    }
-
-    return riders as RiderResponse[];
-  } catch (error) {
-    throw error;
-  }
-};
-
+  };
 // vendors.ts
 
 interface GetNearbyVendorsOptions {
@@ -672,36 +738,6 @@ export const getNearbyRiders = async (
     throw error;
   }
 };
-
-/*
-LEGACY
-*/
-// export const getNearbyRiders = async (
-//   userId: string,
-// ): Promise<RiderResponse[]> => {
-//   try {
-//     const {
-//       data: { session },
-//       error: sessionError,
-//     } = await supabase.auth.getSession();
-
-//     if (sessionError || !session) {
-//       throw new Error("User not authenticated");
-//     }
-//     // Call RPC function
-//     const { data, error } = await supabase.rpc("get_nearby_riders", {
-//       p_user_id: userId,
-//     });
-
-//     if (error) {
-//       throw new Error(error.message || "Failed to fetch nearby riders");
-//     }
-
-//     return data as RiderResponse[];
-//   } catch (error) {
-//     throw error;
-//   }
-// };
 
 export const getRiderProfile = async (
   riderId: string,

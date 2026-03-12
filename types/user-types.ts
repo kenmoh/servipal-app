@@ -162,6 +162,16 @@ export interface RiderResponse {
   reviews: UserReview;
 }
 
+export interface DispatchRidersResponse {
+  pagination: {
+    page_size: number;
+    page_offset: number;
+    total_count: number;
+    has_more: boolean;
+  };
+  riders: RiderResponse[];
+}
+
 export interface CreateRiderData {
   email: string;
   password: string;

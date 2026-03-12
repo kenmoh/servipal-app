@@ -1,4 +1,5 @@
 import { ReviewsService } from "@/api/review";
+import HDivider from "@/components/HDivider";
 import ReviewCard from "@/components/ReviewCard";
 import { Review } from "@/types/review-types";
 import { FlashList } from "@shopify/flash-list";
@@ -18,6 +19,7 @@ const ProductReviews = () => {
 
   return (
     <View className="flex-1 bg-background ">
+      <HDivider />
       <FlashList
         data={data?.reviews || []}
         keyExtractor={(item: Review) => item.id.toString()}
@@ -27,6 +29,7 @@ const ProductReviews = () => {
           <RefreshControl refreshing={isFetching} onRefresh={refetch} />
         )}
         scrollEventThrottle={16}
+        ItemSeparatorComponent={() => <HDivider width={"90%"} />}
         showsVerticalScrollIndicator={false}
         removeClippedSubviews={true}
       />

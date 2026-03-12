@@ -315,7 +315,7 @@ const RidersScreen = () => {
 
       <FlashList
         // ref={listRef}
-        data={riders?.riders || []}
+        data={riders || []}
         keyExtractor={keyExtractor}
         renderItem={renderItem}
         refreshing={isFetching}
@@ -406,11 +406,11 @@ const RidersScreen = () => {
                   width={"70%"}
                   borderRadius={50}
                   backgroundColor={
-                    getDeliveryButtonConfig("PENDING", "SENDER")?.primary
+                    getDeliveryButtonConfig("PENDING", "CUSTOMER")?.primary
                       ?.color || "orange"
                   }
                   text={
-                    getDeliveryButtonConfig("PENDING", "SENDER")?.primary
+                    getDeliveryButtonConfig("PENDING", "CUSTOMER")?.primary
                       ?.text || "Book Rider"
                   }
                   variant="fill"

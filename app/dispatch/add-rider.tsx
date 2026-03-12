@@ -163,6 +163,7 @@ const AddRider = () => {
             <AppTextInput
               placeholder="Full Name"
               onBlur={onBlur}
+              height={45}
               onChangeText={onChange}
               autoCapitalize="words"
               value={value}
@@ -178,6 +179,7 @@ const AddRider = () => {
               <AppTextInput
                 placeholder="Email"
                 onBlur={onBlur}
+                height={45}
                 autoCapitalize="none"
                 onChangeText={onChange}
                 keyboardType="email-address"
@@ -194,6 +196,7 @@ const AddRider = () => {
             <AppTextInput
               placeholder="Phone Number"
               onBlur={onBlur}
+              height={45}
               onChangeText={onChange}
               value={value}
               keyboardType={"phone-pad"}
@@ -210,6 +213,7 @@ const AddRider = () => {
               onBlur={onBlur}
               autoCapitalize="characters"
               onChangeText={onChange}
+              height={45}
               value={value}
               errorMessage={errors.bike_number?.message}
             />
@@ -227,6 +231,7 @@ const AddRider = () => {
                   onChangeText={onChange}
                   autoCapitalize="none"
                   secureTextEntry
+                  height={45}
                   value={value}
                   errorMessage={errors?.root?.password?.message}
                 />
@@ -239,6 +244,7 @@ const AddRider = () => {
                 <AppTextInput
                   placeholder="Confirm Password"
                   onBlur={onBlur}
+                  height={45}
                   onChangeText={onChange}
                   autoCapitalize="none"
                   secureTextEntry
@@ -259,7 +265,7 @@ const AddRider = () => {
                 : "Submit"
           }
           onPress={handleSubmit(onSubmit)}
-          borderRadius={50}
+          borderRadius={10}
           disabled={createMutation.isPending || updateMutation.isPending}
           icon={
             createMutation.isPending || updateMutation.isPending ? (
@@ -273,7 +279,7 @@ const AddRider = () => {
             text="Delete Rider"
             variant="outline"
             backgroundColor="red"
-            borderRadius={50}
+            borderRadius={10}
             color="red"
             borderColor="red"
             onPress={() => deleteRiderMutation.mutate}

@@ -134,7 +134,7 @@ const RiderProfile = ({ ref, riderId, showButton = true }: ProfileData) => {
           <View className="flex-row my-4 justify-between w-[80%] self-center">
             <View className="items-center">
               <Text className="text-xl font-poppins-bold text-primary">
-                {data?.total_delivery_count || 0}
+                {data?.reviews?.stats?.total_reviews || 0}
               </Text>
               <Text className="font-poppins-light text-muted text-sm">
                 Trips
@@ -142,7 +142,7 @@ const RiderProfile = ({ ref, riderId, showButton = true }: ProfileData) => {
             </View>
             <View className="items-center">
               <Text className="text-xl font-poppins-bold text-primary">
-                {data?.average_rating}
+                {data?.reviews?.stats?.average_rating}
               </Text>
               <Text className="font-poppins-light text-muted text-sm">
                 Rating

@@ -199,8 +199,9 @@ const ProductDetail = () => {
               <Text className="text-[10px] text-slate-400 font-poppins-light">
                 Shipping
               </Text>
-              <Text className="text-xs text-slate-900 dark:text-slate-200 font-poppins-medium">
-                Free Delivery
+              <Text className="text-xs text-slate-900 dark:text-slate-200  font-poppins-medium">
+                ₦ {product?.shipping_cost}{" "}
+                {product?.shipping_cost === 0 && "Free Delivery"}
               </Text>
             </View>
           </View>
@@ -213,7 +214,8 @@ const ProductDetail = () => {
                 Returns
               </Text>
               <Text className="text-xs text-slate-900 dark:text-slate-200 font-poppins-medium">
-                30 Days Free
+                {product?.return_days}{" "}
+                {product?.return_days! > 0 ? "Days Free" : "N/A"}
               </Text>
             </View>
           </View>
@@ -226,7 +228,7 @@ const ProductDetail = () => {
                 Warranty
               </Text>
               <Text className="text-xs text-slate-900 dark:text-slate-200 font-poppins-medium">
-                1 Year Local
+                {product?.warranty} {product?.warranty ? "Year" : "N/A"}
               </Text>
             </View>
           </View>
@@ -341,7 +343,7 @@ const ProductDetail = () => {
         )}
 
         {/* Quantity & Inventory */}
-        <View className="flex-row items-center justify-between bg-input p-4 rounded-3xl mb-8">
+        <View className="flex-row items-center justify-between bg-input p-4 rounded-2xl mb-8">
           <View>
             <Text className="text-sm font-poppins-bold text-slate-900 dark:text-white">
               Quantity
