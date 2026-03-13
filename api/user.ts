@@ -711,7 +711,7 @@ interface GetNearbyRidersOptions {
 
 export const getNearbyRiders = async (
   options: GetNearbyRidersOptions = {},
-): Promise<RiderResponse[]> => {
+): Promise<DispatchRidersResponse> => {
   const { maxDistanceKm = 100, page = 0, pageSize = 20 } = options;
   try {
     const {
@@ -733,7 +733,7 @@ export const getNearbyRiders = async (
       throw new Error(error.message || "Failed to fetch nearby riders");
     }
 
-    return data as RiderResponse[];
+    return data as DispatchRidersResponse;
   } catch (error) {
     throw error;
   }

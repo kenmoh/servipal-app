@@ -26,6 +26,20 @@ const ReceiptLayout = () => {
       />
 
       <Stack.Screen
+        name="laundry-receipt/[id]"
+        options={{
+          title: "Receipt",
+          headerTintColor: theme === "dark" ? HEADER_BG_LIGHT : HEADER_BG_DARK,
+          headerShadowVisible: false,
+          headerTitleStyle: { fontFamily: "Poppins-Medium" },
+          headerStyle: {
+            backgroundColor:
+              theme === "dark" ? HEADER_BG_DARK : HEADER_BG_LIGHT,
+          },
+        }}
+      />
+
+      <Stack.Screen
         name="[id]"
         options={{
           title: "Receipt",

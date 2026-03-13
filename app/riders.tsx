@@ -1,4 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 
 import { getDeliveryOrderByTxRef, updateDeliveryStatus } from "@/api/delivery";
@@ -228,19 +233,32 @@ const RidersScreen = () => {
 
   // ============ FETCH RIDERS ============
   const {
-    data: riders,
+    data,
     isLoading,
     error,
     refetch,
     isFetching,
-  } = useQuery({
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
     queryKey: ["riders", user?.id],
-    queryFn: async () => getNearbyRiders(),
+    queryFn: ({ pageParam = 0 }) => getNearbyRiders({ page: pageParam }),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage) => {
+      if (lastPage.pagination.has_more) {
+        return (
+          lastPage.pagination.page_offset / lastPage.pagination.page_size + 1
+        );
+      }
+      return undefined;
+    },
     enabled: !!user?.id,
     staleTime: 1000 * 30, // 30 seconds
     gcTime: 1000 * 60 * 5, // 5 minutes
-    refetchOnWindowFocus: true,
   });
+
+  const ridersList = data?.pages.flatMap((page) => page.riders) || [];
 
   // ============ REALTIME RIDER UPDATES ============
   useEffect(() => {
@@ -298,7 +316,9 @@ const RidersScreen = () => {
   }
 
   if (error) {
-    return <RefreshButton onPress={refetch} label="Error loading riders" />;
+    return (
+      <RefreshButton onPress={() => refetch()} label="Error loading riders" />
+    );
   }
 
   return (
@@ -314,14 +334,26 @@ const RidersScreen = () => {
       <HDivider />
 
       <FlashList
-        // ref={listRef}
-        data={riders || []}
+        data={ridersList}
         keyExtractor={keyExtractor}
         renderItem={renderItem}
-        refreshing={isFetching}
+        refreshing={isFetching && !isFetchingNextPage}
         onRefresh={handleRefresh}
         onLayout={handleLayoutComplete}
         onScroll={handleScrollToHide}
+        onEndReached={() => {
+          if (hasNextPage && !isFetchingNextPage) {
+            fetchNextPage();
+          }
+        }}
+        onEndReachedThreshold={0.5}
+        ListFooterComponent={() =>
+          isFetchingNextPage ? (
+            <View className="py-4">
+              <ActivityIndicator size="small" color="#aaa" />
+            </View>
+          ) : null
+        }
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
         removeClippedSubviews={true}

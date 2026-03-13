@@ -37,6 +37,14 @@ export interface Dispute {
 /**
  * Dispute message from the dispute_messages table
  */
+
+export interface DisputeMessageSender {
+  id: string;
+  full_name: string;
+  profile_image_url: string | null;
+  user_type: string;
+}
+
 export interface DisputeMessage {
   id: string;
   dispute_id: string;
@@ -44,8 +52,17 @@ export interface DisputeMessage {
   message_text: string;
   attachments: string[] | null;
   created_at: string;
-  is_read: boolean;
-  read_at: string | null;
+  sender?: DisputeMessageSender;
+}
+
+export interface DisputeMessagesResponse {
+  messages: DisputeMessage[];
+  total_count: number;
+}
+
+export interface DisputeUnreadCount {
+  unread_count: number;
+  last_read_at: string | null;
 }
 
 /**

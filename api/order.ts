@@ -1,7 +1,7 @@
 import {
   DetailResponse,
   OrderStatus,
-  UnifiedOrderResponse,
+  UserFoodLaundryOrdersResponse,
 } from "@/types/order-types";
 import { apiClient } from "@/utils/client";
 import { supabase } from "@/utils/supabase";
@@ -22,11 +22,15 @@ const LAUNDRY_BASE_URL = "/laundry";
 export const fetchUserOrders = async (
   userId: string,
   orderType: "FOOD" | "LAUNDRY",
-): Promise<UnifiedOrderResponse[]> => {
+  offset?: number,
+  limit?: number,
+): Promise<UserFoodLaundryOrdersResponse> => {
   try {
-    const { data, error } = await supabase.rpc("get_user_orders", {
+    const { data, error } = await supabase.rpc("get_user_orders_json", {
       p_user_id: userId,
       p_order_type: orderType,
+      p_limit: limit,
+      p_offset: offset,
     });
 
     if (error) throw error;
@@ -76,7 +80,9 @@ export const fetchOrderDetails = async (
 
     if (error) {
       console.log(error);
-      Sentry.captureException(error, { tags: { action: "fetch_order_details" } });
+      Sentry.captureException(error, {
+        tags: { action: "fetch_order_details" },
+      });
       throw error;
     }
     return data;

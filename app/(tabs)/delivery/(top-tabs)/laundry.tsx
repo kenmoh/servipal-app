@@ -4,7 +4,6 @@ import FoodLaundryOrderCard from "@/components/food-laundry-order-card";
 import HDivider from "@/components/HDivider";
 import LoadingIndicator from "@/components/LoadingIndicator";
 import StatCard from "@/components/StatCard";
-import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useUserStore } from "@/store/userStore";
 import { UnifiedOrderResponse } from "@/types/order-types";
 import Feather from "@expo/vector-icons/Feather";
@@ -16,9 +15,8 @@ import { useQuery } from "@tanstack/react-query";
 import React, { useCallback, useMemo } from "react";
 import { View } from "react-native";
 
-const UserOrders = () => {
+const LaundryOrdersScreen = () => {
   const { user } = useUserStore();
-
 
   const {
     data: orders,
@@ -45,21 +43,23 @@ const UserOrders = () => {
   const stats = useMemo(
     () => ({
       pending:
-        data?.filter(
+        orders?.orders?.filter(
           (order) =>
             order.order_status === "PENDING" ||
             order.order_status === "PREPARING",
         ).length || 0,
       pickedUp:
-        data?.filter((order) => order.order_status === "IN_TRANSIT").length ||
-        0,
+        orders?.orders?.filter((order) => order.order_status === "IN_TRANSIT")
+          .length || 0,
       completed:
-        data?.filter((order) => order.order_status === "COMPLETED").length || 0,
+        orders?.orders?.filter((order) => order.order_status === "COMPLETED")
+          .length || 0,
       delivered:
-        data?.filter((order) => order.order_status === "DELIVERED").length || 0,
-      packageOrders: data?.length || 0,
+        orders?.orders?.filter((order) => order.order_status === "DELIVERED")
+          .length || 0,
+      packageOrders: orders?.orders?.length || 0,
     }),
-    [data],
+    [orders?.orders],
   );
 
   const statItems = useMemo(() => {
@@ -68,7 +68,7 @@ const UserOrders = () => {
         id: "total",
         icon: <FontAwesome5 name="coins" color="gray" size={24} />,
         label: "Total Orders",
-        value: data?.length || 0,
+        value: orders?.orders?.length || 0,
       },
       {
         id: "pickedUp",
@@ -97,7 +97,12 @@ const UserOrders = () => {
         value: stats.completed,
       },
     ];
-  }, [data?.length, stats.completed, stats.pickedUp, stats.delivered]);
+  }, [
+    orders?.orders?.length,
+    stats.completed,
+    stats.pickedUp,
+    stats.delivered,
+  ]);
 
   const renderItem = useCallback(
     ({ item }: { item: UnifiedOrderResponse }) => (
@@ -148,7 +153,7 @@ const UserOrders = () => {
     <ErrorBoundary>
       <View className="bg-background flex-1 px-2">
         <FlashList
-          data={data}
+          data={orders?.orders || []}
           keyExtractor={keyExtractor}
           renderItem={renderItem}
           ListHeaderComponent={renderHeader}
@@ -161,4 +166,4 @@ const UserOrders = () => {
   );
 };
 
-export default UserOrders;
+export default LaundryOrdersScreen;

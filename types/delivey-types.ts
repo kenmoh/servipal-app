@@ -70,3 +70,12 @@ export interface SendItem {
   dropoffLat: number | null;
   dropoffLng: number | null;
 }
+export interface DeliveryOrdersResponse {
+  orders: DeliveryOrder[];
+  pagination: {
+    page_size: number;
+    page_offset: number;
+    total_count: number;
+    has_more: boolean;
+  };
+}

@@ -172,14 +172,14 @@ export default Sentry.wrap(function RootLayout() {
                       name="wallet"
                       options={{
                         headerShown: false,
-                        animation: "fade_from_bottom",
+                        animation: "slide_from_bottom",
                       }}
                     />
                     <Stack.Screen
                       name="wallet/transaction"
                       options={{
                         headerShown: false,
-                        animation: "fade_from_bottom",
+                        animation: "slide_from_bottom",
                       }}
                     />
                     <Stack.Screen
@@ -211,6 +211,7 @@ export default Sentry.wrap(function RootLayout() {
                       name="receipt"
                       options={{
                         headerShown: false,
+                        animation: "slide_from_bottom",
                       }}
                     />
                     <Stack.Screen
@@ -240,7 +241,7 @@ export default Sentry.wrap(function RootLayout() {
                       name="change-password"
                       options={{
                         title: "Change Password",
-                        animation: "fade_from_bottom",
+                        animation: "slide_from_bottom",
                         headerShown: true,
                         headerShadowVisible: false,
                         headerTintColor:
@@ -281,7 +282,7 @@ export default Sentry.wrap(function RootLayout() {
                       name="dispatch"
                       options={{
                         headerShown: false,
-                        animation: "slide_from_right",
+                        animation: "slide_from_bottom",
                       }}
                     />
                     <Stack.Screen

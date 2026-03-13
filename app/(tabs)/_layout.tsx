@@ -9,7 +9,6 @@ export default function TabLayout() {
   const theme = useColorScheme();
   const { user } = useUserStore();
   const BG_COLOR = theme === "dark" ? HEADER_BG_DARK : HEADER_BG_LIGHT;
-  const TINT_COLOR = theme === "dark" ? HEADER_BG_LIGHT : HEADER_BG_DARK;
   const ALLOWED_USER = ["CUSTOMER", "LAUNDRY_VENDOR", "RESTAURANT_VENDOR"];
   const isAllowed = ALLOWED_USER.includes(user?.user_metadata?.user_type!);
   const hideForRider = user?.user_metadata.user_type === "RIDER";

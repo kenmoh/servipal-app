@@ -96,6 +96,7 @@ const ReportPage = () => {
             fontSize: 18,
           },
           headerTintColor: theme === "dark" ? HEADER_BG_LIGHT : HEADER_BG_DARK,
+          animation: "slide_from_bottom",
         }}
       />
       <ScrollView

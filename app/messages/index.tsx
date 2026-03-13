@@ -1,9 +1,14 @@
-import { getMyDisputes, subscribeToDisputeUpdates } from "@/api/dispute";
+import {
+  getDisputeUnreadCount,
+  getMyDisputes,
+  markDisputeAsRead,
+  subscribeToDisputeUpdates,
+} from "@/api/dispute";
 import EmptyList from "@/components/EmptyList";
 import { useUserStore } from "@/store/userStore";
 import type { Dispute } from "@/types/dispute-types";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
 import React, { useCallback, useEffect } from "react";
 import {
@@ -98,11 +103,10 @@ const StatusBadge = ({ status }: { status: string }) => {
 const DisputeItem = ({
   dispute,
   currentUserId,
-  onPress,
 }: {
   dispute: Dispute;
   currentUserId: string;
-  onPress: () => void;
+  // onPress: () => void;
 }) => {
   // Determine other party based on who initiated
   const isInitiator = dispute.initiator_id === currentUserId;
@@ -113,10 +117,32 @@ const DisputeItem = ({
   // Generate display name from order type (we don't have profile data here)
   const displayName = `${dispute.order_type} Support`;
   const initials = getInitials(displayName);
+  const { mutate } = useMutation({
+    mutationFn: () => markDisputeAsRead(dispute.id),
+  });
+
+  const { data, refetch } = useQuery({
+    queryKey: ["dispute-unread-count", currentUserId],
+    queryFn: () => getDisputeUnreadCount(dispute.id),
+  });
+
+  const queryClient = useQueryClient();
+
+  const handleDisputePress = () => {
+    router.push({
+      pathname: "/messages/[id]",
+      params: { id: dispute.id },
+    });
+    mutate();
+    refetch();
+    queryClient.invalidateQueries({
+      queryKey: ["dispute-unread-count", currentUserId],
+    });
+  };
 
   return (
     <Pressable
-      onPress={onPress}
+      onPress={handleDisputePress}
       className="bg-surface-elevated rounded-2xl mb-3 active:opacity-80"
     >
       <View className="flex-row items-center p-4">
@@ -126,6 +152,12 @@ const DisputeItem = ({
             {initials}
           </Text>
         </View>
+
+        {data?.unread_count && data.unread_count > 0 && (
+          <View className="absolute right-3 top-2 bg-orange-500 rounded-full items-center justify-center w-6 h-6">
+            <Text className="text-primary tex-x">{data.unread_count}</Text>
+          </View>
+        )}
 
         {/* Content */}
         <View className="flex-1 ml-3">
@@ -228,7 +260,7 @@ const DisputeListScreen = () => {
       <DisputeItem
         dispute={item}
         currentUserId={user?.id || ""}
-        onPress={() => handleDisputePress(item.id)}
+        // onPress={() => handleDisputePress(item.id)}
       />
     ),
     [user?.id, handleDisputePress],

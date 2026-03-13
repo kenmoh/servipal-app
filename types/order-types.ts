@@ -66,6 +66,16 @@ export interface UnifiedOrderResponse {
   updated_at: string;
 }
 
+export interface UserFoodLaundryOrdersResponse {
+  orders: UnifiedOrderResponse[];
+  pagination: {
+    page_size: number;
+    page_offset: number;
+    total_count: number;
+    has_more: boolean;
+  };
+}
+
 export interface DeliveryDetails {
   id: string;
   order_id: string;

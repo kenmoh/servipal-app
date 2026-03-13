@@ -13,13 +13,13 @@ import FontAwesome from "@expo/vector-icons/FontAwesome";
 import FontAwesome5 from "@expo/vector-icons/FontAwesome5";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { FlashList } from "@shopify/flash-list";
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
 
 import React, { useCallback, useMemo } from "react";
-import { View } from "react-native";
+import { ActivityIndicator, View } from "react-native";
 
-const UserOrders = () => {
-  const { user, profile } = useUserStore();
+const DeliveryScreen = () => {
+  const { user } = useUserStore();
   const { navigateTo } = useVerifiedNavigation();
   const {
     data: allData,
@@ -27,20 +27,28 @@ const UserOrders = () => {
     refetch,
     isFetching,
     isPending,
-  } = useQuery({
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
     queryKey: ["delivery-orders", user?.id],
-    queryFn: () => getUserDeliveryOrders(),
-    refetchOnWindowFocus: true,
-    refetchOnMount: true,
+    queryFn: ({ pageParam = 0 }) =>
+      getUserDeliveryOrders({ offset: pageParam as number }),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage) => {
+      if (lastPage.pagination.has_more) {
+        return lastPage.pagination.page_offset + lastPage.pagination.page_size;
+      }
+      return undefined;
+    },
     enabled: !!user?.id,
     staleTime: 0,
     gcTime: 5 * 60 * 1000,
     retry: 3,
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 
   const data = useMemo(() => {
-    return allData || [];
+    return allData?.pages.flatMap((page) => page.orders) || [];
   }, [allData]);
 
   const stats = useMemo(
@@ -153,9 +161,23 @@ const UserOrders = () => {
           keyExtractor={keyExtractor}
           renderItem={renderItem}
           ListHeaderComponent={renderHeader}
-          refreshing={isFetching}
+          refreshing={isFetching && !isFetchingNextPage}
           onRefresh={refetch}
+          onEndReached={() => {
+            if (hasNextPage && !isFetchingNextPage) {
+              fetchNextPage();
+            }
+          }}
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={() =>
+            isFetchingNextPage ? (
+              <View className="py-4">
+                <ActivityIndicator size="small" color="#aaa" />
+              </View>
+            ) : null
+          }
           showsVerticalScrollIndicator={false}
+          removeClippedSubviews={true}
         />
         {["CUSTOMER", "RESTAURANT_VENDOR", "LAUNDRY_VENDOR"].includes(
           user?.user_metadata?.user_type!,
@@ -165,4 +187,4 @@ const UserOrders = () => {
   );
 };
 
-export default UserOrders;
+export default DeliveryScreen;

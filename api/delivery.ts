@@ -1,4 +1,8 @@
-import { DeliveryOrder, SendItem } from "@/types/delivey-types";
+import {
+  DeliveryOrder,
+  DeliveryOrdersResponse,
+  SendItem,
+} from "@/types/delivey-types";
 import { InitiatePaymentResponse } from "@/types/payment-types";
 import { RiderAssignmentResponse } from "@/types/user-types";
 import { apiClient } from "@/utils/client";
@@ -20,10 +24,9 @@ export async function getUserDeliveryOrders(
   options: {
     limit?: number;
     offset?: number;
-    status?: string; // Optional filter (e.g., 'PENDING', 'DELIVERED')
   } = {},
-): Promise<DeliveryOrder[]> {
-  const { limit = 50, offset = 0, status } = options;
+): Promise<DeliveryOrdersResponse> {
+  const { limit = 25, offset = 0 } = options;
 
   try {
     const {
@@ -75,11 +78,6 @@ export async function getUserDeliveryOrders(
       .order("updated_at", { ascending: false })
       .range(offset, offset + limit - 1);
 
-    // status filter
-    if (status) {
-      query = query.eq("delivery_status", status);
-    }
-
     const { data, error, count } = await query;
 
     if (error) {
@@ -87,7 +85,7 @@ export async function getUserDeliveryOrders(
       throw new Error(`Failed to load orders: ${error.message}`);
     }
 
-    return (data || []).map((order: any) => {
+    const orders = (data || []).map((order: any) => {
       if (!Number.isSafeInteger(Number(order.order_number))) {
         console.warn(`Unsafe order_number: ${order.order_number}`);
       }
@@ -97,6 +95,16 @@ export async function getUserDeliveryOrders(
         order_number: Number(order.order_number),
       };
     }) as DeliveryOrder[];
+
+    return {
+      orders,
+      pagination: {
+        page_size: limit,
+        page_offset: offset,
+        total_count: count || 0,
+        has_more: (count || 0) > offset + limit,
+      },
+    };
   } catch (error) {
     console.error("Delivery orders fetch failed:", error);
     throw new Error(`Failed to load orders: ${error}`);
