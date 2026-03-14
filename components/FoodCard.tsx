@@ -99,7 +99,7 @@ const FoodCard = ({
       </View>
 
       {isOwner ? (
-        <View className="flex-row absolute right-2 bottom-2">
+        <View className="flex-row absolute right-2 top-2">
           <Pressable
             onPress={() =>
               router.push({

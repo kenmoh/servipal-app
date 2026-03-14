@@ -46,11 +46,11 @@ export const productCreateSchema = z.object({
     .number("Price must be a number")
     .positive("Price must be greater than 0"),
 
-  warranty: z.string().optional(),
+  warranty: z.string().nullable().optional(),
 
-  shipping_cost: z.coerce.number().positive().optional(),
+  shipping_cost: z.coerce.number().nonnegative().nullable().optional(),
 
-  return_days: z.coerce.number().positive().optional(),
+  return_days: z.coerce.number().nonnegative().nullable().optional(),
 
   category_id: z.string({ message: "Category is a required field" }),
 
@@ -112,7 +112,7 @@ const AddProductScreen = () => {
     if (existingProduct) {
       reset({
         name: existingProduct.name || "",
-        category_id: existingProduct.category_id || "",
+        category_id: existingProduct.product_category_id || "",
         description: existingProduct.description || "",
         price: existingProduct.price || 0,
         stock: existingProduct.stock || 0,
@@ -196,7 +196,11 @@ const AddProductScreen = () => {
   const isPending = createMutation.isPending || updateMutation.isPending;
 
   const onSubmit = (data: ProductCreateFormData) => {
-    Sentry.addBreadcrumb({ category: "product", message: isEditing ? "Updating product" : "Creating product", level: "info" });
+    Sentry.addBreadcrumb({
+      category: "product",
+      message: isEditing ? "Updating product" : "Creating product",
+      level: "info",
+    });
     const productData: CreateProduct = {
       name: data.name,
       description: data.description,
@@ -205,9 +209,9 @@ const AddProductScreen = () => {
       colors: data.colors || [],
       stock: data.stock,
       category_id: data.category_id,
-      warranty: data.warranty,
-      shipping_cost: data.shipping_cost,
-      return_days: data.return_days,
+      warranty: data.warranty ?? undefined,
+      shipping_cost: data.shipping_cost ?? undefined,
+      return_days: data.return_days ?? undefined,
       product_type: data.productType as "PHYSICAL" | "DIGITAL",
       images: data.images,
     };
@@ -462,7 +466,12 @@ const AddProductScreen = () => {
                 : "Create Product"
           }
           onPress={handleSubmit(onSubmit, (errors) =>
-            Sentry.addBreadcrumb({ category: "product", message: "Product form validation errors", level: "warning", data: errors }),
+            Sentry.addBreadcrumb({
+              category: "product",
+              message: "Product form validation errors",
+              level: "warning",
+              data: errors,
+            }),
           )}
           icon={
             isPending ? (

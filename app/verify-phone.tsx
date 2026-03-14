@@ -22,19 +22,18 @@ const VerifyOtp = () => {
   const inputRefs = useRef<Array<TextInput | null>>([]);
   const { showSuccess, showError } = useToast();
   const queryClient = useQueryClient();
-  const { profile } = useUserStore();
+  const { profile, fetchProfile } = useUserStore();
 
   const verifyMutation = useMutation({
     mutationFn: verifyOTP,
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       if (data?.account_status === "ACTIVE") {
         queryClient.invalidateQueries({
           queryKey: ["user-profile-image", profile?.id],
         });
+        await fetchProfile();
         showSuccess("Success", "Phone number verified successfully!");
         router.back();
-      } else {
-        showError("Error", "Invalid verification code");
       }
     },
     onError: (error: any) => {

@@ -147,11 +147,21 @@ export const createProduct = async (
     if (!session) {
       throw new Error("User not authenticated");
     }
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("store_name, business_name, full_name")
+      .eq("id", session.user.id)
+      .single();
+
     const uploadedImages = await normalizeMenuImages(
       data.images,
       session.user.id,
       PRODUCT_IMAGE_BUCKET,
     );
+
+    const storeName =
+      profile?.store_name || profile?.business_name || profile?.full_name;
     // First, create the product without images
     const { data: product, error: productError } = await supabase
       .from("product_items")
@@ -163,6 +173,7 @@ export const createProduct = async (
         sizes: data.sizes,
         colors: data.colors,
         stock: data.stock,
+        store_name: storeName,
         warranty: data.warranty,
         return_days: data.return_days,
         shipping_cost: data.shipping_cost,
@@ -340,7 +351,7 @@ export const updateProduct = async (
     if (data.colors !== undefined) updateData.colors = data.colors;
     if (data.stock !== undefined) updateData.stock = data.stock;
     if (data.category_id !== undefined)
-      updateData.category_id = data.category_id;
+      updateData.product_category_id = data.category_id;
     if (data.product_type !== undefined)
       updateData.product_type = data.product_type;
 
@@ -384,19 +395,12 @@ export const updateProduct = async (
         // Delete existing records
         await supabase.from("product_images").delete().eq("product_id", id);
 
-        // Create new records
-        if (uploadedUrls.length > 0) {
-          await createProductImages(id, uploadedUrls);
-        }
-
         // Update product with new image URLs
         updateData.images = uploadedUrls;
       } catch (imageError) {
-        console.error("Image update failed:", imageError);
         Sentry.captureException(imageError, {
           tags: { action: "update_product_images" },
         });
-        // Continue with other updates even if images fail
       }
     }
 
@@ -408,6 +412,7 @@ export const updateProduct = async (
       .single();
 
     if (error) {
+      console.error("Error updating product:", error);
       throw new Error(error.message || "Failed to update product");
     }
 

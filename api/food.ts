@@ -8,6 +8,7 @@ import {
 import { InitiatePaymentResponse } from "@/types/payment-types";
 import { apiClient } from "@/utils/client";
 import { supabase } from "@/utils/supabase";
+import { fetch } from "expo/fetch";
 
 const FOOD_TABLE = "food_items";
 const BASE_URL = "/food";
@@ -59,6 +60,7 @@ export const normalizeMenuImages = async (
         });
 
       if (uploadError) {
+        console.log("ERROR: ", uploadError);
         throw uploadError;
       }
 

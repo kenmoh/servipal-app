@@ -169,7 +169,7 @@ interface UserStore {
   registerPushToken: () => Promise<void>;
   initialize: () => () => void;
 
-  // 🔑 Location Actions
+  //  Location Actions
   checkLocationPermission: () => Promise<boolean>;
   startLocationTracking: () => Promise<void>;
   stopLocationTracking: () => void;
@@ -830,8 +830,6 @@ export const useUserStore = create<UserStore>((set, get) => ({
       lastLocationUpdate: null,
       // Don't reset vendorLocationCaptured - it's persistent state
     });
-
-    console.log("✅ Location tracking STOPPED");
   },
 
   // Fetch User Profile (enhanced with vendor location capture)
@@ -873,33 +871,26 @@ export const useUserStore = create<UserStore>((set, get) => ({
         profileError: null,
       });
 
-      console.log("✅ Profile fetched successfully");
-      console.log(`   User type: ${profile.user_type}`);
-      console.log(
-        `   Vendor location captured: ${isVendor ? (locationCaptured ? "YES" : "NO") : "N/A"}`,
-      );
-
-      // 🔑 REGISTER PUSH TOKEN AFTER PROFILE FETCH
+      // REGISTER PUSH TOKEN AFTER PROFILE FETCH
       setTimeout(() => {
         get().registerPushToken();
       }, 500);
 
-      // 🔑 START LOCATION TRACKING AFTER PROFILE FETCH
+      // START LOCATION TRACKING AFTER PROFILE FETCH
       // (We need profile to determine user_type for proper config)
       setTimeout(() => {
         get().startLocationTracking();
 
         // For vendors without captured location, attempt one-time capture
         if (isVendor && !locationCaptured) {
-          console.log(
-            "🔄 Vendor location not yet captured - will capture on first location update",
+          Sentry.captureMessage(
+            "Vendor location not yet captured - will capture on first location update",
           );
           // Location will be captured automatically in watchPositionAsync callback
           // when shouldUpdateServerLocation() returns true and update succeeds
         }
       }, 1000);
     } catch (error: any) {
-      console.error("❌ Error fetching profile:", error);
       Sentry.captureException(error, { tags: { action: "fetch_profile" } });
       set({
         profileError: error?.message || "Failed to load profile",
@@ -911,16 +902,12 @@ export const useUserStore = create<UserStore>((set, get) => ({
   // 🔑 Register Push Token
   registerPushToken: async () => {
     try {
-      console.log("🔄 Registering for push notifications...");
       const token = await registerForPushNotificationAsync();
 
       if (token) {
-        console.log("✅ Push token obtained:", token);
         await syncPushToken(token, Platform.OS);
-        console.log("✅ Push token synchronized with backend");
       }
     } catch (error) {
-      console.error("❌ Push token registration failed:", error);
       Sentry.captureException(error, {
         tags: { action: "register_push_token" },
       });
@@ -932,15 +919,12 @@ export const useUserStore = create<UserStore>((set, get) => ({
     set({ isLoading: true });
 
     try {
-      console.log("🔄 Hydrating user session...");
-
       const {
         data: { session },
         error: sessionError,
       } = await supabase.auth.getSession();
 
       if (sessionError) {
-        console.error("❌ Session error:", sessionError);
         Sentry.captureException(sessionError, {
           tags: { action: "hydrate_session" },
         });
@@ -951,15 +935,11 @@ export const useUserStore = create<UserStore>((set, get) => ({
       }
 
       if (session?.user) {
-        console.log("✅ Active session found:", session.user.id);
-
         const storedUser = await authStorage.getUser();
 
         if (storedUser && storedUser.id === session.user.id) {
-          console.log("✅ Using stored user data");
           set({ user: storedUser });
         } else {
-          console.log("🔄 Converting session user to AuthUser");
           const authUser = toAuthUser(session.user);
           await authStorage.storeUser(authUser);
           set({ user: authUser });
@@ -1019,7 +999,6 @@ export const useUserStore = create<UserStore>((set, get) => ({
   // Sign Out (enhanced with location stop)
   signOut: async () => {
     try {
-      console.log("🔄 Signing out...");
       Sentry.addBreadcrumb({
         category: "auth",
         message: "User signing out",
@@ -1149,13 +1128,12 @@ export const useUserStore = create<UserStore>((set, get) => ({
 
     const responseListener =
       Notifications.addNotificationResponseReceivedListener((response) => {
-        console.log("👆 Notification Tapped:", response);
         Sentry.addBreadcrumb({
           category: "notification",
           message: "Notification tapped",
           level: "info",
         });
-        // Handle navigation based on notification data
+        // TODO: Handle navigation based on notification data
         // For example: router.push(response.notification.request.content.data.url)
       });
 

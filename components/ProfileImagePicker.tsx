@@ -1,7 +1,7 @@
 import Feather from "@expo/vector-icons/Feather";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { TouchableOpacity, View } from "react-native";
 
 interface CustomImagePickerProps {
@@ -24,6 +24,12 @@ const ProfileImagePicker = ({
   const [selectedImage, setSelectedImage] = useState<string | null>(
     initialImage,
   );
+
+  useEffect(() => {
+    if (initialImage) {
+      setSelectedImage(initialImage);
+    }
+  }, [initialImage]);
   // You can use your custom theme colors here if needed
 
   const openGallery = async () => {

@@ -118,10 +118,9 @@ const MarketPlace = () => {
           numColumns={2}
         />
       </View>
-      {user?.user_metadata?.user_type === "LAUNDRY_VENDOR" ||
-      user?.user_metadata?.user_type === "RESTAURANT_VENDOR" ? (
-        ""
-      ) : (
+      {!["LAUNDRY_VENDOR", "RESTAURANT_VENDOR"].includes(
+        user?.user_metadata?.user_type!,
+      ) && (
         <FAB
           icon={<Feather name="plus" size={24} color={"white"} />}
           onPress={() => navigateTo("/product-detail/add-product")}

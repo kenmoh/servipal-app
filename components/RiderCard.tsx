@@ -112,7 +112,7 @@ const RiderCard = ({ rider }: { rider: RiderResponse }) => {
         </View>
         <View className="items-center">
           <Text className="text-primary font-poppins text-base">
-            {rider?.reviews?.stats?.average_rating}
+            {rider?.reviews?.stats?.average_rating.toFixed(1)}
           </Text>
           <Text className="text-muted text-xs font-poppins">
             Average Rating

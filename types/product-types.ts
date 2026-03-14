@@ -23,6 +23,7 @@ export interface ProductResponse extends CreateProduct {
   is_deleted: boolean;
   store_name: string;
   review_stats: ReviewSummaryStats;
+  product_category_id?: string;
   created_at: Date;
   updated_at: Date;
 }

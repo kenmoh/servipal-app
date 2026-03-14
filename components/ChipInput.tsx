@@ -21,6 +21,7 @@ interface ChipInputProps {
 
 const ChipInput: React.FC<ChipInputProps> = ({
   value = [],
+
   onChange,
   placeholder = "Type and press Enter",
   label,
