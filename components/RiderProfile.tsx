@@ -142,7 +142,7 @@ const RiderProfile = ({ ref, riderId, showButton = true }: ProfileData) => {
             </View>
             <View className="items-center">
               <Text className="text-xl font-poppins-bold text-primary">
-                {data?.reviews?.stats?.average_rating}
+                {data?.reviews?.stats?.average_rating.toFixed(1)}
               </Text>
               <Text className="font-poppins-light text-muted text-sm">
                 Rating
