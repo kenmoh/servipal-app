@@ -252,6 +252,7 @@ const UpdateProfile = () => {
           className="flex-1"
           contentContainerStyle={{ paddingBottom: 300 }}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
         >
           <View className="w-[90%] self-center gap-5">
             <Text className="text-secondary font-poppins-semibold text-base mt-4">

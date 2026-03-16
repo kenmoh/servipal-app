@@ -57,7 +57,9 @@ const GoogleTextInput = ({
   const BG_COLOR = theme === "dark" ? "rgba(30, 33, 39, 0.5)" : "#eee";
 
   useEffect(() => {
-    setInputValue(value || "");
+    if (value !== null && value !== undefined && value !== inputValue) {
+      setInputValue(value);
+    }
   }, [value]);
 
   const styles = StyleSheet.create({
@@ -130,20 +132,50 @@ const GoogleTextInput = ({
         fetchDetails={true}
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}
-        onPlaceSelect={(data) => {
+        onPlaceSelect={(data: any) => {
           if (data?.details) {
-            const text = data.details.displayName.text;
-            const secondaryText = data.details.formattedAddress.replace(
-              /,? ?Nigeria$/i,
-              "",
-            );
-            const address = text + " " + secondaryText;
+            // Support both New and Legacy Places API structures
+            const text =
+              data.details.displayName?.text ||
+              data.details.name ||
+              data.description ||
+              "";
+            const rawAddress = data.details.formattedAddress || "";
+            const secondaryText = rawAddress.replace(/,? ?Nigeria$/i, "");
+
+            // Avoid duplicating the main name if it's already in the formatted address
+            let address =
+              secondaryText.includes(text) || !text
+                ? secondaryText
+                : text + ", " + secondaryText;
+
+            // Remove Plus Codes (e.g., FH97+8XG) and Postal Codes (e.g., 106104) and clean up
+            address = address
+              .replace(/\b[A-Z0-9]{4,8}\+[A-Z0-9]{2,}\b/gi, "") // Remove plus code
+              .replace(/\b\d{6}\b/g, "") // Remove 6-digit postal code
+              .replace(/^[ ,]+|[ ,]+$/g, "") // Trim leading/trailing commas/spaces
+              .replace(/ ,[ ,]+/g, ", ") // Fix double commas
+              .trim();
 
             setInputValue(address);
+
+            // Directly update the input text if the ref supports it
+            if (
+              ref.current &&
+              typeof ref.current.setAddressText === "function"
+            ) {
+              ref.current.setAddressText(address);
+            }
+
             if (data.details.location) {
               const { latitude: lat, longitude: lng } = data.details.location;
               onPlaceSelect(lat, lng, address);
             }
+          } else {
+            console.warn(
+              "GoogleTextInput: Selection made but no details found",
+              data,
+            );
           }
         }}
       />

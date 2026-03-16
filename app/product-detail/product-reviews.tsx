@@ -12,7 +12,7 @@ const ProductReviews = () => {
   const { productId } = useLocalSearchParams<{ productId: string }>();
 
   const { data, isFetching, refetch } = useQuery({
-    queryKey: ["product-summary", productId],
+    queryKey: ["product-reviews", productId],
     queryFn: () => ReviewsService.fetchItemReviews(productId!),
     enabled: !!productId,
   });

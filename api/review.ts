@@ -118,8 +118,6 @@ export const ReviewsService = {
       throw new Error(error.message);
     }
 
-    console.log("FROM SERVER", data);
-
     return data as ItemReview;
   },
 
