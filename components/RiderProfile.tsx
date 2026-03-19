@@ -1,4 +1,4 @@
-import { getRiderProfile } from "@/api/user";
+import { fetchRider } from "@/api/user";
 import { HEADER_BG_DARK, HEADER_BG_LIGHT } from "@/constants/theme";
 import { RiderResponse } from "@/types/user-types";
 import Feather from "@expo/vector-icons/Feather";
@@ -17,6 +17,7 @@ import {
 import { Easing } from "react-native-reanimated";
 
 import HDivider from "./HDivider";
+import { AppButton } from "./ui/app-button";
 
 interface ProfileData {
   ref: Ref<BottomSheet>;
@@ -40,15 +41,33 @@ const RiderProfile = ({ ref, riderId, showButton = true }: ProfileData) => {
 
   const { data, isLoading } = useQuery({
     queryKey: ["rider-profile", riderId],
-    queryFn: () => getRiderProfile(riderId as string),
+    queryFn: () => fetchRider(riderId as string),
     staleTime: 10 * 60 * 1000,
     enabled: !!riderId,
   });
 
+  const stats = [
+    {
+      label: "Trips",
+      value: data?.reviews?.stats?.total_reviews || 0,
+      icon: "truck-delivery-outline" as const,
+    },
+    {
+      label: "Rating",
+      value: data?.reviews?.stats?.average_rating?.toFixed(1) || "0.0",
+      icon: "star-outline" as const,
+    },
+    {
+      label: "Bike",
+      value: data?.bike_number?.toUpperCase() || "N/A",
+      icon: "bike" as const,
+    },
+  ];
+
   return (
     <BottomSheet
       ref={ref}
-      snapPoints={["50%"]}
+      snapPoints={["60%", "100%"]}
       index={-1}
       animateOnMount={true}
       animationConfigs={{
@@ -88,73 +107,114 @@ const RiderProfile = ({ ref, riderId, showButton = true }: ProfileData) => {
         </BottomSheetView>
       ) : (
         <BottomSheetView style={{ flex: 1 }} className={"bg-background"}>
-          <View className="p-4 items-center flex-1 bg-background">
-            <View className="w-[75px] h-[75px] rounded-full overflow-hidden">
-              <Image
-                source={data?.profile_image_url}
-                style={{ width: 75, height: 75, borderRadius: 37.5 }}
-                contentFit="cover"
-              />
-            </View>
-            <Text className="text-primary font-poppins-semibold text-lg mt-1">
-              {data?.full_name}
-            </Text>
-            {!showButton && (
-              <View className="flex-row gap-1 items-center mt-1">
-                <Feather name="phone" color="gray" size={15} />
-                <Text
-                  onPress={() => handleCallPress(data?.phone_number!)}
-                  className="text-primary font-poppins text-sm"
-                >
-                  {data?.phone_number}
-                </Text>
+          {/* Profile Content */}
+          <View className="px-6 pt-4 flex-1">
+            <View className="flex-row items-end gap-4 mb-4">
+              <View className="p-1 bg-background rounded-full">
+                <Image
+                  source={data?.profile_image_url}
+                  style={{
+                    width: 80,
+                    height: 80,
+                    borderRadius: 40,
+                    borderWidth: 2,
+                    borderColor: "#f97316",
+                  }}
+                  contentFit="cover"
+                />
               </View>
-            )}
+              <View className="pb-1 flex-1">
+                <Text
+                  className="text-primary font-poppins-bold text-xl"
+                  numberOfLines={1}
+                >
+                  {data?.full_name}
+                </Text>
+                <View className="flex-row items-center gap-1">
+                  <MaterialCommunityIcons
+                    name="certificate"
+                    color="#f97316"
+                    size={16}
+                  />
+                  <Text className="text-orange-500 font-poppins-semibold text-xs">
+                    Verified Rider
+                  </Text>
+                </View>
+              </View>
+            </View>
 
-            <View className="flex-row gap-1 items-center mt-1">
-              <MaterialCommunityIcons
-                name="office-building"
-                color={"gray"}
-                size={14}
-              />
-              <Text className="text-muted font-poppins text-sm text-center">
-                {data?.business_name}
-              </Text>
-            </View>
-            <View className="flex-row gap-1">
-              <Feather name="map-pin" color={"gray"} size={14} />
-              <Text className="text-muted font-poppins text-sm text-center">
-                {data?.business_address}
-              </Text>
-            </View>
-          </View>
+            <View className="space-y-4 gap-4">
+              {/* Business Info Section */}
+              <View className="bg-slate-500/10 p-4 rounded-3xl gap-2">
+                <View className="flex-row items-center gap-3">
+                  <View className="w-8 h-8 rounded-full bg-orange-500/20 items-center justify-center">
+                    <MaterialCommunityIcons
+                      name="office-building"
+                      color="#f97316"
+                      size={18}
+                    />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-muted font-poppins-light text-[10px] uppercase tracking-wider">
+                      Business
+                    </Text>
+                    <Text className="text-primary font-poppins-semibold text-sm">
+                      {data?.business_name}
+                    </Text>
+                  </View>
+                </View>
 
-          <HDivider />
+                <View className="flex-row items-center gap-3">
+                  <View className="w-8 h-8 rounded-full bg-blue-500/20 items-center justify-center">
+                    <Feather name="map-pin" color="#3b82f6" size={16} />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-muted font-poppins-light text-[10px] uppercase tracking-wider">
+                      Address
+                    </Text>
+                    <Text
+                      className="text-primary font-poppins text-xs"
+                      numberOfLines={1}
+                    >
+                      {data?.business_address}
+                    </Text>
+                  </View>
+                </View>
+              </View>
 
-          <View className="flex-row my-4 justify-between w-[80%] self-center">
-            <View className="items-center">
-              <Text className="text-xl font-poppins-bold text-primary">
-                {data?.reviews?.stats?.total_reviews || 0}
-              </Text>
-              <Text className="font-poppins-light text-muted text-sm">
-                Trips
-              </Text>
-            </View>
-            <View className="items-center">
-              <Text className="text-xl font-poppins-bold text-primary">
-                {data?.reviews?.stats?.average_rating.toFixed(1)}
-              </Text>
-              <Text className="font-poppins-light text-muted text-sm">
-                Rating
-              </Text>
-            </View>
-            <View className="items-center">
-              <Text className="text-xl font-poppins-bold text-primary">
-                {data?.bike_number.toUpperCase()}
-              </Text>
-              <Text className="font-poppins-light text-muted text-sm">
-                Bike Number
-              </Text>
+              {/* Stats Section */}
+              <View className="flex-row justify-between bg-white/5 p-4 rounded-3xl border border-slate-500/10">
+                {stats.map((stat, i) => (
+                  <View key={i} className="items-center flex-1">
+                    <MaterialCommunityIcons
+                      name={stat.icon}
+                      size={20}
+                      color="#94a3b8"
+                    />
+                    <Text className="text-primary font-poppins-bold text-base mt-1">
+                      {stat.value}
+                    </Text>
+                    <Text className="text-muted font-poppins-light text-[10px] uppercase">
+                      {stat.label}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+
+              {/* Action Section */}
+              {!showButton && (
+                <View className="mt-2">
+                  <AppButton
+                    text={`Call ${data?.full_name?.split(" ")[0] || "Rider"}`}
+                    onPress={() => handleCallPress(data?.phone_number!)}
+                    icon={<Feather name="phone-call" size={18} color="white" />}
+                    borderRadius={20}
+                    height={50}
+                    variant="fill"
+                    color="#f97316"
+                  />
+                </View>
+              )}
             </View>
           </View>
         </BottomSheetView>

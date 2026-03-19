@@ -70,7 +70,7 @@ const ItemDetails = () => {
 
   const openSheet = () => bottomSheetRef.current?.snapToIndex(1);
   const closeSheet = () => bottomSheetRef.current?.close();
-  const viewRiderProfile = () => riderProfileRef.current?.snapToIndex(0);
+  const viewRiderProfile = () => riderProfileRef.current?.snapToIndex(1);
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ["delivery-order", id],
@@ -424,7 +424,7 @@ const ItemDetails = () => {
           <View className="my-5 w-[95%] self-center bg-background h-[100%] flex-1 px-5">
             <View className="gap-5">
               <View className="gap-2 flex-row justify-end">
-                {showCancel && (
+                {/* {showCancel && (
                   <Pressable
                     onPress={openSheet}
                     className="bg-red-500/30 rounded-full px-4 py-2 flex-row items-center gap-2 active:opacity-75"
@@ -434,7 +434,7 @@ const ItemDetails = () => {
                       Cancel
                     </Text>
                   </Pressable>
-                )}
+                )} */}
                 <Pressable
                   onPress={() => {
                     router.push({
@@ -538,7 +538,7 @@ const ItemDetails = () => {
                 {showRiderButton && (
                   <Pressable
                     onPress={viewRiderProfile}
-                    className="mt-3 flex-row gap-3 bg-slate-700/20 rounded-full px-4 py-2 active:opacity-75 items-center justify-center"
+                    className="mt-3 flex-row gap-3 bg-slate-700/20 rounded-full px-4 py-3 active:opacity-75 items-center justify-center"
                   >
                     <Feather name="user" color="orange" size={15} />
 
@@ -582,6 +582,7 @@ const ItemDetails = () => {
                       borderRadius={50}
                       text={smartButton.primary.text}
                       variant="fill"
+                      backgroundColor={smartButton.primary.backgroundColor}
                       color={
                         smartButton.primary.disabled
                           ? "rgba(0,0,0,0.3)"
@@ -618,7 +619,9 @@ const ItemDetails = () => {
                       borderRadius={50}
                       text={smartButton.secondary.text}
                       variant={smartButton.secondary.variant || "outline"}
-                      backgroundColor="transparent"
+                      backgroundColor={
+                        smartButton.secondary.backgroundColor || "transparent"
+                      }
                       textColor={smartButton.secondary.color}
                       color={smartButton.secondary.color}
                       icon={
@@ -722,13 +725,15 @@ const ItemDetails = () => {
             />
 
             <AppButton
-              text="Cancel Delivery"
+              text="Cancel Order"
               width={"100%"}
               onPress={openAlert}
+              variant="outline"
+              backgroundColor="transparent"
               color="#ef4444"
               icon={
                 updateDeliveryMutation.isPending && (
-                  <ActivityIndicator color="#fff" />
+                  <ActivityIndicator color="#ef4444" />
                 )
               }
               disabled={updateDeliveryMutation.isPending}

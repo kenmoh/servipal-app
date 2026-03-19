@@ -96,7 +96,7 @@ export function AppButton({
   disabled,
   style,
   textStyle,
-  borderColor = "orange",
+  borderColor,
   className,
   ...pressableProps
 }: AppButtonProps) {
@@ -110,16 +110,28 @@ export function AppButton({
     return variant === "fill" ? "#FFFFFF" : color;
   }, [variant, textColor, color, isTextColorClass]);
 
+  const actualBorderColor = borderColor || color;
+
+  const resolveBackgroundColor = () => {
+    "worklet";
+    if (variant !== "fill") return "transparent";
+    // Inline the class check inside the worklet for safety
+    const isBgClass =
+      backgroundColor?.startsWith("bg-") || backgroundColor?.includes(" ");
+    if (backgroundColor && !isBgClass) return backgroundColor;
+    return color;
+  };
+
   // Reanimated shared values for animations
   const pressScale = useSharedValue(1);
 
   const animatedContainerStyle = useAnimatedStyle(() => {
     return {
-      backgroundColor: withTiming(variant === "fill" ? color : "transparent", {
+      backgroundColor: withTiming(resolveBackgroundColor(), {
         duration: 300,
       }),
       borderColor: withTiming(
-        variant === "outline" ? borderColor : "transparent",
+        variant === "outline" ? actualBorderColor : "transparent",
         { duration: 300 },
       ),
       borderWidth: variant === "outline" ? borderWidth : 0,
@@ -137,8 +149,10 @@ export function AppButton({
 
   // Build className for Pressable
   const pressableClassName = useMemo(() => {
+    const isBgClass =
+      backgroundColor?.startsWith("bg-") || backgroundColor?.includes(" ");
     const classes = ["flex-row", "items-center", "justify-center"];
-    if (backgroundColor) classes.push(backgroundColor);
+    if (isBgClass && backgroundColor) classes.push(backgroundColor);
     if (className) classes.push(className);
     return classes.join(" ");
   }, [backgroundColor, className]);

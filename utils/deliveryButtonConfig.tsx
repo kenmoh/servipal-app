@@ -14,6 +14,7 @@ export interface DeliveryActionConfig {
   warningMessage?: string;
   variant?: "fill" | "outline" | "ghost";
   textColor?: string;
+  backgroundColor?: string;
 }
 
 export interface DualButtonConfig {
@@ -38,7 +39,7 @@ export const getDeliveryButtonConfig = (
   };
 
   const cancelAction: DeliveryActionConfig = {
-    text: "Cancel Delivery",
+    text: "Cancel",
     icon: <AntDesign name="close-circle" size={20} color="#ef4444" />,
     color: "#ef4444",
     textColor: "#ef4444",
@@ -60,6 +61,7 @@ export const getDeliveryButtonConfig = (
             text: "Assign Rider",
             icon: <Feather name="user-plus" size={20} color="white" />,
             color: "#f97316",
+            backgroundColor: "bg-button-primary",
             nextStatus: "ASSIGNED",
           },
           secondary: {
@@ -119,11 +121,7 @@ export const getDeliveryButtonConfig = (
             color: "#059669", // green
             nextStatus: "COMPLETED",
           },
-          secondary: {
-            ...cancelAction,
-            warningMessage:
-              "Package has been delivered. Rider will collect it back and still be paid.",
-          },
+          secondary: null,
         };
 
       case "CANCELLED":
@@ -147,6 +145,7 @@ export const getDeliveryButtonConfig = (
               text: "Assign New Rider",
               icon: <Feather name="user-plus" size={20} color="white" />,
               color: "#f97316",
+              backgroundColor: "bg-button-primary",
               nextStatus: "ASSIGNED",
             },
             secondary: null,
@@ -176,6 +175,7 @@ export const getDeliveryButtonConfig = (
             text: "Assign New Rider",
             icon: <Feather name="user-plus" size={20} color="white" />,
             color: "#f97316",
+            backgroundColor: "bg-button-primary",
             nextStatus: "ASSIGNED",
           },
           secondary: null,

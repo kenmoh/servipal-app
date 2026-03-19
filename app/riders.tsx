@@ -17,7 +17,6 @@ import { AppButton } from "@/components/ui/app-button";
 import {
   HEADER_BG_DARK,
   HEADER_BG_LIGHT,
-  INPUT_BG_DARK,
   INPUT_BG_LIGHT,
 } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
@@ -84,7 +83,7 @@ const RidersScreen = () => {
   const HANDLE_INDICATOR_STYLE =
     theme === "dark" ? HEADER_BG_LIGHT : HEADER_BG_DARK;
   const HANDLE_STYLE = theme === "dark" ? HEADER_BG_DARK : HEADER_BG_LIGHT;
-  const BG_COLOR = theme === "dark" ? INPUT_BG_DARK : INPUT_BG_LIGHT;
+  const BG_COLOR = theme === "dark" ? "#181818" : INPUT_BG_LIGHT;
 
   const queryClient = useQueryClient();
 
@@ -148,7 +147,7 @@ const RidersScreen = () => {
       }
 
       setSelectedRider(rider);
-      bottomSheetRef.current?.snapToIndex(0);
+      bottomSheetRef.current?.snapToIndex(1);
     },
     [txRef, paymentStatus, order, isCheckingOrder],
   );
@@ -361,7 +360,7 @@ const RidersScreen = () => {
 
       <BottomSheet
         ref={bottomSheetRef}
-        snapPoints={[400, "55%"]}
+        snapPoints={["85%", "100%"]}
         index={-1}
         enablePanDownToClose={true}
         handleIndicatorStyle={{ backgroundColor: HANDLE_INDICATOR_STYLE }}
@@ -372,84 +371,172 @@ const RidersScreen = () => {
         }}
         onChange={(index: number) => setIsSheetOpen(index >= 0)}
       >
-        <BottomSheetView style={{ flex: 1 }} className="bg-input">
+        <BottomSheetView style={{ flex: 1, backgroundColor: BG_COLOR }}>
           {selectedRider && (
-            <>
-              <View className="p-4 items-center flex-1 bg-input">
-                <View className="w-28 h-28 rounded-full overflow-hidden">
+            <View
+              className="px-6 pt-4 flex-1 bg-slate-100 dark:bg-slate-800"
+              style={{ backgroundColor: BG_COLOR }}
+            >
+              <View className="flex-row items-end gap-4 mb-4">
+                <View className="p-1 bg-background rounded-full">
                   <Image
-                    src={selectedRider?.profile_image_url}
-                    className="w-28 h-28 rounded-full"
+                    source={{ uri: selectedRider?.profile_image_url }}
+                    style={{
+                      width: 80,
+                      height: 80,
+                      borderRadius: 40,
+                      borderWidth: 2,
+                      borderColor: "#f97316",
+                    }}
                   />
                 </View>
-                <Text className="text-primary font-poppins-semibold text-lg mt-1">
-                  {selectedRider?.full_name}
-                </Text>
+                <View className="pb-1 flex-1">
+                  <Text
+                    className="text-primary font-poppins-bold text-xl"
+                    numberOfLines={1}
+                  >
+                    {selectedRider?.full_name}
+                  </Text>
+                  <View className="flex-row items-center gap-1">
+                    <MaterialCommunityIcons
+                      name="certificate"
+                      color="#f97316"
+                      size={16}
+                    />
+                    <Text className="text-orange-500 font-poppins-semibold text-xs">
+                      Verified Rider
+                    </Text>
+                  </View>
+                </View>
+              </View>
 
-                <View className="flex-row gap-1 items-center mt-1">
-                  <MaterialCommunityIcons
-                    name="office-building"
-                    color={"gray"}
-                    size={14}
+              <View className="space-y-4 gap-4">
+                {/* Business Info Section */}
+                <View className="bg-slate-500/10 p-4 rounded-2xl gap-2">
+                  <View className="flex-row items-center gap-3">
+                    <View className="w-8 h-8 rounded-full bg-orange-500/20 items-center justify-center">
+                      <MaterialCommunityIcons
+                        name="office-building"
+                        color="#f97316"
+                        size={18}
+                      />
+                    </View>
+                    <View className="flex-1">
+                      <Text className="text-muted font-poppins-light text-[10px] uppercase tracking-wider">
+                        Business
+                      </Text>
+                      <Text className="text-primary font-poppins-semibold text-sm">
+                        {selectedRider?.business_name}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View className="flex-row items-center gap-3">
+                    <View className="w-8 h-8 rounded-full bg-blue-500/20 items-center justify-center">
+                      <Feather name="map-pin" color="#3b82f6" size={16} />
+                    </View>
+                    <View className="flex-1">
+                      <Text className="text-muted font-poppins-light text-[10px] uppercase tracking-wider">
+                        Address
+                      </Text>
+                      <Text
+                        className="text-primary font-poppins text-xs"
+                        numberOfLines={1}
+                      >
+                        {selectedRider?.business_address}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+
+                {/* Stats Section */}
+                <View className="flex-row justify-between bg-white/5 p-2 rounded-2xl border border-slate-500/10">
+                  <View className="items-center flex-1">
+                    <MaterialCommunityIcons
+                      name="truck-delivery-outline"
+                      size={20}
+                      color="#94a3b8"
+                    />
+                    <Text className="text-primary font-poppins-bold text-base mt-1">
+                      {selectedRider?.total_deliveries || 0}
+                    </Text>
+                    <Text className="text-muted font-poppins-light text-[10px] uppercase">
+                      Trips
+                    </Text>
+                  </View>
+
+                  <View
+                    style={{
+                      width: 1,
+                      height: 24,
+                      backgroundColor: "#e2e8f0",
+                      alignSelf: "center",
+                    }}
                   />
-                  <Text className="text-muted font-poppins text-sm text-center">
-                    {selectedRider?.business_name}
-                  </Text>
+
+                  <View className="items-center flex-1">
+                    <MaterialCommunityIcons
+                      name="star-outline"
+                      size={20}
+                      color="#94a3b8"
+                    />
+                    <Text className="text-primary font-poppins-bold text-base mt-1">
+                      {selectedRider?.reviews?.stats?.average_rating?.toFixed(
+                        1,
+                      ) || "0.0"}
+                    </Text>
+                    <Text className="text-muted font-poppins-light text-[10px] uppercase">
+                      Rating
+                    </Text>
+                  </View>
+
+                  <View
+                    style={{
+                      width: 1,
+                      height: 24,
+                      backgroundColor: "#e2e8f0",
+                      alignSelf: "center",
+                    }}
+                  />
+
+                  <View className="items-center flex-1">
+                    <MaterialCommunityIcons
+                      name="bike"
+                      size={20}
+                      color="#94a3b8"
+                    />
+                    <Text className="text-primary font-poppins-bold text-base mt-1">
+                      {selectedRider?.bike_number?.toUpperCase() || "N/A"}
+                    </Text>
+                    <Text className="text-muted font-poppins-light text-[10px] uppercase">
+                      Bike
+                    </Text>
+                  </View>
                 </View>
-                <View className="flex-row gap-1">
-                  <Feather name="map-pin" color={"gray"} size={14} />
-                  <Text className="text-muted font-poppins text-sm text-center">
-                    {selectedRider?.business_address}
-                  </Text>
+
+                {/* Action Section */}
+                <View className="mt-4 mb-2 items-center">
+                  <AppButton
+                    width={"100%"}
+                    borderRadius={50}
+                    backgroundColor={
+                      getDeliveryButtonConfig("PENDING", "CUSTOMER")?.primary
+                        ?.backgroundColor || "bg-button-primary"
+                    }
+                    color={
+                      getDeliveryButtonConfig("PENDING", "CUSTOMER")?.primary
+                        ?.color || "orange"
+                    }
+                    text={
+                      getDeliveryButtonConfig("PENDING", "CUSTOMER")?.primary
+                        ?.text || "Book Rider"
+                    }
+                    variant="fill"
+                    onPress={handleBookRider}
+                  />
                 </View>
               </View>
-
-              <HDivider />
-
-              <View className="flex-row my-4 justify-between items-center">
-                <View className="items-center flex-1">
-                  <Text className="text-md font-poppins-bold text-primary">
-                    {selectedRider?.total_deliveries || 0}
-                  </Text>
-                  <Text className="font-poppins-light text-muted text-sm">
-                    Trips
-                  </Text>
-                </View>
-                <View className="items-center flex-1">
-                  <Text className="text-md font-poppins-bold text-primary">
-                    {selectedRider?.reviews.stats.average_rating}
-                  </Text>
-                  <Text className="font-poppins-light text-muted text-sm">
-                    Rating
-                  </Text>
-                </View>
-                <View className="items-center flex-1">
-                  <Text className="text-md font-poppins-bold text-primary">
-                    {selectedRider?.bike_number?.toUpperCase()}
-                  </Text>
-                  <Text className="font-poppins-light text-muted text-sm">
-                    Bike Number
-                  </Text>
-                </View>
-              </View>
-
-              <View className="bg-input mb-3 items-center w-[80%] mx-auto">
-                <AppButton
-                  width={"70%"}
-                  borderRadius={50}
-                  backgroundColor={
-                    getDeliveryButtonConfig("PENDING", "CUSTOMER")?.primary
-                      ?.color || "orange"
-                  }
-                  text={
-                    getDeliveryButtonConfig("PENDING", "CUSTOMER")?.primary
-                      ?.text || "Book Rider"
-                  }
-                  variant="fill"
-                  onPress={handleBookRider}
-                />
-              </View>
-            </>
+            </View>
           )}
         </BottomSheetView>
       </BottomSheet>
