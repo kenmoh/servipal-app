@@ -153,9 +153,9 @@ const DisputeItem = ({
           </Text>
         </View>
 
-        {data?.unread_count && data.unread_count > 0 && (
+        {(data?.unread_count ?? 0) > 0 && (
           <View className="absolute right-3 top-2 bg-orange-500 rounded-full items-center justify-center w-6 h-6">
-            <Text className="text-primary tex-x">{data.unread_count}</Text>
+            <Text className="text-primary text-xs">{data?.unread_count}</Text>
           </View>
         )}
 
@@ -188,7 +188,7 @@ const DisputeItem = ({
             <View className="flex-row items-center gap-2">
               <StatusBadge status={dispute.status} />
 
-              {dispute.unread_count > 0 && (
+              {(dispute.unread_count ?? 0) > 0 && (
                 <View className="bg-brand-primary w-5 h-5 rounded-full items-center justify-center">
                   <Text className="text-white text-[10px] font-poppins-bold">
                     {dispute.unread_count > 9 ? "9+" : dispute.unread_count}

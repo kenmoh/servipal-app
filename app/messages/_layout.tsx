@@ -20,7 +20,7 @@ const _layout = () => {
           },
         }}
       >
-        <Stack.Screen name="id" options={{ headerShown: false }} />
+        <Stack.Screen name="[id]" options={{}} />
         <Stack.Screen name="index" options={{ title: "Messages" }} />
       </Stack>
     </View>

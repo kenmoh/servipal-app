@@ -9,6 +9,7 @@ import {
 } from "@/types/dispute-types";
 import { supabase } from "@/utils/supabase";
 import * as Sentry from "@sentry/react-native";
+import { fetch } from "expo/fetch";
 
 /**
  * Create a new dispute
@@ -394,20 +395,32 @@ export const uploadDisputeImage = async (
       throw new Error("User not authenticated");
     }
 
-    // Generate unique filename
-    const fileExt = imageUri.split(".").pop() || "jpg";
-    const fileName = `${disputeId}/${Date.now()}.${fileExt}`;
+    const userId = session.user.id;
+    const uri = imageUri;
 
-    // Fetch the image and convert to blob
-    const response = await fetch(imageUri);
-    const blob = await response.blob();
+    if (/^https?:\/\//i.test(uri)) {
+      return uri;
+    }
+
+    // Generate unique filename - prefix with userId to satisfy common RLS policies
+    const fileExt = imageUri.split(".").pop() || "jpg";
+    const fileName = `${userId}/${disputeId}/${Date.now()}.${fileExt}`;
+
+    // Fetch the image and convert to Uint8Array as per profile upload pattern
+    const response = await fetch(uri);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch image: ${response.status}`);
+    }
+
+    const arrayBuffer = await response.arrayBuffer();
+    const bytes = new Uint8Array(arrayBuffer);
 
     // Upload to Supabase storage
-    const { data, error } = await supabase.storage
+    const { data: uploadData, error } = await supabase.storage
       .from("dispute-images")
-      .upload(fileName, blob, {
-        contentType: `image/${fileExt}`,
-        upsert: false,
+      .upload(fileName, bytes, {
+        contentType: `image/${fileExt === "jpg" ? "jpeg" : fileExt}`,
+        upsert: true,
       });
 
     if (error) {
@@ -421,15 +434,17 @@ export const uploadDisputeImage = async (
     // Get public URL
     const { data: urlData } = supabase.storage
       .from("dispute-images")
-      .getPublicUrl(data.path);
+      .getPublicUrl(fileName);
 
-    console.log("✅ Image uploaded:", urlData.publicUrl);
-    Sentry.addBreadcrumb({
-      category: "api.dispute",
-      message: "Dispute image uploaded",
-      level: "info",
-    });
-    return urlData.publicUrl;
+    if (!urlData?.publicUrl) {
+      throw new Error("Failed to get public URL");
+    }
+
+    const timestamp = Date.now();
+    const publicUrl = `${urlData.publicUrl}?t=${timestamp}`;
+
+    console.log("✅ Image uploaded:", publicUrl);
+    return publicUrl;
   } catch (error) {
     console.error("❌ Upload image error:", error);
     Sentry.captureException(error, {
@@ -467,6 +482,7 @@ export const getUserDisputeUnreadCount =
 
 export const getDisputeUnreadCount = async (
   disputeId: string,
+  userId?: string,
 ): Promise<DisputeUnreadCount> => {
   const {
     data: { session },
@@ -475,9 +491,11 @@ export const getDisputeUnreadCount = async (
 
   if (sessionError || !session) throw new Error("User not authenticated");
 
+  const targetUserId = userId || session.user.id;
+
   const { data, error } = await supabase.rpc("get_dispute_unread_count", {
     p_dispute_id: disputeId,
-    p_user_id: session.user.id,
+    p_user_id: targetUserId,
   });
 
   if (error) {

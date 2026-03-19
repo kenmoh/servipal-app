@@ -22,7 +22,9 @@ import {
   FlatList,
   Image,
   Keyboard,
+  Modal,
   Pressable,
+  RefreshControl,
   Text,
   TextInput,
   View,
@@ -53,22 +55,23 @@ const MessageBubble = ({
   message,
   isOwn,
   isOptimistic,
-  lastReadAt,
+  recipientLastReadAt,
+  onImagePress,
 }: {
   message: DisputeMessage;
   isOwn: boolean;
   isOptimistic?: boolean;
-  lastReadAt: string | null;
+  recipientLastReadAt: string | null;
+  onImagePress: (url: string) => void;
 }) => {
   const hasAttachments = message.attachments && message.attachments.length > 0;
 
-  const messageStatus = isOwn
-    ? !lastReadAt
-      ? "sent"
-      : message.created_at <= lastReadAt
-        ? "read"
-        : "sent"
-    : null;
+  const getMessageStatus = (message: DisputeMessage) => {
+    if (!recipientLastReadAt) return "sent";
+    return message.created_at <= recipientLastReadAt ? "read" : "sent";
+  };
+
+  const messageStatus = isOwn ? getMessageStatus(message) : null;
 
   const renderAvatar = () => {
     if (message?.sender?.profile_image_url) {
@@ -105,32 +108,42 @@ const MessageBubble = ({
           </Text>
         )}
         <View
-          className={`px-4 py-3 rounded-2xl ${
+          className={`overflow-hidden rounded-2xl ${
             isOwn
               ? "bg-brand-primary rounded-br-sm"
               : "bg-surface-elevated rounded-bl-sm"
           } ${isOptimistic ? "opacity-70" : ""}`}
         >
+          {/* Attachments */}
           {hasAttachments && (
-            <View className="mb-2">
+            <View>
               {message.attachments!.map((url, index) => (
-                <Image
+                <Pressable
                   key={index}
-                  source={{ uri: url }}
-                  className="w-48 h-36 rounded-lg mb-1"
-                  resizeMode="cover"
-                />
+                  onPress={() => onImagePress(url)}
+                  className="active:opacity-90"
+                >
+                  <Image
+                    source={{ uri: url }}
+                    style={{ width: 250, height: 180 }}
+                    resizeMode="cover"
+                  />
+                </Pressable>
               ))}
             </View>
           )}
+
+          {/* Message text with its own padding */}
           {message.message_text && (
-            <Text
-              className={`text-sm font-poppins ${
-                isOwn ? "text-white" : "text-primary"
-              }`}
-            >
-              {message.message_text}
-            </Text>
+            <View className="px-4 py-2.5">
+              <Text
+                className={`text-sm font-poppins ${
+                  isOwn ? "text-white" : "text-primary"
+                }`}
+              >
+                {message.message_text}
+              </Text>
+            </View>
           )}
         </View>
 
@@ -309,6 +322,7 @@ const ConversationScreen = () => {
   >([]);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [viewingImage, setViewingImage] = useState<string | null>(null);
 
   // Fetch dispute details
   const { data: disputeDetails } = useQuery({
@@ -324,11 +338,25 @@ const ConversationScreen = () => {
     enabled: !!disputeId,
   });
 
-  // Fetch unread count + last_read_at (for tick rendering)
+  const otherPartyId =
+    user?.id === disputeDetails?.initiator_id
+      ? disputeDetails?.respondent_id
+      : disputeDetails?.initiator_id;
+
+  // Fetch CURRENT user's unread count
   const { data: unreadData } = useQuery({
-    queryKey: ["dispute-unread-count", disputeId],
+    queryKey: ["disputeUnread", disputeId],
     queryFn: () => getDisputeUnreadCount(disputeId!),
     enabled: !!disputeId,
+    refetchInterval: 5000,
+  });
+
+  // Fetch OTHER party's read status (to show if they read our messages)
+  const { data: otherUnreadData } = useQuery({
+    queryKey: ["disputeUnreadOther", disputeId, otherPartyId],
+    queryFn: () => getDisputeUnreadCount(disputeId!, otherPartyId),
+    enabled: !!disputeId && !!otherPartyId,
+    refetchInterval: 5000,
   });
 
   const lastReadAt = unreadData?.last_read_at ?? null;
@@ -475,7 +503,8 @@ const ConversationScreen = () => {
           message={item}
           isOwn={isOwn}
           isOptimistic={isOptimistic}
-          lastReadAt={lastReadAt}
+          recipientLastReadAt={otherUnreadData?.last_read_at || null}
+          onImagePress={setViewingImage}
         />
       );
     },
@@ -531,7 +560,9 @@ const ConversationScreen = () => {
           title: disputeDetails
             ? `${disputeDetails.order_type} Dispute`
             : "Dispute",
-          headerRight: () => <HeaderRight status={disputeDetails?.status} />,
+          headerRight: () => (
+            <HeaderRight status={disputeDetails?.status?.replace("_", " ")} />
+          ),
         }}
       />
 
@@ -578,6 +609,33 @@ const ConversationScreen = () => {
         isSending={sendMutation.isPending}
         isUploading={isUploading}
       />
+
+      {/* Image viewer Modal */}
+      <Modal
+        visible={!!viewingImage}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setViewingImage(null)}
+      >
+        <Pressable
+          className="flex-1 bg-black/90 items-center justify-center"
+          onPress={() => setViewingImage(null)}
+        >
+          {viewingImage && (
+            <Image
+              source={{ uri: viewingImage }}
+              style={{ width: "95%", height: "80%" }}
+              resizeMode="contain"
+            />
+          )}
+          <Pressable
+            onPress={() => setViewingImage(null)}
+            className="absolute top-12 right-6 w-10 h-10 bg-white/20 rounded-full items-center justify-center"
+          >
+            <Ionicons name="close" size={24} color="white" />
+          </Pressable>
+        </Pressable>
+      </Modal>
 
       {isResolved && (
         <View className="absolute bottom-20 left-4 right-4 bg-status-success-subtle p-3 rounded-xl">

@@ -47,7 +47,7 @@ const Rider = memo(
               <HDivider />
 
               <View className="flex-row items-center self-center gap-8 mt-2">
-                {rider?.total_deliveries && (
+                {(rider?.total_deliveries ?? 0) > 0 && (
                   <View>
                     <Text className="text-center font-poppins text-xs text-muted">
                       {rider.total_deliveries || 0}
