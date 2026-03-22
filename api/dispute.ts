@@ -76,7 +76,7 @@ export const getMyDisputes = async (): Promise<Dispute[]> => {
       .from("disputes")
       .select("*")
       .or(
-        `initiator_id.eq.${session.user.id},respondent_id.eq.${session.user.id}`,
+        `initiator_id.eq.${session.user.id},respondent_id.eq.${session.user.id}, dispatch_id.eq.${session.user.id}`,
       )
       .order("updated_at", { ascending: false });
 

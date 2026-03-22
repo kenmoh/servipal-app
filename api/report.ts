@@ -6,14 +6,14 @@ import {
   ReportCreate,
   ReportStatusUpdate,
   MessageCreate,
-  BadgeCount,
+  // BadgeCount,
 } from "@/types/review-types";
 
 const REPORT_BASE_URL = "/reports";
 
 // Fetch report
 export const fetchReport = async (
-  reportId: string
+  reportId: string,
 ): Promise<ReportResponse> => {
   try {
     const response: ApiResponse<ReportResponse | ErrorResponse> =
@@ -39,36 +39,36 @@ export const fetchReport = async (
   }
 };
 // Fetch report
-export const fetchUnreadBadgeCount = async (
-  userId: string
-): Promise<BadgeCount> => {
-  try {
-    const response: ApiResponse<BadgeCount | ErrorResponse> =
-      await apiClient.get(`${REPORT_BASE_URL}/${userId}/unread-badge-count`, {
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
+// export const fetchUnreadBadgeCount = async (
+//   userId: string,
+// ): Promise<BadgeCount> => {
+//   try {
+//     const response: ApiResponse<BadgeCount | ErrorResponse> =
+//       await apiClient.get(`${REPORT_BASE_URL}/${userId}/unread-badge-count`, {
+//         headers: {
+//           "Content-Type": "application/json",
+//         },
+//       });
 
-    if (!response.ok || !response.data || "detail" in response.data) {
-      const errorMessage =
-        response.data && "detail" in response.data
-          ? response.data.detail
-          : "Error fetching badge count";
-      throw new Error(errorMessage);
-    }
-    return response.data;
-  } catch (error) {
-    if (error instanceof Error) {
-      throw new Error(error.message);
-    }
-    throw new Error("An unexpected error occurred");
-  }
-};
+//     if (!response.ok || !response.data || "detail" in response.data) {
+//       const errorMessage =
+//         response.data && "detail" in response.data
+//           ? response.data.detail
+//           : "Error fetching badge count";
+//       throw new Error(errorMessage);
+//     }
+//     return response.data;
+//   } catch (error) {
+//     if (error instanceof Error) {
+//       throw new Error(error.message);
+//     }
+//     throw new Error("An unexpected error occurred");
+//   }
+// };
 
 // Fetch reports
 export const fetchCurrentUserReports = async (
-  userId: string
+  userId: string,
 ): Promise<ReportResponse[]> => {
   try {
     const response: ApiResponse<ReportResponse[] | ErrorResponse> =
@@ -97,7 +97,7 @@ export const fetchCurrentUserReports = async (
 // Create Report
 export const createReport = async (
   orderId: string,
-  reportData: ReportCreate
+  reportData: ReportCreate,
 ): Promise<ReportResponse> => {
   const data = {
     description: reportData.description,
@@ -131,7 +131,7 @@ export const createReport = async (
 // Create Report
 export const addMessage = async (
   reportId: string,
-  reportData: MessageCreate
+  reportData: MessageCreate,
 ): Promise<ReportResponse> => {
   const data = {
     content: reportData.content,
@@ -163,7 +163,7 @@ export const addMessage = async (
 // Update Report
 export const updateReportStatus = async (
   reportData: ReportStatusUpdate,
-  reportId: string
+  reportId: string,
 ): Promise<ReportStatusUpdate> => {
   const data = {
     issue_status: reportData.issue_status,
@@ -198,19 +198,19 @@ export const updateReportStatus = async (
 export const fetchAllNotifications = async (
   limit = 20,
   skip = 0,
-  markRead = false
+  markRead = false,
 ) => {
   try {
     const response: ApiResponse<any> = await apiClient.get(
       `/notification?limit=${limit}&skip=${skip}&mark_read=${markRead}`,
-      { headers: { "Content-Type": "application/json" } }
+      { headers: { "Content-Type": "application/json" } },
     );
     if (!response.ok || !response.data)
       throw new Error("Error fetching notifications");
     return response.data;
   } catch (error) {
     throw new Error(
-      error instanceof Error ? error.message : "Unexpected error"
+      error instanceof Error ? error.message : "Unexpected error",
     );
   }
 };
@@ -220,14 +220,14 @@ export const fetchNotificationById = async (notificationId: string) => {
   try {
     const response: ApiResponse<any> = await apiClient.get(
       `/notification/${notificationId}`,
-      { headers: { "Content-Type": "application/json" } }
+      { headers: { "Content-Type": "application/json" } },
     );
     if (!response.ok || !response.data)
       throw new Error("Error fetching notification");
     return response.data;
   } catch (error) {
     throw new Error(
-      error instanceof Error ? error.message : "Unexpected error"
+      error instanceof Error ? error.message : "Unexpected error",
     );
   }
 };
@@ -238,14 +238,14 @@ export const markReportRead = async (reportId: string) => {
     const response: ApiResponse<any> = await apiClient.post(
       `${REPORT_BASE_URL}/${reportId}/mark-read`,
       {},
-      { headers: { "Content-Type": "application/json" } }
+      { headers: { "Content-Type": "application/json" } },
     );
     if (!response.ok || !response.data)
       throw new Error("Error marking notification as read");
     return response.data;
   } catch (error) {
     throw new Error(
-      error instanceof Error ? error.message : "Unexpected error"
+      error instanceof Error ? error.message : "Unexpected error",
     );
   }
 };
@@ -256,14 +256,14 @@ export const markAllNotificationsRead = async () => {
     const response: ApiResponse<any> = await apiClient.post(
       `/notification/read-all`,
       {},
-      { headers: { "Content-Type": "application/json" } }
+      { headers: { "Content-Type": "application/json" } },
     );
     if (!response.ok || !response.data)
       throw new Error("Error marking all notifications as read");
     return response.data;
   } catch (error) {
     throw new Error(
-      error instanceof Error ? error.message : "Unexpected error"
+      error instanceof Error ? error.message : "Unexpected error",
     );
   }
 };
@@ -273,13 +273,13 @@ export const deleteNotification = async (notificationId: string) => {
   try {
     const response: ApiResponse<any> = await apiClient.delete(
       `/notification/${notificationId}`,
-      { headers: { "Content-Type": "application/json" } }
+      { headers: { "Content-Type": "application/json" } },
     );
     if (!response.ok) throw new Error("Error deleting notification");
     return response.data;
   } catch (error) {
     throw new Error(
-      error instanceof Error ? error.message : "Unexpected error"
+      error instanceof Error ? error.message : "Unexpected error",
     );
   }
 };
@@ -288,20 +288,20 @@ export const deleteNotification = async (notificationId: string) => {
 export const addNotificationThreadMessage = async (
   notificationId: string,
   content: string,
-  senderRole?: "reporter" | "reportee" | "admin"
+  senderRole?: "reporter" | "reportee" | "admin",
 ) => {
   try {
     const response: ApiResponse<any> = await apiClient.post(
       `/notification/${notificationId}/detail`,
       senderRole ? { content, sender_role: senderRole } : { content },
-      { headers: { "Content-Type": "application/json" } }
+      { headers: { "Content-Type": "application/json" } },
     );
     if (!response.ok || !response.data)
       throw new Error("Error adding message to thread");
     return response.data;
   } catch (error) {
     throw new Error(
-      error instanceof Error ? error.message : "Unexpected error"
+      error instanceof Error ? error.message : "Unexpected error",
     );
   }
 };
@@ -310,20 +310,20 @@ export const addNotificationThreadMessage = async (
 export const createReportThreadNotification = async (
   reportIssueId: string,
   title: string,
-  content: string
+  content: string,
 ) => {
   try {
     const response: ApiResponse<any> = await apiClient.post(
       `/notification/report-thread`,
       { report_issue_id: reportIssueId, title, content },
-      { headers: { "Content-Type": "application/json" } }
+      { headers: { "Content-Type": "application/json" } },
     );
     if (!response.ok || !response.data)
       throw new Error("Error creating report thread notification");
     return response.data;
   } catch (error) {
     throw new Error(
-      error instanceof Error ? error.message : "Unexpected error"
+      error instanceof Error ? error.message : "Unexpected error",
     );
   }
 };
@@ -334,14 +334,14 @@ export const markThreadRead = async (notificationId: string) => {
     const response: ApiResponse<any> = await apiClient.post(
       `/notification/${notificationId}/read-one`,
       {},
-      { headers: { "Content-Type": "application/json" } }
+      { headers: { "Content-Type": "application/json" } },
     );
     if (!response.ok || !response.data)
       throw new Error("Error marking thread as read");
     return response.data;
   } catch (error) {
     throw new Error(
-      error instanceof Error ? error.message : "Unexpected error"
+      error instanceof Error ? error.message : "Unexpected error",
     );
   }
 };
@@ -352,14 +352,14 @@ export const markReadOnView = async (notificationId: string) => {
     const response: ApiResponse<any> = await apiClient.post(
       `/notification/${notificationId}/view-message`,
       {},
-      { headers: { "Content-Type": "application/json" } }
+      { headers: { "Content-Type": "application/json" } },
     );
     if (!response.ok || !response.data)
       throw new Error("Error marking notification as read on view");
     return response.data;
   } catch (error) {
     throw new Error(
-      error instanceof Error ? error.message : "Unexpected error"
+      error instanceof Error ? error.message : "Unexpected error",
     );
   }
 };
@@ -369,14 +369,14 @@ export const fetchNotificationBadgeCount = async () => {
   try {
     const response: ApiResponse<any> = await apiClient.get(
       `/notification/badge-count`,
-      { headers: { "Content-Type": "application/json" } }
+      { headers: { "Content-Type": "application/json" } },
     );
     if (!response.ok || !response.data)
       throw new Error("Error fetching badge count");
     return response.data;
   } catch (error) {
     throw new Error(
-      error instanceof Error ? error.message : "Unexpected error"
+      error instanceof Error ? error.message : "Unexpected error",
     );
   }
 };
@@ -386,14 +386,14 @@ export const fetchNotificationStatistics = async () => {
   try {
     const response: ApiResponse<any> = await apiClient.get(
       `/notification/stats`,
-      { headers: { "Content-Type": "application/json" } }
+      { headers: { "Content-Type": "application/json" } },
     );
     if (!response.ok || !response.data)
       throw new Error("Error fetching notification statistics");
     return response.data;
   } catch (error) {
     throw new Error(
-      error instanceof Error ? error.message : "Unexpected error"
+      error instanceof Error ? error.message : "Unexpected error",
     );
   }
 };
@@ -410,14 +410,14 @@ export const markSingleNotificationRead = async (notificationId: string) => {
     const response: ApiResponse<any> = await apiClient.post(
       `/notification/${notificationId}/read-message`,
       {},
-      { headers: { "Content-Type": "application/json" } }
+      { headers: { "Content-Type": "application/json" } },
     );
     if (!response.ok || !response.data)
       throw new Error("Error marking notification as read");
     return response.data;
   } catch (error) {
     throw new Error(
-      error instanceof Error ? error.message : "Unexpected error"
+      error instanceof Error ? error.message : "Unexpected error",
     );
   }
 };
@@ -428,14 +428,14 @@ export const markAllUserNotificationsRead = async () => {
     const response: ApiResponse<any> = await apiClient.post(
       `/notification/read-all`,
       {},
-      { headers: { "Content-Type": "application/json" } }
+      { headers: { "Content-Type": "application/json" } },
     );
     if (!response.ok || !response.data)
       throw new Error("Error marking all user notifications as read");
     return response.data;
   } catch (error) {
     throw new Error(
-      error instanceof Error ? error.message : "Unexpected error"
+      error instanceof Error ? error.message : "Unexpected error",
     );
   }
 };

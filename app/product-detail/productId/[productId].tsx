@@ -199,10 +199,15 @@ const ProductDetail = () => {
               <Text className="text-[10px] text-slate-400 font-poppins-light">
                 Shipping
               </Text>
-              <Text className="text-xs text-slate-900 dark:text-slate-200  font-poppins-medium">
-                ₦ {product?.shipping_cost}{" "}
-                {product?.shipping_cost === 0 && "Free Delivery"}
-              </Text>
+              {product?.shipping_cost ? (
+                <Text className="text-xs text-slate-900 dark:text-slate-200  font-poppins-medium">
+                  ₦ {product?.shipping_cost}{" "}
+                </Text>
+              ) : (
+                <Text className="text-xs text-slate-900 dark:text-slate-200  font-poppins-medium">
+                  Free Delivery
+                </Text>
+              )}
             </View>
           </View>
           <View className="flex-row items-center gap-2">
