@@ -560,6 +560,38 @@ export const deleteRider = async (riderId: string): Promise<null> => {
   }
 };
 
+/**
+ * Deletes the current user's account using a Supabase RPC function.
+ * This RPC should handle deleting the profile and the auth user record.
+ *
+ * @param feedback - Optional reason for deleting the account
+ */
+export const deleteUserAccount = async (feedback?: string): Promise<void> => {
+  try {
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession();
+
+    if (sessionError || !session) {
+      throw new Error("User not authenticated");
+    }
+
+    const { error } = await supabase.rpc("delete_user_account", {
+      p_feedback: feedback || null,
+    });
+
+    if (error) {
+      throw new Error(error.message || "Failed to delete account");
+    }
+
+    // Sign out the user locally after successful deletion
+    await supabase.auth.signOut();
+  } catch (error) {
+    throw error;
+  }
+};
+
 export const updateRiderByDispatcher = async (
   riderId: string,
   updates: UpdateRiderData,

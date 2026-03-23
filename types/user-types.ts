@@ -79,6 +79,7 @@ export interface UserProfile {
   is_verified?: boolean;
   is_online?: boolean;
   is_blocked?: boolean;
+  has_delivery?: boolean;
   last_seen_at?: string;
 }
 

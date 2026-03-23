@@ -101,8 +101,6 @@ export const startDeliveryTracking = async (
         notificationColor: "#FF6B00",
       },
     });
-
-    console.log("📍 Background delivery tracking started");
   } catch (error) {
     Sentry.captureException(error, {
       tags: { action: "start_delivery_tracking" },

@@ -1,12 +1,19 @@
 import { requestOtp } from "@/api/auth";
-import { fetchProfileImageUrls, ImageData, uploadImage } from "@/api/user";
+import {
+  deleteUserAccount,
+  fetchProfileImageUrls,
+  ImageData,
+  uploadImage,
+} from "@/api/user";
+import AppModal from "@/components/AppModal";
 import HDivider from "@/components/HDivider";
 import ProfileImagePicker from "@/components/ProfileImagePicker";
 import { useToast } from "@/components/ToastProvider";
 import { AppButton } from "@/components/ui/app-button";
+import { AppTextInput } from "@/components/ui/app-text-input";
 import {
-    useToggleOnlineStatus,
-    useTogglePickupAndDropoff,
+  useToggleOnlineStatus,
+  useTogglePickupAndDropoff,
 } from "@/hooks/status-toggle";
 import { useTheme } from "@/hooks/theme-toggle";
 import { useUserStore } from "@/store/userStore";
@@ -20,15 +27,15 @@ import { router } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import React, { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Dimensions,
-    Platform,
-    Pressable,
-    ScrollView,
-    Switch,
-    Text,
-    View,
+  ActivityIndicator,
+  Alert,
+  Dimensions,
+  Platform,
+  Pressable,
+  ScrollView,
+  Switch,
+  Text,
+  View,
 } from "react-native";
 
 const BACKDROP_IMAGE_HEIGHT = Dimensions.get("window").height * 0.18;
@@ -51,6 +58,9 @@ const ProfileScreen = () => {
   const [canPickup, setCanPickup] = useState(
     profile?.can_pickup_and_dropoff ?? false,
   );
+  const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
+  const [deleteFeedback, setDeleteFeedback] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const { data } = useQuery({
     queryKey: ["user-profile-image", user?.id],
@@ -125,6 +135,16 @@ const ProfileScreen = () => {
   };
 
   const handleToggle = () => {
+    // If turning off online status while having active delivery
+    if (isOnline && profile?.has_delivery) {
+      Alert.alert(
+        "Action Required",
+        "You cannot go offline while you have an active delivery. Please complete your current delivery first.",
+        [{ text: "OK" }],
+      );
+      return;
+    }
+
     // Optimistic update
     const previousValue = isOnline;
     setIsOnline(!isOnline);
@@ -333,6 +353,35 @@ const ProfileScreen = () => {
       console.error("Error in background toggle:", error);
       showError("Error", "Failed to check permission.");
     }
+  };
+
+  const confirmDeleteAccount = async () => {
+    setIsDeleting(true);
+    try {
+      await deleteUserAccount(deleteFeedback);
+      showSuccess("Success", "Your account has been deleted.");
+      setIsDeleteModalVisible(false);
+      // signOut() is called inside deleteUserAccount
+    } catch (error: any) {
+      showError("Error", error.message || "Failed to delete account");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      "Delete Account",
+      "Are you sure you want to delete your account? This action is permanent and cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => setIsDeleteModalVisible(true),
+        },
+      ],
+    );
   };
 
   const handleStoreRedirect = () => {
@@ -668,7 +717,7 @@ const ProfileScreen = () => {
         </View>
       </View>
 
-      <View className="mt-8 px-3 pb-8 flex-row ">
+      <View className="mt-8 px-3 pb-8 flex-row">
         <AppButton
           text="Logout"
           color={"#aaa"}
@@ -685,9 +734,55 @@ const ProfileScreen = () => {
           borderRadius={50}
           variant="ghost"
           icon={<Ionicons name="trash-outline" size={20} color="crimson" />}
-          onPress={() => console.log("Account deleted")}
+          onPress={handleDeleteAccount}
         />
       </View>
+
+      <AppModal
+        visible={isDeleteModalVisible}
+        onClose={() => setIsDeleteModalVisible(false)}
+        height="60%"
+      >
+        <View className="gap-6 pt-4">
+          <View>
+            <Text className="text-xl font-poppins-semibold text-primary">
+              We're sorry to see you go
+            </Text>
+            <Text className="text-sm text-muted mt-2">
+              Please tell us why you're deleting your account. Your feedback
+              helps us improve.
+            </Text>
+          </View>
+
+          <AppTextInput
+            label="Feedback (Optional)"
+            placeholder="Tell us why you're leaving..."
+            multiline
+            height={120}
+            value={deleteFeedback}
+            onChangeText={setDeleteFeedback}
+            textAlignVertical="top"
+          />
+
+          <View className="gap-3 mt-4">
+            <AppButton
+              text={isDeleting ? "Deleting..." : "Permanently Delete Account"}
+              backgroundColor="bg-red-500"
+              color="white"
+              borderRadius={50}
+              onPress={confirmDeleteAccount}
+              disabled={isDeleting}
+            />
+            <AppButton
+              text="Cancel"
+              variant="outline"
+              borderRadius={50}
+              onPress={() => setIsDeleteModalVisible(false)}
+              disabled={isDeleting}
+            />
+          </View>
+        </View>
+      </AppModal>
     </ScrollView>
   );
 };

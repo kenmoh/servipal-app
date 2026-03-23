@@ -143,10 +143,7 @@ export default Sentry.wrap(function RootLayout() {
                 >
                   {/* Auth Screens */}
                   <Stack.Protected guard={!user?.id}>
-                    <Stack.Screen
-                      name="sign-in"
-                      // options={{ headerShown: false }}
-                    />
+                    <Stack.Screen name="sign-in" />
                     <Stack.Screen name="sign-up" options={{}} />
                     <Stack.Screen
                       name="forgot-password"

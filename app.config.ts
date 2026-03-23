@@ -33,7 +33,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       backgroundColor: "#000000",
     },
     googleServicesFile: "./google-services.json",
-    // edgeToEdgeEnabled: true,
     softwareKeyboardLayoutMode: "pan",
     package: "com.kenmoh.servipal",
     predictiveBackGestureEnabled: false,
@@ -66,11 +65,11 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       },
     ],
   },
-  web: {
-    output: "static",
-    favicon: "./assets/images/favicon.png",
-    bundler: "metro",
-  },
+  // web: {
+  //   output: "static",
+  //   favicon: "./assets/images/favicon.png",
+  //   bundler: "metro",
+  // },
   plugins: [
     "expo-router",
     [
