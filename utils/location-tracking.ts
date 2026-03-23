@@ -13,7 +13,6 @@ export const defineLocationTask = () => {
     BACKGROUND_LOCATION_TASK,
     async ({ data, error }: any) => {
       if (error) {
-        console.error("📍 Background location task error:", error);
         Sentry.captureException(error, {
           tags: { action: "bg_location_task" },
         });
@@ -24,10 +23,6 @@ export const defineLocationTask = () => {
         const { locations } = data;
         if (locations && locations.length > 0) {
           const { latitude, longitude } = locations[0].coords;
-          console.log("📍 Background location update:", {
-            latitude,
-            longitude,
-          });
 
           // Retrieve current delivery info from persistent storage if needed
           // For simplicity, we assume we have access to the current delivery context
@@ -40,7 +35,6 @@ export const defineLocationTask = () => {
                 longitude,
               );
             } catch (err) {
-              console.error("❌ Failed to update coords from bg task:", err);
               Sentry.captureException(err, {
                 tags: { action: "bg_delivery_coords_update" },
               });
@@ -68,7 +62,6 @@ export const startDeliveryTracking = async (
   riderId: string,
 ): Promise<void> => {
   if (!deliveryId || !riderId) {
-    console.warn("🚫 Tracking not started: missing deliveryId or riderId");
     return;
   }
 
@@ -79,16 +72,12 @@ export const startDeliveryTracking = async (
   const { status: foregroundStatus } =
     await Location.requestForegroundPermissionsAsync();
   if (foregroundStatus !== "granted") {
-    console.error("Foreground location permission denied");
     return;
   }
 
   const { status: backgroundStatus } =
     await Location.requestBackgroundPermissionsAsync();
   if (backgroundStatus !== "granted") {
-    console.warn(
-      "Background location permission denied - tracking will stop when app closes",
-    );
     // We proceed anyway, but it won't work in bg on some OSs without this
   }
 
@@ -115,7 +104,6 @@ export const startDeliveryTracking = async (
 
     console.log("📍 Background delivery tracking started");
   } catch (error) {
-    console.error("❌ Failed to start background tracking:", error);
     Sentry.captureException(error, {
       tags: { action: "start_delivery_tracking" },
     });
@@ -135,9 +123,7 @@ export const stopDeliveryTracking = async (): Promise<void> => {
     }
     LocationContext.deliveryId = null;
     LocationContext.riderId = null;
-    console.log("📍 Delivery tracking stopped");
   } catch (error) {
-    console.error("❌ Failed to stop tracking:", error);
     Sentry.captureException(error, {
       tags: { action: "stop_delivery_tracking" },
     });
