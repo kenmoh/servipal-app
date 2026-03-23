@@ -21,6 +21,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     infoPlist: {
       ITSAppUsesNonExemptEncryption: false,
       UIBackgroundModes: ["location"],
+      NSLocationWhenInUseUsageDescription: `${PRODUCT_NAME} needs access to your location to find the best services and display riders closest to you.`,
+      NSLocationAlwaysAndWhenInUseUsageDescription: `${PRODUCT_NAME} needs access to your location to find the best services and display riders closest to you.`,
+      NSLocationAlwaysUsageDescription: `${PRODUCT_NAME} needs access to your location to track your location in the background during active deliveries.`,
     },
     associatedDomains: ["applinks:servipal.com"],
   },
@@ -87,12 +90,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       {
         isIosBackgroundLocationEnabled: true,
         isAndroidBackgroundLocationEnabled: true,
-        locationAlwaysAndWhenInUsePermission:
-          "Allow $(PRODUCT_NAME) to access your location to find the best services and display riders closest to you",
-        locationWhenInUsePermission:
-          "Allow $(PRODUCT_NAME) to access your location to find the best services and display riders closest to you",
-        backgroundLocationPermission:
-          "Allow $(PRODUCT_NAME) to track your location in the background during active deliveries.",
+        locationAlwaysAndWhenInUsePermission: `${PRODUCT_NAME} needs access to your location to find the best services and display riders closest to you.`,
+        locationWhenInUsePermission: `${PRODUCT_NAME} needs access to your location to find the best services and display riders closest to you.`,
+        backgroundLocationPermission: `${PRODUCT_NAME} needs access to your location to track your location in the background during active deliveries.`,
       },
     ],
     "expo-secure-store",

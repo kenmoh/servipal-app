@@ -32,7 +32,7 @@ const LocationPermission = ({ onRetry }: LocationPermissionProps) => {
                 className='text-primary px-4 text-center text-sm font-poppins-regular'
 
             >
-                Please enable location services to see available deliveries within 30km of your location
+                Allow ServiPal to access your location to find the best services and display riders closest to you.
             </Text>
             <View className='gap-2 w-full px-6' >
                 <AppButton

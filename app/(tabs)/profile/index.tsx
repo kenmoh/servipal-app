@@ -5,8 +5,8 @@ import ProfileImagePicker from "@/components/ProfileImagePicker";
 import { useToast } from "@/components/ToastProvider";
 import { AppButton } from "@/components/ui/app-button";
 import {
-  useToggleOnlineStatus,
-  useTogglePickupAndDropoff,
+    useToggleOnlineStatus,
+    useTogglePickupAndDropoff,
 } from "@/hooks/status-toggle";
 import { useTheme } from "@/hooks/theme-toggle";
 import { useUserStore } from "@/store/userStore";
@@ -20,15 +20,15 @@ import { router } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Dimensions,
-  Platform,
-  Pressable,
-  ScrollView,
-  Switch,
-  Text,
-  View,
+    ActivityIndicator,
+    Alert,
+    Dimensions,
+    Platform,
+    Pressable,
+    ScrollView,
+    Switch,
+    Text,
+    View,
 } from "react-native";
 
 const BACKDROP_IMAGE_HEIGHT = Dimensions.get("window").height * 0.18;
@@ -208,7 +208,7 @@ const ProfileScreen = () => {
       // Explanatory alert before requesting (if not already granted/permanently denied)
       Alert.alert(
         "Location Access",
-        "ServiPal needs your general location to find the best services and nearby vendors for you.",
+        "Allow ServiPal to access your location to find the best services and display riders closest to you.",
         [
           {
             text: "Continue",
@@ -289,7 +289,7 @@ const ProfileScreen = () => {
       // 3. Show explanation before background request
       Alert.alert(
         "Delivery Tracking",
-        "Allow ServiPal to access your location even when the app is in the background? This is specifically used to display riders closest to you and provide faster delivery updates.",
+        "Allow ServiPal to track your location in the background during active deliveries to display riders closest to you and provide faster updates.",
         [
           {
             text: "Allow",
