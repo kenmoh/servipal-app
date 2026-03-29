@@ -20,14 +20,14 @@ export default function Index() {
     );
   }
 
-  // // First launch - show onboarding
-  if (isFirstLaunch === true) {
-    return <Redirect href="/onboarding" />;
-  }
-
   // User exists - go to main app
   if (user?.id) {
     return <Redirect href="/(tabs)/delivery/(top-tabs)" />;
+  }
+
+  // // First launch - show onboarding
+  if (isFirstLaunch === true) {
+    return <Redirect href="/onboarding" />;
   }
 
   // No user - show sign-in

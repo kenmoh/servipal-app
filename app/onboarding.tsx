@@ -27,7 +27,7 @@ const Onboarding = () => {
 
   const handleFirstLaunch = async () => {
     await setFirstLaunchComplete();
-    router.replace("/sign-up");
+    router.replace("/user-selection");
   };
 
   return (
@@ -84,7 +84,7 @@ const Onboarding = () => {
       </Swiper>
 
       {/* Skip Button */}
-      <TouchableOpacity
+      {/* <TouchableOpacity
         className="bg-black/20"
         activeOpacity={0.6}
         onPress={handleFirstLaunch}
@@ -108,7 +108,7 @@ const Onboarding = () => {
         >
           Skip
         </Text>
-      </TouchableOpacity>
+      </TouchableOpacity> */}
 
       {activeIndex === onboardingSlides.length - 1 && (
         <TouchableOpacity

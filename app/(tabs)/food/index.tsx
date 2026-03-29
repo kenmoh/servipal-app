@@ -60,13 +60,31 @@ const RestaurantScreen = () => {
   // Simple debounce for search
   useEffect(() => {
     const timer = setTimeout(() => {
-      setSearchQuery(searchInput);
+      if (searchInput.length === 0 || searchInput.length >= 3) {
+        setSearchQuery(searchInput);
+      }
     }, 500);
 
     return () => clearTimeout(timer);
   }, [searchInput]);
 
-  if (!userLocation || isFetching) {
+  const renderHeader = React.useMemo(() => (
+    <>
+      <View className="px-4 py-2">
+        <AppTextInput
+          placeholder="Search for food or restaurants..."
+          value={searchInput}
+          borderRadius="rounded-full"
+          height={45}
+          onChangeText={setSearchInput}
+          icon={<Feather name="search" size={20} color="gray" />}
+        />
+      </View>
+      <HDivider />
+    </>
+  ), [searchInput]);
+
+  if (!userLocation || (isFetching && !data)) {
     return <LoadingIndicator />;
   }
 
@@ -80,23 +98,15 @@ const RestaurantScreen = () => {
     <View className="flex-1 bg-background">
       <HDivider />
 
+      {isFetching && data && (
+        <View className="absolute top-0 left-0 right-0 z-10">
+          <LoadingIndicator />
+        </View>
+      )}
+
       <FlashList
         data={data?.vendors || []}
-        ListHeaderComponent={() => (
-          <>
-            <View className="px-4 py-2">
-              <AppTextInput
-                placeholder="Search for food or restaurants..."
-                value={searchInput}
-                borderRadius="rounded-full"
-                height={45}
-                onChangeText={setSearchInput}
-                icon={<Feather name="search" size={20} color="gray" />}
-              />
-            </View>
-            <HDivider />
-          </>
-        )}
+        ListHeaderComponent={renderHeader}
         ListEmptyComponent={<EmptySearch searchQuery={searchQuery} />}
         showsVerticalScrollIndicator={false}
         keyExtractor={(item) => item.id}

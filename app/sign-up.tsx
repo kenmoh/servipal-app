@@ -15,6 +15,7 @@ import { supabase } from "@/utils/supabase";
 import { useMutation } from "@tanstack/react-query";
 
 import { useToast } from "@/components/ToastProvider";
+import { useUserStore } from "@/store/userStore";
 import { AppButton } from "@/components/ui/app-button";
 import { AppTextInput } from "@/components/ui/app-text-input";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -32,7 +33,6 @@ const roleData = [
 const signUpSchema = z
   .object({
     email: z.email().trim().nonempty("Email is required"),
-    userType: z.string().nonempty("User type is required"),
     phoneNumber: z
       .string()
       .regex(phoneRegEx, "Enter a valid phone number")
@@ -62,6 +62,8 @@ type SignUpFormValues = z.infer<typeof signUpSchema>;
 
 const SignUp = () => {
   const { showError, showInfo } = useToast();
+  const { selectedUserType, user } = useUserStore();
+  
   const {
     control,
     handleSubmit,
@@ -70,12 +72,17 @@ const SignUp = () => {
     resolver: zodResolver(signUpSchema),
     defaultValues: {
       email: "",
-      userType: "",
       phoneNumber: "",
       password: "",
       confirmPassword: "",
     },
   });
+
+  React.useEffect(() => {
+    if (!selectedUserType && !user?.id) {
+      router.replace("/user-selection");
+    }
+  }, [selectedUserType, user?.id]);
 
   const openURL = () => {
     Linking.openURL("https://www.servi-pal.com/terms");
@@ -87,7 +94,7 @@ const SignUp = () => {
       password,
       phoneNumber,
       userType,
-    }: SignUpFormValues) => {
+    }: SignUpFormValues & { userType: string }) => {
       const trimmedEmail = email.trim().toLowerCase();
       const trimmedPhone = phoneNumber.trim();
 
@@ -125,7 +132,8 @@ const SignUp = () => {
   });
 
   const onSubmit = (values: SignUpFormValues) => {
-    mutate(values);
+    if (!selectedUserType) return;
+    mutate({ ...values, userType: selectedUserType });
   };
 
   return (
@@ -179,18 +187,6 @@ const SignUp = () => {
             )}
           />
 
-          <Controller
-            control={control}
-            name="userType"
-            render={({ field: { onChange, value } }) => (
-              <AppPicker
-                items={roleData}
-                isBank={false}
-                value={value}
-                onValueChange={onChange}
-              />
-            )}
-          />
           <Controller
             control={control}
             name="password"

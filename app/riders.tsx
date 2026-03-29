@@ -209,7 +209,9 @@ const RidersScreen = () => {
       clearTimeout(debounceTimer.current);
     }
     debounceTimer.current = setTimeout(() => {
-      setDebouncedSearchQuery(searchQuery);
+      if (searchQuery.length === 0 || searchQuery.length >= 3) {
+        setDebouncedSearchQuery(searchQuery);
+      }
     }, 300);
 
     return () => {

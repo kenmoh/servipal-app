@@ -389,7 +389,7 @@ export async function getNearbyVendors(
 ): Promise<NearbyVendorsResponse | null> {
   const {
     userType,
-    maxDistanceKm = 100,
+    maxDistanceKm = 1000000,
     page = 0,
     pageSize = 20,
     minRating,
@@ -402,11 +402,10 @@ export async function getNearbyVendors(
     page_size: pageSize,
     page_offset: page * pageSize,
     min_rating: minRating ?? null,
-    p_search_query: searchQuery ?? null,
+    p_search_query: searchQuery && searchQuery.length >= 3 ? searchQuery : null,
   });
 
   if (error) {
-    console.error("Failed to fetch nearby vendors:", error);
     return null;
   }
 
@@ -744,7 +743,7 @@ interface GetNearbyRidersOptions {
 export const getNearbyRiders = async (
   options: GetNearbyRidersOptions = {},
 ): Promise<DispatchRidersResponse> => {
-  const { maxDistanceKm = 100, page = 0, pageSize = 20 } = options;
+  const { maxDistanceKm = 1000000, page = 0, pageSize = 20 } = options;
   try {
     const {
       data: { session },
