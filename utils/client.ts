@@ -5,6 +5,7 @@ export const apiClient = create({
   // baseURL: "https://api.servi-pal.com/api",
   // baseURL: "https://servipal-backend-334769928993.us-central1.run.app/api/v1",
   baseURL: "https://servipal-backend.onrender.com/api/v1",
+  // baseURL: "https://servipal-backend.fastapicloud.dev/api/v1",
 });
 
 apiClient.addAsyncRequestTransform(async (request) => {

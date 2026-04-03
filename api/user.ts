@@ -665,17 +665,22 @@ export const updatecurrentUserLocation = async (
   coordinates: LocationCoordinates,
 ): Promise<UpdateLocationResponse> => {
   try {
-    // Get current session
-    const {
-      data: { session },
-      error: sessionError,
-    } = await supabase.auth.getSession();
+    // In production (EAS builds), getSession() reads from an in-memory cache
+    // that can be stale or empty immediately after login.
+    // getUser() makes a server round-trip, guaranteeing the session is valid.
+    let { data: userData, error: userError } = await supabase.auth.getUser();
 
-    if (sessionError || !session) {
-      throw new Error("User not authenticated");
+    // If getUser() fails, attempt a session refresh as a fallback
+    if (userError || !userData?.user) {
+      const { data: refreshData, error: refreshError } =
+        await supabase.auth.refreshSession();
+      if (refreshError || !refreshData?.session) {
+        throw new Error("User not authenticated");
+      }
+      userData = { user: refreshData.session.user };
     }
 
-    const userId = session.user.id;
+    const userId = userData.user!.id;
 
     // Validate coordinates
     if (
@@ -833,7 +838,6 @@ export const registerPushToken = async (
     );
 
     if (error) {
-      console.error("Push token registration error:", error);
       throw new Error(error.message || "Failed to register push token");
     }
   } catch (error) {

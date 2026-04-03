@@ -141,7 +141,7 @@ export default Sentry.wrap(function RootLayout() {
                     },
                   }}
                 >
-                  {/* Auth Screens */}
+                  {/* Auth Screens — only shown when NOT logged in */}
                   <Stack.Protected guard={!user?.id}>
                     <Stack.Screen name="sign-in" />
                     <Stack.Screen name="sign-up" options={{}} />
@@ -156,6 +156,11 @@ export default Sentry.wrap(function RootLayout() {
                     <Stack.Screen
                       name="reset-password"
                       options={{ title: "Reset password" }}
+                    />
+                    {/* user-selection is part of the registration flow — hide after login */}
+                    <Stack.Screen
+                      name="user-selection"
+                      options={{ headerShown: false }}
                     />
                   </Stack.Protected>
 

@@ -287,7 +287,7 @@ const ReceiptPage = () => {
                             <h2>Delivery Details</h2>
                             <div class="address-box">
                                 <strong style="display:block; margin-bottom:4px; font-size:11px; color:#999;">DROP-OFF</strong>
-                                ${truncateText(data.delivery?.destination || "")}
+                                ${truncateText(data.order?.destination || "")}
                             </div>
                         </div>
                         

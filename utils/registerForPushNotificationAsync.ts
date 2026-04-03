@@ -40,22 +40,13 @@ export async function registerForPushNotificationAsync() {
 
       while (attempt < maxRetries) {
         try {
-          console.log(
-            `🔄 Expo push token attempt ${attempt + 1}/${maxRetries}...`,
-          );
           const token = (
             await Notifications.getExpoPushTokenAsync({ projectId })
           ).data;
-          console.log("✅ Expo push token obtained");
           return token;
         } catch (error: any) {
           attempt++;
           const errorMessage = error?.message || String(error);
-
-          console.warn(
-            `⚠️ Expo push token attempt ${attempt} failed:`,
-            errorMessage,
-          );
 
           if (attempt >= maxRetries) {
             throw error;
@@ -68,24 +59,18 @@ export async function registerForPushNotificationAsync() {
             errorMessage.includes("IOException");
 
           if (!isTransient) {
-            console.error(
-              "❌ Non-transient error, aborting retries:",
-              errorMessage,
-            );
+            Sentry.captureException(error, {
+              tags: { action: "get_push_token" },
+            });
             throw error;
           }
 
-          console.log(`⏱️ Retrying in ${delay}ms...`);
           await new Promise((resolve) => setTimeout(resolve, delay));
           delay *= 2; // Exponential backoff
         }
       }
     } catch (e: unknown) {
       const finalError = e instanceof Error ? e.message : String(e);
-      console.error(
-        "❌ Failed to get Expo push token after retries:",
-        finalError,
-      );
       Sentry.captureException(e, { tags: { action: "get_push_token" } });
       throw new Error(`Push token registration failed: ${finalError}`);
     }

@@ -7,6 +7,7 @@ import { supabase } from "@/utils/supabase";
 import * as Sentry from "@sentry/react-native";
 import { AuthError } from "@supabase/supabase-js";
 import { useMutation } from "@tanstack/react-query";
+import { router } from "expo-router";
 
 export const useSignIn = () => {
   const { showError } = useToast();
@@ -70,17 +71,20 @@ export const useSignIn = () => {
     },
 
     onSuccess: async (data) => {
-      console.log("✅ Login success:", {
-        userId: data.user.id,
-        email: data.user.email,
-      });
       Sentry.setUser({ id: data.user.id, email: data.user.email ?? undefined });
-      Sentry.addBreadcrumb({ category: "auth", message: "User signed in successfully", level: "info" });
+      Sentry.addBreadcrumb({
+        category: "auth",
+        message: "User signed in successfully",
+        level: "info",
+      });
 
       try {
         const authUser = toAuthUser(data.user);
         await authStorage.storeUser(authUser);
         setUser(authUser);
+        // Explicitly replace the entire nav stack so there's no way to
+        // navigate back to sign-in, user-selection, or any other auth screen.
+        router.replace("/(tabs)/delivery/(top-tabs)");
       } catch (error) {
         showError("Error", "Failed to save login data. Please try again.");
         await supabase.auth.signOut();

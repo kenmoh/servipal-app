@@ -5,6 +5,7 @@ import {
   Alert,
   Dimensions,
   Modal,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -254,6 +255,27 @@ const ItemDetails = () => {
           },
         });
         return;
+      }
+
+      // Enforce Delivery Tracking for riders accepting or picking up orders
+      if (btnConfig.nextStatus === "ACCEPTED" || btnConfig.nextStatus === "PICKED_UP") {
+        const state = useUserStore.getState();
+        const isTrackingEnabled =
+          Platform.OS === "ios"
+            ? state.isIosBackgroundLocationEnabled
+            : state.isAndroidBackgroundLocationEnabled;
+
+        if (!isTrackingEnabled) {
+          Alert.alert(
+            "Tracking Required",
+            "You must enable 'Delivery Tracking' in your Profile settings before accepting or picking up a delivery.",
+            [
+              { text: "Cancel", style: "cancel" },
+              { text: "Go to Profile", onPress: () => router.push("/profile") },
+            ]
+          );
+          return;
+        }
       }
 
       if (btnConfig.requiresReason) {

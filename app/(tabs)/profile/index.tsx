@@ -52,6 +52,8 @@ const ProfileScreen = () => {
     isAndroidBackgroundLocationEnabled,
     locationWhenInUsePermission,
     checkLocationPermission,
+    startLocationTracking,
+    stopLocationTracking,
   } = useUserStore();
 
   const [isOnline, setIsOnline] = useState(profile?.is_online ?? false);
@@ -234,10 +236,8 @@ const ProfileScreen = () => {
             text: "Continue",
             onPress: async () => {
               try {
-                console.log("🔄 Triggering native foreground request...");
                 const { status: requestStatus } =
                   await Location.requestForegroundPermissionsAsync();
-                console.log("Foreground request result:", requestStatus);
 
                 if (requestStatus === "granted") {
                   showSuccess("Success", "General location enabled!");
@@ -249,7 +249,6 @@ const ProfileScreen = () => {
                 }
                 await checkLocationPermission();
               } catch (error) {
-                console.error("Error in foreground request:", error);
                 showError("Error", "Failed to request permission.");
               }
             },
@@ -258,14 +257,39 @@ const ProfileScreen = () => {
         ],
       );
     } catch (error) {
-      console.error("Error in foreground toggle:", error);
       showError("Error", "Failed to check permission.");
     }
   };
 
-  const handleBackgroundToggle = async () => {
+  const handleBackgroundToggle = async (newValue: boolean) => {
     try {
-      // 1. Check Foreground dependency first
+      if (!newValue) {
+        if (profile?.has_delivery) {
+          Alert.alert(
+            "Active Delivery",
+            "You cannot disable delivery tracking while you have an active delivery. Please complete your current delivery first.",
+            [{ text: "Cancel", style: "cancel" }],
+          );
+        } else {
+          Alert.alert(
+            "Disable Tracking",
+            "If you disable delivery tracking, you won't be able to provide real-time updates for future deliveries. You can re-enable this anytime.",
+            [
+              { text: "Cancel", style: "cancel" },
+              {
+                text: "Disable in Settings",
+                onPress: () => {
+                  stopLocationTracking();
+                  Linking.openSettings();
+                },
+                style: "destructive",
+              },
+            ],
+          );
+        }
+        return;
+      }
+
       const { status: fgStatus } =
         await Location.getForegroundPermissionsAsync();
       if (fgStatus !== "granted") {
@@ -277,76 +301,64 @@ const ProfileScreen = () => {
         return;
       }
 
-      // 2. Check Background status
       const { status: bgStatus, canAskAgain } =
         await Location.getBackgroundPermissionsAsync();
 
       if (bgStatus === "granted") {
         Alert.alert(
           "Permission Enabled",
-          "Delivery tracking is already enabled. You can manage this in your device settings.",
+          "Delivery tracking is already enabled in your device settings.",
+          [{ text: "OK" }],
+        );
+        await checkLocationPermission();
+        await startLocationTracking();
+        return;
+      }
+
+      if (bgStatus === "denied" && !canAskAgain) {
+        Alert.alert(
+          "Delivery Tracking",
+          "Allow ServiPal to access your location in the background only during active deliveries to provide real-time tracking and faster updates. Please enable this in your device settings.",
           [
+            { text: "Cancel", style: "cancel" },
             { text: "Open Settings", onPress: () => Linking.openSettings() },
-            { text: "OK", style: "cancel" },
           ],
         );
         return;
       }
 
-      if (bgStatus === "denied" && !canAskAgain) {
-        const message =
-          Platform.OS === "android"
-            ? "Background location must be set to 'Allow all the time' in your system settings."
-            : "Background location access must be set to 'Always' in your system settings.";
-
-        Alert.alert("Action Required", message, [
-          { text: "Open Settings", onPress: () => Linking.openSettings() },
-          { text: "Cancel", style: "cancel" },
-        ]);
-        return;
-      }
-
-      // 3. Show explanation before background request
       Alert.alert(
-        "Delivery Tracking",
-        "Allow ServiPal to track your location in the background during active deliveries to display riders closest to you and provide faster updates.",
+        "Delivery Tracking Permission",
+        "ServiPal collects location data to enable delivery tracking even when the app is closed or not in use. This helps customers track their assigned riders. Allow ServiPal to access your location in the background?",
         [
+          { text: "Cancel", style: "cancel" },
           {
             text: "Allow",
             onPress: async () => {
-              try {
-                console.log("🔄 Triggering native background request...");
-                const { status: requestStatus } =
-                  await Location.requestBackgroundPermissionsAsync();
-                console.log("Background request result:", requestStatus);
+              const { status: requestStatus } =
+                await Location.requestBackgroundPermissionsAsync();
 
-                if (requestStatus === "granted") {
-                  showSuccess("Success", "Delivery tracking enabled!");
-                } else {
-                  console.warn("Background permission denied:", requestStatus);
-                  const message =
-                    Platform.OS === "android"
-                      ? "Background location must be set to 'Allow all the time'. Please update this in settings."
-                      : "Background location permission must be set to 'Always' in your system settings.";
-
-                  showError("Permission Denied", message);
-
-                  Alert.alert("Action Required", message, [
-                    {
-                      text: "Open Settings",
-                      onPress: () => Linking.openSettings(),
-                    },
-                    { text: "Cancel", style: "cancel" },
-                  ]);
-                }
+              if (requestStatus === "granted") {
+                showSuccess("Success", "Delivery tracking enabled!");
                 await checkLocationPermission();
-              } catch (error) {
-                console.error("Error in background request:", error);
-                showError("Error", "Failed to request permission.");
+                await startLocationTracking();
+              } else {
+                const message =
+                  Platform.OS === "android"
+                    ? "Background location must be set to 'Allow all the time'. Please update this in settings."
+                    : "Background location permission must be set to 'Always' in your system settings.";
+
+                Alert.alert("Action Required", message, [
+                  { text: "Cancel", style: "cancel" },
+                  {
+                    text: "Open Settings",
+                    onPress: () => Linking.openSettings(),
+                  },
+                ]);
+                await checkLocationPermission();
               }
             },
           },
-          { text: "Cancel", style: "cancel" },
         ],
       );
     } catch (error) {

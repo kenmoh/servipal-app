@@ -228,7 +228,7 @@ export const useUserStore = create<UserStore>((set, get) => ({
   //  Location Setters
   setCurrentLocation: (location) => {
     set({ currentLocation: location, lastLocationUpdate: Date.now() });
-    
+
     Sentry.addBreadcrumb({
       category: "location",
       message: "Location updated locally",
@@ -238,7 +238,7 @@ export const useUserStore = create<UserStore>((set, get) => ({
   },
   setLocationPermissionGranted: (granted) => {
     set({ locationPermissionGranted: granted });
-    
+
     Sentry.addBreadcrumb({
       category: "location",
       message: granted
@@ -249,7 +249,7 @@ export const useUserStore = create<UserStore>((set, get) => ({
   },
   setLocationTrackingActive: (active) => {
     set({ locationTrackingActive: active });
-    
+
     Sentry.addBreadcrumb({
       category: "location",
       message: active
@@ -260,7 +260,7 @@ export const useUserStore = create<UserStore>((set, get) => ({
   },
   setVendorLocationCaptured: (captured) => {
     set({ vendorLocationCaptured: captured });
-   
+
     Sentry.addBreadcrumb({
       category: "location",
       message: captured
@@ -337,7 +337,6 @@ export const useUserStore = create<UserStore>((set, get) => ({
       };
 
       if (currentFgStatus !== "granted" || !isLocationEnabled) {
-        
         Sentry.addBreadcrumb({
           category: "location",
           message: "Location services not enabled or permission not granted",
@@ -351,48 +350,51 @@ export const useUserStore = create<UserStore>((set, get) => ({
         }
       }
 
+      // We no longer automatically request background permission here for riders
+      // because it violates Google Play policy (requires prominent disclosure first)
+      // and it interferes with the manual "Delivery Tracking" toggle.
+
       // For riders: check/request background permission
-      const { user, profile } = get();
-      const isRider =
-        user?.user_metadata?.user_type === "RIDER" ||
-        profile?.user_type === "RIDER";
+      // const { user, profile } = get();
+      // const isRider =
+      //   user?.user_metadata?.user_type === "RIDER" ||
+      //   profile?.user_type === "RIDER";
 
-      if (isRider) {
-        const { status: bgStatus } =
-          await Location.getBackgroundPermissionsAsync();
+      // if (isRider) {
+      //   const { status: bgStatus } =
+      //     await Location.getBackgroundPermissionsAsync();
 
-        if (bgStatus !== "granted") {
-          
-          Sentry.addBreadcrumb({
-            category: "location",
-            message: "Requesting background location permission for rider",
-            level: "info",
-          });
+      //   if (bgStatus !== "granted") {
 
-          const { status: newBgStatus } =
-            await Location.requestBackgroundPermissionsAsync();
+      //     Sentry.addBreadcrumb({
+      //       category: "location",
+      //       message: "Requesting background location permission for rider",
+      //       level: "info",
+      //     });
 
-          if (newBgStatus !== "granted") {
-           
-            Sentry.addBreadcrumb({
-              category: "location",
-              message: "Background location permission denied for rider",
-              level: "warning",
-            });
-            // Still allow foreground tracking
-            set({ locationPermissionGranted: true });
-            await updatePermissionFlags(); // Update flags even if background is denied but foreground is granted
-            return true;
-          }
-        }
-      }
+      //     const { status: newBgStatus } =
+      //       await Location.requestBackgroundPermissionsAsync();
+
+      //     if (newBgStatus !== "granted") {
+
+      //       Sentry.addBreadcrumb({
+      //         category: "location",
+      //         message: "Background location permission denied for rider",
+      //         level: "warning",
+      //       });
+      //       // Still allow foreground tracking
+      //       set({ locationPermissionGranted: true });
+      //       await updatePermissionFlags(); // Update flags even if background is denied but foreground is granted
+      //       return true;
+      //     }
+      //   }
+      // }
 
       set({ locationPermissionGranted: true });
 
       // Update specific permission flags
       await updatePermissionFlags();
 
-     
       Sentry.addBreadcrumb({
         category: "location",
         message: "Location permissions updated in store",
@@ -430,7 +432,7 @@ export const useUserStore = create<UserStore>((set, get) => ({
       if (error) throw error;
 
       const hasActive = !!data?.length;
-     
+
       Sentry.addBreadcrumb({
         category: "order",
         message: `Customer active order check: ${hasActive ? "YES" : "NO"}`,
@@ -471,7 +473,6 @@ export const useUserStore = create<UserStore>((set, get) => ({
       ["RESTAURANT_VENDOR", "LAUNDRY_VENDOR", "DISPATCH"].includes(userType)
     ) {
       if (!vendorLocationCaptured) {
-       
         Sentry.addBreadcrumb({
           category: "location",
           message: `Vendor (${userType}) first-time location capture`,
@@ -479,7 +480,7 @@ export const useUserStore = create<UserStore>((set, get) => ({
         });
         return true;
       }
-    
+
       Sentry.addBreadcrumb({
         category: "location",
         message: `Vendor (${userType}) location already captured`,
@@ -491,7 +492,7 @@ export const useUserStore = create<UserStore>((set, get) => ({
     // Customers: ONLY update when has active order
     if (userType === "CUSTOMER") {
       const hasActive = await get().checkCustomerHasActiveOrder(userId);
-      
+
       Sentry.addBreadcrumb({
         category: "location",
         message: `Customer location update: ${hasActive ? "YES" : "NO"}`,
@@ -533,7 +534,6 @@ export const useUserStore = create<UserStore>((set, get) => ({
 
     // Skip if no location available
     if (!get().currentLocation) {
-      
       Sentry.addBreadcrumb({
         category: "location",
         message: "Cannot capture vendor location: No current location",
@@ -597,7 +597,7 @@ export const useUserStore = create<UserStore>((set, get) => ({
     }
 
     const userType = user?.user_metadata?.user_type || profile?.user_type;
- 
+
     // Only track relevant user types
     if (
       ![
@@ -635,7 +635,6 @@ export const useUserStore = create<UserStore>((set, get) => ({
 
       //  For riders: enable background location task
       if (userType === "RIDER") {
-
         const isTaskRegistered =
           await TaskManager.isTaskRegisteredAsync(LOCATION_TASK_NAME);
         if (!isTaskRegistered) {
@@ -648,7 +647,7 @@ export const useUserStore = create<UserStore>((set, get) => ({
               notificationBody: "Required for dispatch and delivery tracking",
               notificationColor: "#0066ff",
             },
-          });;
+          });
         } else {
         }
       }
@@ -672,7 +671,6 @@ export const useUserStore = create<UserStore>((set, get) => ({
           );
 
           if (distance < 50) {
-            
             return;
           }
         }
@@ -682,7 +680,6 @@ export const useUserStore = create<UserStore>((set, get) => ({
           .shouldUpdateServerLocation()
           .then(async (shouldUpdate) => {
             if (!shouldUpdate) {
-              
               return;
             }
 
@@ -707,11 +704,15 @@ export const useUserStore = create<UserStore>((set, get) => ({
                 !vendorLocationCaptured
               ) {
                 set({ vendorLocationCaptured: true });
-               
               }
-            } catch (error) {
+            } catch (error: any) {
               Sentry.captureException(error, {
                 tags: { action: "update_location_to_server" },
+                extra: {
+                  errorMessage: error?.message,
+                  latitude,
+                  longitude,
+                },
               });
             }
           });
@@ -723,7 +724,6 @@ export const useUserStore = create<UserStore>((set, get) => ({
         lastLocationUpdate: Date.now(),
       });
 
-     
       Sentry.addBreadcrumb({
         category: "location",
         message: `Location tracking STARTED for ${userType}`,
@@ -744,7 +744,6 @@ export const useUserStore = create<UserStore>((set, get) => ({
     if (!locationTrackingActive && !locationWatcher) {
       return;
     }
-
 
     // Stop foreground watcher
     if (locationWatcher) {
@@ -1002,7 +1001,12 @@ export const useUserStore = create<UserStore>((set, get) => ({
               const authUser = toAuthUser(session.user);
               await authStorage.storeUser(authUser);
               set({ user: authUser });
-              // Fetch profile on sign in
+              // Small delay to ensure Supabase session is fully persisted
+              // in its internal cache before we make authenticated API calls.
+              // Without this, getSession() / getUser() in API functions can
+              // still return null immediately after SIGNED_IN fires.
+              await new Promise((resolve) => setTimeout(resolve, 300));
+              // Fetch profile on sign in (triggers startLocationTracking)
               await get().fetchProfile();
             }
             break;
