@@ -1,20 +1,23 @@
 import { updateDeliveryCoords } from "@/api/delivery";
+import { updatecurrentUserLocation } from "@/api/user";
 import * as Sentry from "@sentry/react-native";
 import * as Location from "expo-location";
 import * as TaskManager from "expo-task-manager";
 
 export const BACKGROUND_LOCATION_TASK = "BACKGROUND_LOCATION_UPDATE_TASK";
+export const GENERAL_LOCATION_TASK = "background-location-task";
 
 /**
  * Task Definition - must be called at top level of the app
  */
 export const defineLocationTask = () => {
+  // 1. Task for Active Delivery Tracking (Frequent)
   TaskManager.defineTask(
     BACKGROUND_LOCATION_TASK,
     async ({ data, error }: any) => {
       if (error) {
         Sentry.captureException(error, {
-          tags: { action: "bg_location_task" },
+          tags: { action: "bg_delivery_location_task" },
         });
         return;
       }
@@ -24,9 +27,6 @@ export const defineLocationTask = () => {
         if (locations && locations.length > 0) {
           const { latitude, longitude } = locations[0].coords;
 
-          // Retrieve current delivery info from persistent storage if needed
-          // For simplicity, we assume we have access to the current delivery context
-          // in a production app, you might use SecureStore or a singleton
           if (LocationContext.deliveryId) {
             try {
               await updateDeliveryCoords(
@@ -39,6 +39,40 @@ export const defineLocationTask = () => {
                 tags: { action: "bg_delivery_coords_update" },
               });
             }
+          }
+        }
+      }
+    },
+  );
+
+  // 2. Task for General Profile Updates (Less frequent, base location)
+  TaskManager.defineTask(
+    GENERAL_LOCATION_TASK,
+    async ({ data, error }: any) => {
+      if (error) {
+        Sentry.captureException(error, {
+          tags: { action: "bg_general_location_task" },
+        });
+        return;
+      }
+
+      if (data) {
+        const { locations } = data;
+        if (locations && locations.length > 0) {
+          const { latitude, longitude } = locations[0].coords;
+          try {
+            // Update the user's primary location in the profile
+            await updatecurrentUserLocation({ latitude, longitude });
+            Sentry.addBreadcrumb({
+              category: "location",
+              message: `[BG] General location updated: ${latitude}, ${longitude}`,
+              level: "info",
+            });
+          } catch (err) {
+            // Log but don't crash
+            Sentry.captureException(err, {
+              tags: { action: "bg_general_location_update" },
+            });
           }
         }
       }

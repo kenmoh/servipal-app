@@ -20,6 +20,7 @@ Sentry.init({
   dsn: "https://945bccd1ed4b5bcb5eab8cf7e3c776fa@o4505603287023616.ingest.us.sentry.io/4510143988629504",
 
   sendDefaultPii: true,
+  enableLogs: true,
 
   // Configure Session Replay
   replaysSessionSampleRate: 0.1,
@@ -31,6 +32,22 @@ Sentry.init({
 
   spotlight: __DEV__,
 });
+
+// Sentry Logging Test - as requested
+Sentry.logger.info("This is an info log");
+
+Sentry.logger.warn("This is a warning log", {
+  log_type: "test",
+});
+
+Sentry.logger.error("This is an error log");
+
+// Using formatted messages with dynamic values
+const testUser = "john_doe";
+const testAction = "login";
+Sentry.logger.info(
+  Sentry.logger.fmt`User '${testUser}' performed '${testAction}'`,
+);
 
 // Register background location task at module load
 defineLocationTask();

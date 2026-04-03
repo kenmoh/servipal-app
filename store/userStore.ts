@@ -10,6 +10,10 @@ import {
   toAuthUser,
 } from "@/types/user-types";
 import { registerForPushNotificationAsync } from "@/utils/registerForPushNotificationAsync";
+import {
+  BACKGROUND_LOCATION_TASK,
+  GENERAL_LOCATION_TASK,
+} from "@/utils/location-tracking";
 import { supabase } from "@/utils/supabase";
 import * as Sentry from "@sentry/react-native";
 import { AuthChangeEvent, Session } from "@supabase/supabase-js";
@@ -31,53 +35,7 @@ Notifications.setNotificationHandler({
   }),
 });
 
-// Define background task AT MODULE LEVEL (before store creation)
-// Must execute during JS bundle initialization, NOT inside React/store lifecycle
-const LOCATION_TASK_NAME = "background-location-task";
-
-TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
-  if (error) {
-    console.error("[BG Location Task] Error:", error);
-    Sentry.captureException(error, { tags: { action: "bg_location_task" } });
-    return;
-  }
-
-  // @ts-ignore - Expo types don't fully support this yet
-  const locations = (data as any)?.locations as Location.LocationObject[];
-  if (!locations?.length) {
-    console.warn(" [BG Location Task] No locations in payload");
-    Sentry.addBreadcrumb({
-      category: "location",
-      message: "BG Location Task: No locations in payload",
-      level: "warning",
-    });
-    return;
-  }
-
-  const { latitude, longitude } = locations[locations.length - 1].coords;
-  console.log(
-    ` [BG Task] Location received: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`,
-  );
-  Sentry.addBreadcrumb({
-    category: "location",
-    message: "BG Task: Location received",
-    level: "info",
-    data: { latitude, longitude },
-  });
-
-  try {
-    await updatecurrentUserLocation({ latitude, longitude });
-    console.log(" [BG Task] Location updated to server");
-    Sentry.addBreadcrumb({
-      category: "location",
-      message: "BG Task: Location updated to server",
-      level: "info",
-    });
-  } catch (err) {
-    console.error(" [BG Task] Failed to update server:", err);
-    Sentry.captureException(err, { tags: { action: "bg_location_update" } });
-  }
-});
+const LOCATION_TASK_NAME = GENERAL_LOCATION_TASK;
 
 const FIRST_LAUNCH_KEY = "hasLaunched";
 
@@ -300,110 +258,76 @@ export const useUserStore = create<UserStore>((set, get) => ({
 
   //  Location Permission Check
   checkLocationPermission: async () => {
-    Sentry.addBreadcrumb({
-      category: "location",
-      message: "Checking location permissions",
-      level: "info",
-    });
-
     try {
-      const { status: currentFgStatus } =
-        await Location.getForegroundPermissionsAsync();
+      // 1. Check if device location services are on at all
       const isLocationEnabled = await Location.hasServicesEnabledAsync();
-
-      // Helper to update specific permission flags even on early returns
-      const updatePermissionFlags = async () => {
-        const { status: finalFgStatus } =
-          await Location.getForegroundPermissionsAsync();
-        const { status: finalBgStatus } =
-          await Location.getBackgroundPermissionsAsync();
-
-        const isAlwaysGranted = finalBgStatus === "granted";
-        const isWhenInUseGranted = finalFgStatus === "granted";
-
-        set({
-          isIosBackgroundLocationEnabled:
-            Platform.OS === "ios" ? isAlwaysGranted : null,
-          isAndroidBackgroundLocationEnabled:
-            Platform.OS === "android" ? isAlwaysGranted : null,
-          locationAlwaysAndWhenInUsePermission: isAlwaysGranted,
-          locationWhenInUsePermission: isWhenInUseGranted,
-        });
-
-        // console.log(" Permission flags synchronized:", {
-        //   isWhenInUseGranted,
-        //   isAlwaysGranted,
-        // });
-      };
-
-      if (currentFgStatus !== "granted" || !isLocationEnabled) {
-        Sentry.addBreadcrumb({
-          category: "location",
-          message: "Location services not enabled or permission not granted",
-          level: "warning",
-        });
-
-        if (!isLocationEnabled) {
-          set({ locationPermissionGranted: false });
-          await updatePermissionFlags();
-          return false;
-        }
+      if (!isLocationEnabled) {
+        Sentry.captureMessage(
+          "[Location] checkLocationPermission: device location services DISABLED",
+          "warning",
+        );
+        set({ locationPermissionGranted: false });
+        return false;
       }
 
-      // We no longer automatically request background permission here for riders
-      // because it violates Google Play policy (requires prominent disclosure first)
-      // and it interferes with the manual "Delivery Tracking" toggle.
-
-      // For riders: check/request background permission
-      // const { user, profile } = get();
-      // const isRider =
-      //   user?.user_metadata?.user_type === "RIDER" ||
-      //   profile?.user_type === "RIDER";
-
-      // if (isRider) {
-      //   const { status: bgStatus } =
-      //     await Location.getBackgroundPermissionsAsync();
-
-      //   if (bgStatus !== "granted") {
-
-      //     Sentry.addBreadcrumb({
-      //       category: "location",
-      //       message: "Requesting background location permission for rider",
-      //       level: "info",
-      //     });
-
-      //     const { status: newBgStatus } =
-      //       await Location.requestBackgroundPermissionsAsync();
-
-      //     if (newBgStatus !== "granted") {
-
-      //       Sentry.addBreadcrumb({
-      //         category: "location",
-      //         message: "Background location permission denied for rider",
-      //         level: "warning",
-      //       });
-      //       // Still allow foreground tracking
-      //       set({ locationPermissionGranted: true });
-      //       await updatePermissionFlags(); // Update flags even if background is denied but foreground is granted
-      //       return true;
-      //     }
-      //   }
-      // }
-
-      set({ locationPermissionGranted: true });
-
-      // Update specific permission flags
-      await updatePermissionFlags();
+      // 2. Check current foreground permission status
+      const { status: currentFgStatus } =
+        await Location.getForegroundPermissionsAsync();
 
       Sentry.addBreadcrumb({
         category: "location",
-        message: "Location permissions updated in store",
+        message: `checkLocationPermission: currentFgStatus="${currentFgStatus}"`,
         level: "info",
-        data: {
-          isWhenInUseGranted: get().locationWhenInUsePermission,
-          isAlwaysGranted: get().locationAlwaysAndWhenInUsePermission,
-        },
       });
+
+      // 3. If not yet granted, request it
+      if (currentFgStatus !== "granted") {
+        Sentry.addBreadcrumb({
+          category: "location",
+          message: `Requesting foreground permission (was "${currentFgStatus}")`,
+          level: "info",
+        });
+
+        const { status: requestedStatus } =
+          await Location.requestForegroundPermissionsAsync();
+
+        if (requestedStatus !== "granted") {
+          Sentry.captureMessage(
+            `[Location] Foreground permission DENIED (requested="${requestedStatus}")`,
+            "warning",
+          );
+          set({ locationPermissionGranted: false });
+          return false;
+        }
+
+        Sentry.addBreadcrumb({
+          category: "location",
+          message: "Foreground permission GRANTED after request",
+          level: "info",
+        });
+      }
+
+      // 4. Sync background permission flags (used by rider background task toggle)
+      const { status: bgStatus } =
+        await Location.getBackgroundPermissionsAsync();
+      const isAlwaysGranted = bgStatus === "granted";
+
+      set({
+        locationPermissionGranted: true,
+        isIosBackgroundLocationEnabled:
+          Platform.OS === "ios" ? isAlwaysGranted : null,
+        isAndroidBackgroundLocationEnabled:
+          Platform.OS === "android" ? isAlwaysGranted : null,
+        locationAlwaysAndWhenInUsePermission: isAlwaysGranted,
+        locationWhenInUsePermission: true, // we just confirmed foreground is granted
+      });
+
+      Sentry.addBreadcrumb({
+        category: "location",
+        message: `checkLocationPermission: GRANTED (bgGranted=${isAlwaysGranted})`,
+        level: "info",
+      });
+
       return true;
     } catch (error) {
       Sentry.captureException(error, {
@@ -586,49 +510,67 @@ export const useUserStore = create<UserStore>((set, get) => ({
       vendorLocationCaptured,
     } = get();
 
-    // Skip if already tracking
+    const userType = user?.user_metadata?.user_type || profile?.user_type;
+    const userId = user?.id || profile?.id;
+
+    // Skip if already tracking — log so we know it was attempted
     if (locationTrackingActive || locationWatcher) {
+      Sentry.addBreadcrumb({
+        category: "location",
+        message: `startLocationTracking: already active — skipping (userType=${userType})`,
+        level: "debug",
+      });
       return;
     }
 
     // Skip if no authenticated user
-    if (!user?.id && !profile?.id) {
+    if (!userId) {
+      Sentry.captureMessage(
+        "[Location] startLocationTracking called with NO user — skipping",
+        "warning",
+      );
       return;
     }
-
-    const userType = user?.user_metadata?.user_type || profile?.user_type;
 
     // Only track relevant user types
-    if (
-      ![
-        "RIDER",
-        "CUSTOMER",
-        "RESTAURANT_VENDOR",
-        "LAUNDRY_VENDOR",
-        "DISPATCH",
-      ].includes(userType!)
-    ) {
+    const TRACKED_TYPES = [
+      "RIDER",
+      "CUSTOMER",
+      "RESTAURANT_VENDOR",
+      "LAUNDRY_VENDOR",
+      "DISPATCH",
+    ];
+    if (!TRACKED_TYPES.includes(userType!)) {
+      Sentry.captureMessage(
+        `[Location] startLocationTracking: untracked userType="${userType}" — skipping`,
+        "info",
+      );
       return;
     }
 
-    Sentry.addBreadcrumb({
-      category: "location",
-      message: `Starting location tracking for ${userType}`,
-      level: "info",
-    });
+    Sentry.captureMessage(
+      `[Location] startLocationTracking ENTERED for userType=${userType} userId=${userId}`,
+      "info",
+    );
 
     // Check permissions
     const hasPermission = await get().checkLocationPermission();
     if (!hasPermission) {
+      Sentry.captureMessage(
+        `[Location] startLocationTracking: PERMISSION DENIED for ${userType}`,
+        "warning",
+      );
       return;
     }
 
+    Sentry.captureMessage(
+      `[Location] Permission granted — starting watchPositionAsync for ${userType}`,
+      "info",
+    );
+
     try {
-      //  VALID LocationOptions (no invalid properties)
       const config: Location.LocationOptions = {
         accuracy: Location.Accuracy.High,
-        // Riders: frequent updates (every 60s or 30m movement)
-        // Others: less frequent (every 5min or 200m movement)
         timeInterval: userType === "RIDER" ? 60000 : 300000, // Android only
         distanceInterval: userType === "RIDER" ? 30 : 200,
       };
@@ -637,6 +579,13 @@ export const useUserStore = create<UserStore>((set, get) => ({
       if (userType === "RIDER") {
         const isTaskRegistered =
           await TaskManager.isTaskRegisteredAsync(LOCATION_TASK_NAME);
+
+        Sentry.addBreadcrumb({
+          category: "location",
+          message: `RIDER bg task already registered: ${isTaskRegistered}`,
+          level: "info",
+        });
+
         if (!isTaskRegistered) {
           await Location.startLocationUpdatesAsync(LOCATION_TASK_NAME, {
             accuracy: Location.Accuracy.BestForNavigation,
@@ -648,20 +597,32 @@ export const useUserStore = create<UserStore>((set, get) => ({
               notificationColor: "#0066ff",
             },
           });
-        } else {
+          Sentry.captureMessage(
+            "[Location] RIDER background location task STARTED",
+            "info",
+          );
         }
       }
 
       // Start foreground watcher (works for all user types)
       const watcher = await Location.watchPositionAsync(config, (location) => {
-        const { latitude, longitude } = location.coords;
+        const { latitude, longitude, accuracy } = location.coords;
         const newLocation = { lat: latitude, lng: longitude };
 
         // Update local state immediately
         get().setCurrentLocation(newLocation);
 
-        // Skip if location hasn't changed significantly (50m threshold)
+        // ── First position received — log it ──────────────────────────────
         const { lastSentLocation } = get();
+        const isFirst = !lastSentLocation;
+
+        Sentry.addBreadcrumb({
+          category: "location",
+          message: `Position received (first=${isFirst}) lat=${latitude.toFixed(4)} lng=${longitude.toFixed(4)} acc=${accuracy?.toFixed(0)}m`,
+          level: "debug",
+        });
+
+        // Skip if location hasn't changed significantly (50m threshold)
         if (lastSentLocation) {
           const distance = getDistanceMeters(
             lastSentLocation.lat,
@@ -671,6 +632,11 @@ export const useUserStore = create<UserStore>((set, get) => ({
           );
 
           if (distance < 50) {
+            Sentry.addBreadcrumb({
+              category: "location",
+              message: `Position skipped — only ${distance.toFixed(0)}m from last sent (threshold=50m)`,
+              level: "debug",
+            });
             return;
           }
         }
@@ -680,15 +646,22 @@ export const useUserStore = create<UserStore>((set, get) => ({
           .shouldUpdateServerLocation()
           .then(async (shouldUpdate) => {
             if (!shouldUpdate) {
+              Sentry.addBreadcrumb({
+                category: "location",
+                message: `shouldUpdateServerLocation=false for ${userType} — skipping server update`,
+                level: "debug",
+              });
               return;
             }
 
-            // Update server location
+            // ── Attempt server update ──────────────────────────────────────
             try {
               await updatecurrentUserLocation({ latitude, longitude });
               set({ lastSentLocation: newLocation });
-              console.log(
-                ` Location updated to server: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`,
+
+              Sentry.captureMessage(
+                `[Location] ✅ Server updated lat=${latitude.toFixed(4)} lng=${longitude.toFixed(4)} userType=${userType}`,
+                "info",
               );
 
               // If vendor and we just updated, mark as captured
@@ -712,9 +685,16 @@ export const useUserStore = create<UserStore>((set, get) => ({
                   errorMessage: error?.message,
                   latitude,
                   longitude,
+                  userType,
+                  userId,
                 },
               });
             }
+          })
+          .catch((err) => {
+            Sentry.captureException(err, {
+              tags: { action: "should_update_server_location" },
+            });
           });
       });
 
@@ -724,14 +704,14 @@ export const useUserStore = create<UserStore>((set, get) => ({
         lastLocationUpdate: Date.now(),
       });
 
-      Sentry.addBreadcrumb({
-        category: "location",
-        message: `Location tracking STARTED for ${userType}`,
-        level: "info",
-      });
+      Sentry.captureMessage(
+        `[Location] watchPositionAsync REGISTERED for ${userType} — waiting for first fix`,
+        "info",
+      );
     } catch (error) {
       Sentry.captureException(error, {
         tags: { action: "start_location_tracking" },
+        extra: { userType, userId },
       });
       set({ locationTrackingActive: false });
     }

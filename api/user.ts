@@ -672,12 +672,26 @@ export const updatecurrentUserLocation = async (
 
     // If getUser() fails, attempt a session refresh as a fallback
     if (userError || !userData?.user) {
+      Sentry.addBreadcrumb({
+        category: "location",
+        message: `[updatecurrentUserLocation] getUser() failed (${userError?.message}) — attempting refreshSession`,
+        level: "warning",
+      });
+
       const { data: refreshData, error: refreshError } =
         await supabase.auth.refreshSession();
       if (refreshError || !refreshData?.session) {
-        throw new Error("User not authenticated");
+        throw new Error(
+          `User not authenticated — getUser: ${userError?.message}, refresh: ${refreshError?.message}`,
+        );
       }
       userData = { user: refreshData.session.user };
+
+      Sentry.addBreadcrumb({
+        category: "location",
+        message: "[updatecurrentUserLocation] refreshSession succeeded",
+        level: "info",
+      });
     }
 
     const userId = userData.user!.id;
@@ -689,7 +703,9 @@ export const updatecurrentUserLocation = async (
       coordinates.longitude < -180 ||
       coordinates.longitude > 180
     ) {
-      throw new Error("Invalid coordinates");
+      throw new Error(
+        `Invalid coordinates: lat=${coordinates.latitude} lng=${coordinates.longitude}`,
+      );
     }
 
     // Call the RPC function
@@ -700,8 +716,21 @@ export const updatecurrentUserLocation = async (
     });
 
     if (error) {
+      Sentry.addBreadcrumb({
+        category: "location",
+        message: `[updatecurrentUserLocation] RPC error: ${error.message}`,
+        level: "error",
+        data: { userId, ...coordinates },
+      });
       throw new Error(error.message || "Failed to update location");
     }
+
+    Sentry.addBreadcrumb({
+      category: "location",
+      message: `[updatecurrentUserLocation] RPC success for userId=${userId}`,
+      level: "info",
+      data: coordinates,
+    });
 
     return data as UpdateLocationResponse;
   } catch (error) {
