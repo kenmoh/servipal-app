@@ -33,21 +33,21 @@ Sentry.init({
   spotlight: __DEV__,
 });
 
-// Sentry Logging Test - as requested
-Sentry.logger.info("This is an info log");
+// // Sentry Logging Test - as requested
+// Sentry.logger.info("This is an info log");
 
-Sentry.logger.warn("This is a warning log", {
-  log_type: "test",
-});
+// Sentry.logger.warn("This is a warning log", {
+//   log_type: "test",
+// });
 
-Sentry.logger.error("This is an error log");
+// Sentry.logger.error("This is an error log");
 
-// Using formatted messages with dynamic values
-const testUser = "john_doe";
-const testAction = "login";
-Sentry.logger.info(
-  Sentry.logger.fmt`User '${testUser}' performed '${testAction}'`,
-);
+// // Using formatted messages with dynamic values
+// const testUser = "john_doe";
+// const testAction = "login";
+// Sentry.logger.info(
+//   Sentry.logger.fmt`User '${testUser}' performed '${testAction}'`,
+// );
 
 // Register background location task at module load
 defineLocationTask();

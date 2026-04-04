@@ -258,58 +258,54 @@ export const useUserStore = create<UserStore>((set, get) => ({
 
   //  Location Permission Check
   checkLocationPermission: async () => {
+    const userId = get().user?.id || get().profile?.id;
+    const userType =
+      get().user?.user_metadata?.user_type || get().profile?.user_type;
+
     try {
       // 1. Check if device location services are on at all
       const isLocationEnabled = await Location.hasServicesEnabledAsync();
       if (!isLocationEnabled) {
-        Sentry.captureMessage(
-          "[Location] checkLocationPermission: device location services DISABLED",
-          "warning",
-        );
         set({ locationPermissionGranted: false });
         return false;
       }
 
-      // 2. Check current foreground permission status
-      const { status: currentFgStatus } =
-        await Location.getForegroundPermissionsAsync();
+      // 2. Request Foreground Permissions first
+      const { status: fgStatus } =
+        await Location.requestForegroundPermissionsAsync();
 
-      Sentry.addBreadcrumb({
-        category: "location",
-        message: `checkLocationPermission: currentFgStatus="${currentFgStatus}"`,
-        level: "info",
-      });
-
-      // 3. If not yet granted, request it
-      if (currentFgStatus !== "granted") {
-        Sentry.addBreadcrumb({
-          category: "location",
-          message: `Requesting foreground permission (was "${currentFgStatus}")`,
-          level: "info",
-        });
-
-        const { status: requestedStatus } =
-          await Location.requestForegroundPermissionsAsync();
-
-        if (requestedStatus !== "granted") {
-          Sentry.captureMessage(
-            `[Location] Foreground permission DENIED (requested="${requestedStatus}")`,
-            "warning",
-          );
-          set({ locationPermissionGranted: false });
-          return false;
-        }
-
-        Sentry.addBreadcrumb({
-          category: "location",
-          message: "Foreground permission GRANTED after request",
-          level: "info",
-        });
+      if (fgStatus !== "granted") {
+        set({ locationPermissionGranted: false });
+        return false;
       }
 
-      // 4. Sync background permission flags (used by rider background task toggle)
-      const { status: bgStatus } =
-        await Location.getBackgroundPermissionsAsync();
+      // 3. Request Background Permissions for Riders (and Customers with active orders)
+      let bgStatus = "denied";
+      const needsBackground =
+        userType === "RIDER" ||
+        (userType === "CUSTOMER" &&
+          (await get().checkCustomerHasActiveOrder(userId!)));
+
+      if (needsBackground) {
+        const { status: currentBgStatus } =
+          await Location.getBackgroundPermissionsAsync();
+        bgStatus = currentBgStatus;
+
+        if (currentBgStatus !== "granted") {
+          Sentry.logger.info(
+            `[Location] Requesting background permissions for ${userType}`,
+          );
+          const { status: requestedBgStatus } =
+            await Location.requestBackgroundPermissionsAsync();
+          bgStatus = requestedBgStatus;
+        }
+      } else {
+        // Just check current status if not explicitly needed right now
+        const { status: currentBgStatus } =
+          await Location.getBackgroundPermissionsAsync();
+        bgStatus = currentBgStatus;
+      }
+
       const isAlwaysGranted = bgStatus === "granted";
 
       set({
@@ -319,13 +315,7 @@ export const useUserStore = create<UserStore>((set, get) => ({
         isAndroidBackgroundLocationEnabled:
           Platform.OS === "android" ? isAlwaysGranted : null,
         locationAlwaysAndWhenInUsePermission: isAlwaysGranted,
-        locationWhenInUsePermission: true, // we just confirmed foreground is granted
-      });
-
-      Sentry.addBreadcrumb({
-        category: "location",
-        message: `checkLocationPermission: GRANTED (bgGranted=${isAlwaysGranted})`,
-        level: "info",
+        locationWhenInUsePermission: true,
       });
 
       return true;
@@ -345,9 +335,11 @@ export const useUserStore = create<UserStore>((set, get) => ({
         .from("delivery_orders")
         .select("id, delivery_status")
         .eq("sender_id", userId)
+        .eq("is_deleted", false)
         .in("delivery_status", [
           "PENDING",
           "PAID_NEEDS_RIDER",
+          "ASSIGNED",
           "PICKED_UP",
           "IN_TRANSIT",
         ])
@@ -373,64 +365,39 @@ export const useUserStore = create<UserStore>((set, get) => ({
 
   //  Determine if we should send location to server based on user type & context
   shouldUpdateServerLocation: async (): Promise<boolean> => {
-    const { user, profile, currentLocation, vendorLocationCaptured } = get();
-
-    if (!currentLocation) return false;
-
-    const userType = user?.user_metadata?.user_type || profile?.user_type;
+    const { user, profile, currentLocation, lastSentLocation } = get();
     const userId = user?.id || profile?.id;
+    const userType = user?.user_metadata?.user_type || profile?.user_type;
 
-    if (!userType || !userId) return false;
+    if (!currentLocation || !userId || !userType) return false;
 
-    // Riders: ALWAYS update server location
-    if (userType === "RIDER") {
-      Sentry.addBreadcrumb({
-        category: "location",
-        message: "Rider location update: ALWAYS",
-        level: "debug",
-      });
+    // ── Rule 1: Always allow the first position update of the session ──
+    if (!lastSentLocation) {
+      Sentry.logger.info(
+        `[Location] shouldUpdateServerLocation: Allowing FIRST position update for ${userType}`,
+      );
       return true;
     }
 
-    // Vendors: Update ONLY once (first time) or if location never captured
-    if (
-      ["RESTAURANT_VENDOR", "LAUNDRY_VENDOR", "DISPATCH"].includes(userType)
-    ) {
-      if (!vendorLocationCaptured) {
-        Sentry.addBreadcrumb({
-          category: "location",
-          message: `Vendor (${userType}) first-time location capture`,
-          level: "info",
-        });
-        return true;
-      }
+    // ── Rule 2: Riders always update if active ───────────────────────
+    if (userType === "RIDER") return true;
 
-      Sentry.addBreadcrumb({
-        category: "location",
-        message: `Vendor (${userType}) location already captured`,
-        level: "debug",
-      });
-      return false;
-    }
-
-    // Customers: ONLY update when has active order
+    // ── Rule 3: Customers ONLY update when has active order (after first) ──
     if (userType === "CUSTOMER") {
       const hasActive = await get().checkCustomerHasActiveOrder(userId);
-
-      Sentry.addBreadcrumb({
-        category: "location",
-        message: `Customer location update: ${hasActive ? "YES" : "NO"}`,
-        level: "debug",
-      });
+      Sentry.logger.info(
+        `[Location] Customer location update check: ${hasActive ? "YES" : "NO"}`,
+      );
       return hasActive;
     }
 
-    // Other user types: never update
-    Sentry.addBreadcrumb({
-      category: "location",
-      message: `Location update skipped for ${userType}`,
-      level: "debug",
-    });
+    // ── Rule 4: Vendors/Others — usually only need a one-time capture ─
+    const vendorTypes = ["RESTAURANT_VENDOR", "LAUNDRY_VENDOR", "DISPATCH"];
+    if (vendorTypes.includes(userType)) {
+      const { vendorLocationCaptured } = get();
+      return !vendorLocationCaptured;
+    }
+
     return false;
   },
 
@@ -443,11 +410,15 @@ export const useUserStore = create<UserStore>((set, get) => ({
     if (
       !["RESTAURANT_VENDOR", "LAUNDRY_VENDOR", "DISPATCH"].includes(userType!)
     ) {
+      Sentry.logger.info(`[Vendor] Not a vendor - skipping`);
       return;
     }
 
     // Skip if already captured
     if (vendorLocationCaptured) {
+      Sentry.logger.info(
+        `[Vendor] Vendor location already captured - skipping`,
+      );
       Sentry.addBreadcrumb({
         category: "location",
         message: "Vendor location already captured - skipping",
@@ -458,6 +429,9 @@ export const useUserStore = create<UserStore>((set, get) => ({
 
     // Skip if no location available
     if (!get().currentLocation) {
+      Sentry.logger.error(
+        `[Vendor] Cannot capture vendor location: No current location`,
+      );
       Sentry.addBreadcrumb({
         category: "location",
         message: "Cannot capture vendor location: No current location",
@@ -482,6 +456,14 @@ export const useUserStore = create<UserStore>((set, get) => ({
       };
 
       // Update server location
+      Sentry.logger.info(
+        `[Vendor] Capturing vendor location ONCE for ${userType}`,
+      );
+
+      Sentry.logger.info(
+        `[Vendor] Capturing vendor location ONCE for ${coordinate}`,
+      );
+
       await updatecurrentUserLocation(coordinate);
 
       // Mark as captured
@@ -513,18 +495,18 @@ export const useUserStore = create<UserStore>((set, get) => ({
     const userType = user?.user_metadata?.user_type || profile?.user_type;
     const userId = user?.id || profile?.id;
 
-    // Skip if already tracking — log so we know it was attempted
+    // Skip if already tracking foreground — but we might still need to check background task
     if (locationTrackingActive || locationWatcher) {
-      Sentry.addBreadcrumb({
-        category: "location",
-        message: `startLocationTracking: already active — skipping (userType=${userType})`,
-        level: "debug",
-      });
-      return;
+      Sentry.logger.info(
+        `[Location] startLocationTracking: foreground watch already active (userType=${userType})`,
+      );
     }
 
     // Skip if no authenticated user
     if (!userId) {
+      Sentry.logger.info(
+        `[Location] startLocationTracking called with NO user — skipping`,
+      );
       Sentry.captureMessage(
         "[Location] startLocationTracking called with NO user — skipping",
         "warning",
@@ -541,21 +523,22 @@ export const useUserStore = create<UserStore>((set, get) => ({
       "DISPATCH",
     ];
     if (!TRACKED_TYPES.includes(userType!)) {
-      Sentry.captureMessage(
+      Sentry.logger.info(
         `[Location] startLocationTracking: untracked userType="${userType}" — skipping`,
-        "info",
       );
       return;
     }
 
-    Sentry.captureMessage(
+    Sentry.logger.info(
       `[Location] startLocationTracking ENTERED for userType=${userType} userId=${userId}`,
-      "info",
     );
 
     // Check permissions
     const hasPermission = await get().checkLocationPermission();
     if (!hasPermission) {
+      Sentry.logger.error(
+        `[Location] startLocationTracking: PERMISSION DENIED for ${userType}`,
+      );
       Sentry.captureMessage(
         `[Location] startLocationTracking: PERMISSION DENIED for ${userType}`,
         "warning",
@@ -563,9 +546,8 @@ export const useUserStore = create<UserStore>((set, get) => ({
       return;
     }
 
-    Sentry.captureMessage(
+    Sentry.logger.info(
       `[Location] Permission granted — starting watchPositionAsync for ${userType}`,
-      "info",
     );
 
     try {
@@ -575,140 +557,244 @@ export const useUserStore = create<UserStore>((set, get) => ({
         distanceInterval: userType === "RIDER" ? 30 : 200,
       };
 
-      //  For riders: enable background location task
-      if (userType === "RIDER") {
-        const isTaskRegistered =
-          await TaskManager.isTaskRegisteredAsync(LOCATION_TASK_NAME);
+      Sentry.logger.info(
+        `[Location] Location config for ${userType}: ${JSON.stringify(config)}`,
+      );
 
-        Sentry.addBreadcrumb({
-          category: "location",
-          message: `RIDER bg task already registered: ${isTaskRegistered}`,
-          level: "info",
-        });
+      //  Background location task management (Riders and Customers with active orders)
+      const hasActiveOrder =
+        userType === "CUSTOMER"
+          ? await get().checkCustomerHasActiveOrder(userId)
+          : false;
+      const needsBackgroundTask =
+        userType === "RIDER" || (userType === "CUSTOMER" && hasActiveOrder);
 
-        if (!isTaskRegistered) {
+      if (needsBackgroundTask) {
+        // Check if task is ALREADY running (different from registered)
+        const isTaskRunning =
+          await Location.hasStartedLocationUpdatesAsync(LOCATION_TASK_NAME);
+
+        Sentry.logger.info(
+          `[Location] Bg task check: userType=${userType} needsBg=${needsBackgroundTask} isRunning=${isTaskRunning}`,
+        );
+
+        if (!isTaskRunning) {
           await Location.startLocationUpdatesAsync(LOCATION_TASK_NAME, {
-            accuracy: Location.Accuracy.BestForNavigation,
-            timeInterval: 60000,
-            distanceInterval: 30,
+            accuracy:
+              userType === "RIDER"
+                ? Location.Accuracy.BestForNavigation
+                : Location.Accuracy.High,
+            timeInterval: userType === "RIDER" ? 60000 : 180000,
+            distanceInterval: userType === "RIDER" ? 30 : 100,
             foregroundService: {
-              notificationTitle: "Rider Location Tracking",
-              notificationBody: "Required for dispatch and delivery tracking",
+              notificationTitle:
+                userType === "RIDER"
+                  ? "Rider Location Tracking"
+                  : "Delivery Tracking",
+              notificationBody:
+                userType === "RIDER"
+                  ? "Required for dispatch and delivery tracking"
+                  : "Tracking your active delivery",
               notificationColor: "#0066ff",
             },
+            pausesUpdatesAutomatically: userType !== "RIDER",
+            showsBackgroundLocationIndicator: true,
           });
-          Sentry.captureMessage(
-            "[Location] RIDER background location task STARTED",
-            "info",
+          Sentry.logger.info(
+            `[Location] Background task STARTED for ${userType}`,
           );
         }
       }
 
-      // Start foreground watcher (works for all user types)
-      const watcher = await Location.watchPositionAsync(config, (location) => {
-        const { latitude, longitude, accuracy } = location.coords;
-        const newLocation = { lat: latitude, lng: longitude };
+      // Start foreground watcher (only if not already running)
+      if (!locationWatcher) {
+        const watcher = await Location.watchPositionAsync(
+          config,
+          (location) => {
+            const { latitude, longitude, accuracy } = location.coords;
+            const newLocation = { lat: latitude, lng: longitude };
 
-        // Update local state immediately
-        get().setCurrentLocation(newLocation);
+            // Update local state immediately
+            get().setCurrentLocation(newLocation);
 
-        // ── First position received — log it ──────────────────────────────
-        const { lastSentLocation } = get();
-        const isFirst = !lastSentLocation;
+            // ── First position received — log it ──────────────────────────────
+            const { lastSentLocation } = get();
+            const isFirst = !lastSentLocation;
 
-        Sentry.addBreadcrumb({
-          category: "location",
-          message: `Position received (first=${isFirst}) lat=${latitude.toFixed(4)} lng=${longitude.toFixed(4)} acc=${accuracy?.toFixed(0)}m`,
-          level: "debug",
-        });
+            Sentry.logger.info(
+              `[Location] Position received (first=${isFirst}) lat=${latitude.toFixed(4)} lng=${longitude.toFixed(4)} acc=${accuracy?.toFixed(0)}m`,
+            );
 
-        // Skip if location hasn't changed significantly (50m threshold)
-        if (lastSentLocation) {
-          const distance = getDistanceMeters(
-            lastSentLocation.lat,
-            lastSentLocation.lng,
-            latitude,
-            longitude,
-          );
-
-          if (distance < 50) {
             Sentry.addBreadcrumb({
               category: "location",
-              message: `Position skipped — only ${distance.toFixed(0)}m from last sent (threshold=50m)`,
+              message: `Position received (first=${isFirst}) lat=${latitude.toFixed(4)} lng=${longitude.toFixed(4)} acc=${accuracy?.toFixed(0)}m`,
               level: "debug",
             });
-            return;
-          }
-        }
 
-        // Determine if we should send to server based on user type & context
-        get()
-          .shouldUpdateServerLocation()
-          .then(async (shouldUpdate) => {
-            if (!shouldUpdate) {
+            // ── FIRST POSITION: Always send immediately ──────────────────────
+            if (isFirst) {
+              Sentry.logger.info(
+                `[Location] 🎯 FIRST position detected — sending immediately to server (userType=${userType})`,
+              );
+              
               Sentry.addBreadcrumb({
                 category: "location",
-                message: `shouldUpdateServerLocation=false for ${userType} — skipping server update`,
-                level: "debug",
+                message: `🎯 FIRST position — calling updatecurrentUserLocation`,
+                level: "info",
+                data: { latitude, longitude, userType, userId, isFirst: true },
               });
+              
+              updatecurrentUserLocation({ latitude, longitude })
+                .then(() => {
+                  set({ lastSentLocation: newLocation });
+                  
+                  Sentry.logger.info(
+                    `[Location] ✅ FIRST position sent successfully to server`,
+                  );
+                  
+                  Sentry.addBreadcrumb({
+                    category: "location",
+                    message: `✅ FIRST position update SUCCESS`,
+                    level: "info",
+                    data: { latitude, longitude, userType },
+                  });
+                  
+                  // If vendor, mark as captured
+                  const vendorTypes = [
+                    "RESTAURANT_VENDOR",
+                    "LAUNDRY_VENDOR",
+                    "DISPATCH",
+                  ];
+                  const currentUserType =
+                    user?.user_metadata?.user_type || profile?.user_type;
+                  if (
+                    vendorTypes.includes(currentUserType!) &&
+                    !vendorLocationCaptured
+                  ) {
+                    set({ vendorLocationCaptured: true });
+                    Sentry.logger.info(
+                      `[Location] 📍 Vendor location marked as captured`,
+                    );
+                  }
+                })
+                .catch((error: any) => {
+                  Sentry.logger.error(
+                    `[Location] ❌ FIRST position update FAILED: ${error?.message || error}`,
+                  );
+                  
+                  Sentry.addBreadcrumb({
+                    category: "location",
+                    message: `❌ FIRST position update FAILED`,
+                    level: "error",
+                    data: { 
+                      error: error?.message || String(error),
+                      latitude, 
+                      longitude, 
+                      userType, 
+                      userId 
+                    },
+                  });
+                  
+                  Sentry.captureException(error, {
+                    tags: { action: "update_first_location", isFirst: "true" },
+                    extra: { latitude, longitude, userType, userId },
+                  });
+                });
               return;
             }
 
-            // ── Attempt server update ──────────────────────────────────────
-            try {
-              await updatecurrentUserLocation({ latitude, longitude });
-              set({ lastSentLocation: newLocation });
-
-              Sentry.captureMessage(
-                `[Location] ✅ Server updated lat=${latitude.toFixed(4)} lng=${longitude.toFixed(4)} userType=${userType}`,
-                "info",
+            // Skip if location hasn't changed significantly (50m threshold)
+            if (lastSentLocation) {
+              const distance = getDistanceMeters(
+                lastSentLocation.lat,
+                lastSentLocation.lng,
+                latitude,
+                longitude,
               );
 
-              // If vendor and we just updated, mark as captured
-              const vendorTypes = [
-                "RESTAURANT_VENDOR",
-                "LAUNDRY_VENDOR",
-                "DISPATCH",
-              ];
-              const currentUserType =
-                user?.user_metadata?.user_type || profile?.user_type;
-              if (
-                vendorTypes.includes(currentUserType!) &&
-                !vendorLocationCaptured
-              ) {
-                set({ vendorLocationCaptured: true });
+              Sentry.logger.info(
+                `[Location] Distance from last sent: ${distance.toFixed(0)}m (threshold=50m)`,
+              );
+
+              if (distance < 50) {
+                Sentry.addBreadcrumb({
+                  category: "location",
+                  message: `Position skipped — only ${distance.toFixed(0)}m from last sent (threshold=50m)`,
+                  level: "debug",
+                });
+                return;
               }
-            } catch (error: any) {
-              Sentry.captureException(error, {
-                tags: { action: "update_location_to_server" },
-                extra: {
-                  errorMessage: error?.message,
-                  latitude,
-                  longitude,
-                  userType,
-                  userId,
-                },
-              });
             }
-          })
-          .catch((err) => {
-            Sentry.captureException(err, {
-              tags: { action: "should_update_server_location" },
-            });
-          });
-      });
 
-      set({
-        locationWatcher: watcher,
-        locationTrackingActive: true,
-        lastLocationUpdate: Date.now(),
-      });
+            // Determine if we should send to server based on user type & context
+            get()
+              .shouldUpdateServerLocation()
+              .then(async (shouldUpdate) => {
+                if (!shouldUpdate) {
+                  Sentry.addBreadcrumb({
+                    category: "location",
+                    message: `shouldUpdateServerLocation=false for ${userType} — skipping server update`,
+                    level: "debug",
+                  });
+                  return;
+                }
 
-      Sentry.captureMessage(
-        `[Location] watchPositionAsync REGISTERED for ${userType} — waiting for first fix`,
-        "info",
-      );
+                // ── Attempt server update ──────────────────────────────────────
+                try {
+                  await updatecurrentUserLocation({ latitude, longitude });
+                  set({ lastSentLocation: newLocation });
+
+                  Sentry.logger.info(
+                    `[Location] Server updated lat=${latitude.toFixed(4)} lng=${longitude.toFixed(4)} userType=${userType}`,
+                  );
+
+                  // If vendor and we just updated, mark as captured
+                  const vendorTypes = [
+                    "RESTAURANT_VENDOR",
+                    "LAUNDRY_VENDOR",
+                    "DISPATCH",
+                  ];
+                  const currentUserType =
+                    user?.user_metadata?.user_type || profile?.user_type;
+                  if (
+                    vendorTypes.includes(currentUserType!) &&
+                    !vendorLocationCaptured
+                  ) {
+                    set({ vendorLocationCaptured: true });
+                  }
+                } catch (error: any) {
+                  Sentry.captureException(error, {
+                    tags: { action: "update_location_to_server" },
+                    extra: {
+                      errorMessage: error?.message,
+                      latitude,
+                      longitude,
+                      userType,
+                      userId,
+                    },
+                  });
+                }
+              })
+              .catch((err) => {
+                Sentry.captureException(err, {
+                  tags: { action: "should_update_server_location" },
+                });
+              });
+          },
+        );
+
+        set({
+          locationWatcher: watcher,
+          locationTrackingActive: true,
+          lastLocationUpdate: Date.now(),
+        });
+      }
+
+      Sentry.logger.info(`[Location] tracking setup COMPLETE for ${userType}`);
     } catch (error) {
+      Sentry.logger.error(
+        `[Location] watchPositionAsync FAILED for ${userType}: ${error}`,
+      );
       Sentry.captureException(error, {
         tags: { action: "start_location_tracking" },
         extra: { userType, userId },
@@ -734,8 +820,13 @@ export const useUserStore = create<UserStore>((set, get) => ({
     const userType = user?.user_metadata?.user_type || profile?.user_type;
     if (userType === "RIDER") {
       Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME)
-        .then(() => console.log(" Background location task stopped"))
+        .then(() => {
+          Sentry.logger.info("[Location] Background location task stopped");
+        })
         .catch((err) => {
+          Sentry.logger.error(
+            `[Location] Background location task stop FAILED: ${err}`,
+          );
           Sentry.captureException(err, {
             tags: { action: "stop_bg_location_task" },
           });

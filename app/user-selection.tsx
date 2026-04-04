@@ -78,7 +78,7 @@ const UserSelection = () => {
           <Text className="text-3xl font-poppins-bold text-primary mb-2">
             Join ServiPal as...
           </Text>
-          <Text className="text-lg font-poppins text-gray-500">
+          <Text className="text-lg font-poppins text-primar">
             Select how you would like to use the platform.
           </Text>
         </View>
@@ -103,7 +103,7 @@ const UserSelection = () => {
                 <View className="flex-1">
                   <Text
                     className="text-xl font-poppins-semibold mb-1"
-                    style={{ color: isSelected ? "#FF8C00" : "#fff" }}
+                    style={{ color: isSelected ? "#FF8C00" : "#aaa" }}
                   >
                     {type.name}
                   </Text>

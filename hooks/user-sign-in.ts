@@ -46,7 +46,6 @@ export const useSignIn = () => {
     },
 
     onError: (error: AuthError | Error) => {
-      console.error("❌ Login error:", error);
       Sentry.captureException(error, { tags: { action: "sign_in" } });
 
       let errorMessage = "Login failed. Please try again.";
@@ -54,7 +53,7 @@ export const useSignIn = () => {
       if (error instanceof AuthError) {
         switch (error.message) {
           case "Invalid login credentials":
-            errorMessage = "Invalid email/phone or password.";
+            errorMessage = "Invalid email or password.";
             break;
           case "Email not confirmed":
             errorMessage = "Please verify your email before logging in.";

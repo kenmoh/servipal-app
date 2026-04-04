@@ -63,15 +63,30 @@ export const defineLocationTask = () => {
           try {
             // Update the user's primary location in the profile
             await updatecurrentUserLocation({ latitude, longitude });
+            
             Sentry.addBreadcrumb({
               category: "location",
-              message: `[BG] General location updated: ${latitude}, ${longitude}`,
+              message: `[BG] Location update success: ${latitude}, ${longitude}`,
               level: "info",
+              data: { latitude, longitude, timestamp: new Date().toISOString() }
             });
-          } catch (err) {
+
+            Sentry.logger.info(
+              `[BG] General location updated: ${latitude}, ${longitude}`,
+            );
+          } catch (err: any) {
             // Log but don't crash
+            Sentry.addBreadcrumb({
+              category: "location",
+              message: `[BG] General location update failed: ${err?.message || err}`,
+              level: "error",
+              data: { latitude, longitude }
+            });
+            Sentry.logger.error(`[BG] General location update failed: ${err}`);
+            
             Sentry.captureException(err, {
               tags: { action: "bg_general_location_update" },
+              extra: { latitude, longitude }
             });
           }
         }

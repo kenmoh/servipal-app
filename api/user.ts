@@ -665,36 +665,63 @@ export const updatecurrentUserLocation = async (
   coordinates: LocationCoordinates,
 ): Promise<UpdateLocationResponse> => {
   try {
-    // In production (EAS builds), getSession() reads from an in-memory cache
-    // that can be stale or empty immediately after login.
-    // getUser() makes a server round-trip, guaranteeing the session is valid.
-    let { data: userData, error: userError } = await supabase.auth.getUser();
+    Sentry.logger.info(
+      `[updatecurrentUserLocation] entering... lat=${coordinates.latitude} lng=${coordinates.longitude}`,
+    );
 
-    // If getUser() fails, attempt a session refresh as a fallback
-    if (userError || !userData?.user) {
+    // ── Auth Hardening for Background Cold Boots ──────────────────────────
+    // In production (EAS builds), background tasks may wake up before the
+    // Supabase session is hydrated from storage. We retry getUser() a few times.
+    let userData = null;
+    let userError = null;
+
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      const resp = await supabase.auth.getSession();
+      userData = resp.data;
+      userError = resp.error;
+
+      if (userData?.session?.user.id) break;
+
+      if (attempt < 3) {
+        Sentry.addBreadcrumb({
+          category: "auth",
+          message: `[updatecurrentUserLocation] getSession() attempt ${attempt} failed — retrying in 1s`,
+          level: "info",
+        });
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
+    }
+
+    // If getSession() still fails, attempt a session refresh as a final fallback
+    if (userError || !userData?.session) {
+      Sentry.logger.warn(
+        `[updatecurrentUserLocation] All getSession() attempts failed (${userError?.message}) — attempting refreshSession`,
+      );
       Sentry.addBreadcrumb({
-        category: "location",
-        message: `[updatecurrentUserLocation] getUser() failed (${userError?.message}) — attempting refreshSession`,
+        category: "auth",
+        message: `Final fallback: attempting refreshSession`,
         level: "warning",
       });
 
       const { data: refreshData, error: refreshError } =
         await supabase.auth.refreshSession();
+
       if (refreshError || !refreshData?.session) {
+        Sentry.logger.error(
+          `[updatecurrentUserLocation] refreshSession failed: ${refreshError?.message || "No session data"}`,
+        );
         throw new Error(
           `User not authenticated — getUser: ${userError?.message}, refresh: ${refreshError?.message}`,
         );
       }
-      userData = { user: refreshData.session.user };
+      userData = { session: refreshData.session };
 
-      Sentry.addBreadcrumb({
-        category: "location",
-        message: "[updatecurrentUserLocation] refreshSession succeeded",
-        level: "info",
-      });
+      Sentry.logger.info(
+        `[updatecurrentUserLocation] refreshSession succeeded for ${refreshData.session.user.id}`,
+      );
     }
 
-    const userId = userData.user!.id;
+    const userId = userData?.session?.user.id;
 
     // Validate coordinates
     if (
@@ -703,28 +730,37 @@ export const updatecurrentUserLocation = async (
       coordinates.longitude < -180 ||
       coordinates.longitude > 180
     ) {
+      Sentry.logger.error(
+        `[updatecurrentUserLocation] Invalid coordinates: lat=${coordinates.latitude} lng=${coordinates.longitude}`,
+      );
       throw new Error(
         `Invalid coordinates: lat=${coordinates.latitude} lng=${coordinates.longitude}`,
       );
     }
 
     // Call the RPC function
+    Sentry.logger.info(
+      `[updatecurrentUserLocation] Calling RPC for userId=${userId}`,
+    );
     const { data, error } = await supabase.rpc("update_user_location", {
       user_id: userId,
       latitude: coordinates.latitude,
       longitude: coordinates.longitude,
     });
 
+    Sentry.logger.info(
+      `[updatecurrentUserLocation] RPC response: ${JSON.stringify(data)}`,
+    );
     if (error) {
-      Sentry.addBreadcrumb({
-        category: "location",
-        message: `[updatecurrentUserLocation] RPC error: ${error.message}`,
-        level: "error",
-        data: { userId, ...coordinates },
-      });
+      Sentry.logger.error(
+        `[updatecurrentUserLocation] RPC error: ${error.message}`,
+      );
       throw new Error(error.message || "Failed to update location");
     }
 
+    Sentry.logger.info(
+      `[updatecurrentUserLocation] RPC success for userId=${userId}`,
+    );
     Sentry.addBreadcrumb({
       category: "location",
       message: `[updatecurrentUserLocation] RPC success for userId=${userId}`,
@@ -733,7 +769,8 @@ export const updatecurrentUserLocation = async (
     });
 
     return data as UpdateLocationResponse;
-  } catch (error) {
+  } catch (error: any) {
+    Sentry.logger.error(`[updatecurrentUserLocation] Error: ${error}`);
     throw error;
   }
 };

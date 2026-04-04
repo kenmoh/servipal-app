@@ -2,6 +2,8 @@ import { UserProfile } from "@/types/user-types";
 import AntDesign from "@expo/vector-icons/AntDesign";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
+import FontAwesome from '@expo/vector-icons/FontAwesome';
+import Feather from '@expo/vector-icons/Feather';
 import { RelativePathString, router, type Href } from "expo-router";
 import {
   Dimensions,
@@ -40,7 +42,7 @@ const StoreCard = ({
   return (
     <TouchableOpacity activeOpacity={0.8} onPress={handleStoreSelect}>
       <View
-        className="self-center w-[90%]  rounded-2xl h-['20%'] overflow-hidden my-5"
+        className="self-center w-[90%]  rounded-2xl h-['20%'] overflow-hidden my-4"
         style={{
           height: IMAGET_HEIGHT,
         }}
@@ -61,7 +63,7 @@ const StoreCard = ({
         {/* Rating Badge */}
         {Number(item?.reviews?.stats.average_rating) > 0 && (
           <View style={styles.ratingBadge}>
-            <Text className="text-primary font-poppins-bold">
+            <Text className="text-gray-300 font-poppins-bold">
               {Number(item?.reviews?.stats.average_rating).toFixed(1)}
             </Text>
             <AntDesign name="star" size={14} color={"orange"} />
@@ -69,7 +71,7 @@ const StoreCard = ({
         )}
 
         {/* Content */}
-        <View className="absolute bottom-0 p-3 w-full gap-1">
+        {/* <View className="absolute bottom-0 p-3 w-full gap-1">
           <View
             style={{ backgroundColor: "rgba(0,0,0,0.5)", borderRadius: 10 }}
             className="self-start px-2 py-1"
@@ -94,8 +96,33 @@ const StoreCard = ({
               {item?.distance_km} km Away
             </Text>
           </View>
-        </View>
+        </View> */}
       </View>
+       <View className="gap-1 w-[90%] self-center">
+          <View
+         
+            className="flex-row gap-2 items-baseline"
+          >
+            <FontAwesome name="bank" size={12} color="gray" />
+            <Text
+              className="text-[14px] font-poppins-medium text-primary"
+              numberOfLines={1}
+             
+            >
+              {item?.business_name}
+                          </Text>
+             <Text className="text-xs text-gray-500">
+              {" | "} {item?.distance_km} km Away
+            </Text>
+          </View>
+
+          <View className="items-center flex-row gap-2">
+            <Feather name="map-pin" size={12} color="gray" />
+            <Text className="text-sm text-primary flex-1" numberOfLines={2}>
+              {item?.business_address} 
+            </Text>
+          </View>
+        </View>
     </TouchableOpacity>
   );
 };
