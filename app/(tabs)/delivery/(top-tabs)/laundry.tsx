@@ -1,4 +1,5 @@
 import { fetchUserOrders } from "@/api/order";
+import EmptyList from "@/components/EmptyList";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import FoodLaundryOrderCard from "@/components/food-laundry-order-card";
 import HDivider from "@/components/HDivider";
@@ -157,6 +158,12 @@ const LaundryOrdersScreen = () => {
           keyExtractor={keyExtractor}
           renderItem={renderItem}
           ListHeaderComponent={renderHeader}
+          ListEmptyComponent={()=><EmptyList 
+  title="No laundry orders yet" 
+  description="Find trusted laundry services near you and get your clothes cleaned with ease"
+/>
+
+}
           refreshing={isFetching}
           onRefresh={refetch}
           showsVerticalScrollIndicator={false}

@@ -3,6 +3,7 @@ import {
   deleteUserAccount,
   fetchProfileImageUrls,
   ImageData,
+  updateBackgroundLocationStatus,
   uploadImage,
 } from "@/api/user";
 import AppModal from "@/components/AppModal";
@@ -263,12 +264,20 @@ const ProfileScreen = () => {
 
   const handleBackgroundToggle = async (newValue: boolean) => {
     try {
+      const isRider = user?.user_metadata?.user_type === "RIDER" || profile?.user_type === "RIDER";
+      
       if (!newValue) {
         if (profile?.has_delivery) {
           Alert.alert(
             "Active Delivery",
             "You cannot disable delivery tracking while you have an active delivery. Please complete your current delivery first.",
             [{ text: "Cancel", style: "cancel" }],
+          );
+        } else if (isRider) {
+          Alert.alert(
+            "Cannot Disable",
+            "As a rider, background location tracking must remain enabled at all times to receive delivery assignments. This cannot be disabled.",
+            [{ text: "OK" }],
           );
         } else {
           Alert.alert(
@@ -278,8 +287,11 @@ const ProfileScreen = () => {
               { text: "Cancel", style: "cancel" },
               {
                 text: "Disable in Settings",
-                onPress: () => {
+                onPress: async () => {
                   stopLocationTracking();
+                  const { status: fgStatus } = await Location.getForegroundPermissionsAsync();
+                  const { status: bgStatus } = await Location.getBackgroundPermissionsAsync();
+                  await updateBackgroundLocationStatus(fgStatus, bgStatus);
                   Linking.openSettings();
                 },
                 style: "destructive",
@@ -304,63 +316,70 @@ const ProfileScreen = () => {
       const { status: bgStatus, canAskAgain } =
         await Location.getBackgroundPermissionsAsync();
 
+      // For RIDERS: Check if already granted and verify it's "Allow all the time"
       if (bgStatus === "granted") {
-        Alert.alert(
-          "Permission Enabled",
-          "Delivery tracking is already enabled in your device settings.",
-          [{ text: "OK" }],
-        );
+        const message = isRider
+          ? "Background location is set to 'Allow all the time'. This is required for receiving delivery assignments and providing real-time tracking."
+          : "Delivery tracking is already enabled in your device settings.";
+        
+        Alert.alert("Delivery Tracking Enabled", message, [{ text: "OK" }]);
         await checkLocationPermission();
         await startLocationTracking();
+        await updateBackgroundLocationStatus(fgStatus, "granted");
         return;
       }
 
       if (bgStatus === "denied" && !canAskAgain) {
-        Alert.alert(
-          "Delivery Tracking",
-          "Allow ServiPal to access your location in the background only during active deliveries to provide real-time tracking and faster updates. Please enable this in your device settings.",
-          [
-            { text: "Cancel", style: "cancel" },
-            { text: "Open Settings", onPress: () => Linking.openSettings() },
-          ],
-        );
+        const message = isRider
+          ? "As a rider, you MUST enable 'Allow all the time' for background location to receive delivery assignments and provide real-time tracking.\n\nWithout this permission, you cannot work as a rider. Please enable it in your device settings."
+          : "Allow ServiPal to access your location in the background only during active deliveries to provide real-time tracking and faster updates. Please enable this in your device settings.";
+
+        Alert.alert("Action Required", message, [
+          { text: "Cancel", style: "cancel" },
+          { text: "Open Settings", onPress: () => Linking.openSettings() },
+        ]);
         return;
       }
 
-      Alert.alert(
-        "Delivery Tracking Permission",
-        "ServiPal collects location data to enable delivery tracking even when the app is closed or not in use. This helps customers track their assigned riders. Allow ServiPal to access your location in the background?",
-        [
-          { text: "Cancel", style: "cancel" },
-          {
-            text: "Allow",
-            onPress: async () => {
-              const { status: requestStatus } =
-                await Location.requestBackgroundPermissionsAsync();
+      const message = isRider
+        ? "As a rider, you MUST enable 'Allow all the time' for background location.\n\nThis is required to:\n• Receive delivery assignments\n• Provide real-time tracking to customers\n• Work as a rider\n\n⚡ Please select 'Allow all the time' in the next screen."
+        : "ServiPal collects location data to enable delivery tracking even when the app is closed or not in use. This helps customers track their assigned riders.\n\nPlease select 'Allow all the time' in the next screen.";
 
-              if (requestStatus === "granted") {
-                showSuccess("Success", "Delivery tracking enabled!");
-                await checkLocationPermission();
-                await startLocationTracking();
-              } else {
-                const message =
-                  Platform.OS === "android"
-                    ? "Background location must be set to 'Allow all the time'. Please update this in settings."
-                    : "Background location permission must be set to 'Always' in your system settings.";
+      Alert.alert("Delivery Tracking Permission", message, [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Continue",
+          onPress: async () => {
+            const { status: requestStatus } =
+              await Location.requestBackgroundPermissionsAsync();
 
-                Alert.alert("Action Required", message, [
-                  { text: "Cancel", style: "cancel" },
-                  {
-                    text: "Open Settings",
-                    onPress: () => Linking.openSettings(),
-                  },
-                ]);
-                await checkLocationPermission();
-              }
-            },
+            if (requestStatus === "granted") {
+              showSuccess("Success", "Delivery tracking enabled!");
+              await checkLocationPermission();
+              await startLocationTracking();
+              await updateBackgroundLocationStatus(fgStatus, "granted");
+            } else {
+              await updateBackgroundLocationStatus(fgStatus, requestStatus);
+              const errorMessage = isRider
+                ? Platform.OS === "android"
+                  ? "As a rider, background location MUST be set to 'Allow all the time'.\n\nWithout this permission, you cannot receive delivery assignments or work as a rider.\n\nPlease update this in settings."
+                  : "As a rider, background location permission MUST be set to 'Always'.\n\nWithout this permission, you cannot receive delivery assignments or work as a rider.\n\nPlease update this in your system settings."
+                : Platform.OS === "android"
+                  ? "Background location must be set to 'Allow all the time'. Please update this in settings."
+                  : "Background location permission must be set to 'Always' in your system settings.";
+
+              Alert.alert("Action Required", errorMessage, [
+                { text: "Cancel", style: "cancel" },
+                {
+                  text: "Open Settings",
+                  onPress: () => Linking.openSettings(),
+                },
+              ]);
+              await checkLocationPermission();
+            }
           },
-        ],
-      );
+        },
+      ]);
     } catch (error) {
       console.error("Error in background toggle:", error);
       showError("Error", "Failed to check permission.");

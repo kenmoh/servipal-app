@@ -325,16 +325,7 @@ const DeliveryReceiptPage = () => {
                   color={theme === "dark" ? "#eee" : "black"}
                 />
               </Pressable>
-              {/* <Pressable
-                onPress={handleDownload}
-                className="bg-slate-600/10 p-2.5 rounded-full active:opacity-50"
-              >
-                <Feather
-                  name="download"
-                  size={20}
-                  color={theme === "dark" ? "#eee" : "black"}
-                />
-              </Pressable> */}
+             
             </View>
           ),
         }}

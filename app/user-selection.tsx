@@ -78,7 +78,7 @@ const UserSelection = () => {
           <Text className="text-3xl font-poppins-bold text-primary mb-2">
             Join ServiPal as...
           </Text>
-          <Text className="text-lg font-poppins text-primar">
+          <Text className="text-lg font-poppins text-primary">
             Select how you would like to use the platform.
           </Text>
         </View>

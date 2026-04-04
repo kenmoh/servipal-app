@@ -81,6 +81,8 @@ export interface UserProfile {
   is_blocked?: boolean;
   has_delivery?: boolean;
   last_seen_at?: string;
+  foreground_location_permission?: "granted" | "denied" | "undetermined" | null;
+  background_location_permission?: "granted" | "denied" | "undetermined" | null;
 }
 
 export interface UserProfileUpdate {

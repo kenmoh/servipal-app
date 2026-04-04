@@ -911,6 +911,40 @@ export const registerPushToken = async (
   }
 };
 
+export const updateBackgroundLocationStatus = async (
+  foregroundStatus: "granted" | "denied" | "undetermined",
+  backgroundStatus: "granted" | "denied" | "undetermined",
+): Promise<void> => {
+  try {
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession();
+
+    if (sessionError || !session) {
+      throw new Error("User not authenticated");
+    }
+
+    const userId = session.user.id;
+
+    const { error } = await supabase
+      .from("profiles")
+      .update({ 
+        foreground_location_permission: foregroundStatus,
+        background_location_permission: backgroundStatus 
+      })
+      .eq("id", userId);
+
+    if (error) {
+      throw new Error(
+        error.message || "Failed to update background location status",
+      );
+    }
+  } catch (error) {
+    throw error;
+  }
+};
+
 interface Bank {
   id: number;
   name: string;

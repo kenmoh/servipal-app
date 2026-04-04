@@ -108,7 +108,7 @@ const SignIn = () => {
         <Text className="text-primary font-normal text-[14px]">
           Don't have an account?{" "}
         </Text>
-        <Pressable onPress={() => router.push("/sign-up")} disabled={isPending}>
+        <Pressable onPress={() => router.push("/user-selection")} disabled={isPending}>
           <Text className="font-poppins-medium text-[14px] text-button-primary underline">
             Register
           </Text>

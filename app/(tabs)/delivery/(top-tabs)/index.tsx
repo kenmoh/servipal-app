@@ -1,5 +1,6 @@
 import { getUserDeliveryOrders } from "@/api/delivery";
 import DeliveryCard from "@/components/DeliveryCard";
+import EmptyList from "@/components/EmptyList";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import FAB from "@/components/FAB";
 import HDivider from "@/components/HDivider";
@@ -111,17 +112,6 @@ const DeliveryScreen = () => {
 
   const keyExtractor = useCallback((item: DeliveryOrder) => item?.id!, []);
 
-  const ITEM_HEIGHT = 200;
-
-  const getItemLayout = useCallback(
-    (data: any, index: number) => ({
-      length: ITEM_HEIGHT,
-      offset: ITEM_HEIGHT * index,
-      index,
-    }),
-    [],
-  );
-
   const renderHeader = useCallback(
     () => (
       <View className="bg-background">
@@ -168,6 +158,11 @@ const DeliveryScreen = () => {
               fetchNextPage();
             }
           }}
+          ListEmptyComponent={()=><EmptyList 
+  title="No deliveries yet" 
+  description="Send packages quickly and safely to anywhere with our reliable dispatch service. Press the + button below to get started."
+/>
+}
           onEndReachedThreshold={0.5}
           ListFooterComponent={() =>
             isFetchingNextPage ? (

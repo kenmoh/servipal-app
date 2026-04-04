@@ -1,4 +1,5 @@
 import { fetchUserOrders } from "@/api/order";
+import EmptyList from "@/components/EmptyList";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import FoodLaundryOrderCard from "@/components/food-laundry-order-card";
 import HDivider from "@/components/HDivider";
@@ -128,6 +129,10 @@ const FoodOrdersScreen = () => {
               />
             )}
             horizontal
+            ListEmptyComponent={()=><EmptyList 
+  title="No food orders yet" 
+  description="Discover delicious meals from nearby restaurants and place your first order"
+/>}
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={{
               paddingHorizontal: 10,
