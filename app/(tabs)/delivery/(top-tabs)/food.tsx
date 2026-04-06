@@ -129,10 +129,12 @@ const FoodOrdersScreen = () => {
               />
             )}
             horizontal
-            ListEmptyComponent={()=><EmptyList 
-  title="No food orders yet" 
-  description="Discover delicious meals from nearby restaurants and place your first order"
-/>}
+            ListEmptyComponent={() => (
+              <EmptyList
+                title="No food orders yet"
+                description="Discover delicious meals from nearby restaurants and place your first order"
+              />
+            )}
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={{
               paddingHorizontal: 10,
@@ -156,6 +158,12 @@ const FoodOrdersScreen = () => {
           data={orders?.orders || []}
           keyExtractor={keyExtractor}
           renderItem={renderItem}
+          ListEmptyComponent={() => (
+            <EmptyList
+              title="No food orders yet"
+              description="Orders will appear here once you order for food."
+            />
+          )}
           ListHeaderComponent={renderHeader}
           refreshing={isFetching}
           onRefresh={refetch}

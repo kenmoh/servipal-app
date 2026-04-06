@@ -2,8 +2,8 @@ import { UserProfile } from "@/types/user-types";
 import AntDesign from "@expo/vector-icons/AntDesign";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
-import FontAwesome from '@expo/vector-icons/FontAwesome';
-import Feather from '@expo/vector-icons/Feather';
+import FontAwesome from "@expo/vector-icons/FontAwesome";
+import Feather from "@expo/vector-icons/Feather";
 import { RelativePathString, router, type Href } from "expo-router";
 import {
   Dimensions,
@@ -98,31 +98,32 @@ const StoreCard = ({
           </View>
         </View> */}
       </View>
-       <View className="gap-1 w-[90%] self-center">
-          <View
-         
-            className="flex-row gap-2 items-baseline"
-          >
-            <FontAwesome name="bank" size={12} color="gray" />
-            <Text
-              className="text-[14px] font-poppins-medium text-primary"
-              numberOfLines={1}
-             
-            >
+      <View className="gap-1 w-[90%] self-center">
+        <View className="flex-row gap-2 items-start justify-between">
+          <View className="flex-row gap-2 items-start flex-1">
+            <View className="pt-[2px]">
+              <FontAwesome name="bank" size={12} color="gray" />
+            </View>
+            <Text className="text-[14px] font-poppins-medium text-primary flex-1">
               {item?.business_name}
-                          </Text>
-             <Text className="text-xs text-gray-500">
-              {" | "} {item?.distance_km} km Away
             </Text>
           </View>
+          {item?.distance_km && (
+            <Text className="text-xs text-gray-500 shrink-0 pt-[2px]">
+              {" | "} {item?.distance_km} km Away
+            </Text>
+          )}
+        </View>
 
+        {item?.business_address && (
           <View className="items-center flex-row gap-2">
             <Feather name="map-pin" size={12} color="gray" />
             <Text className="text-sm text-primary flex-1" numberOfLines={2}>
-              {item?.business_address} 
+              {item?.business_address}
             </Text>
           </View>
-        </View>
+        )}
+      </View>
     </TouchableOpacity>
   );
 };

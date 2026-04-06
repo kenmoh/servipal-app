@@ -1,6 +1,7 @@
 // hooks/useColorScheme.ts
-import { useColorScheme as _useColorScheme } from "react-native";
+import { useTheme } from "./theme-toggle";
 
 export function useColorScheme() {
-  return _useColorScheme() ?? "light"; // fallback to 'light' if null
+  const { colorScheme } = useTheme();
+  return colorScheme ?? "light";
 }

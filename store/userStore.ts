@@ -1,5 +1,6 @@
 import {
   registerPushToken as syncPushToken,
+  updateBackgroundLocationStatus,
   updatecurrentUserLocation,
 } from "@/api/user";
 import authStorage from "@/storage/auth-storage";
@@ -267,58 +268,39 @@ export const useUserStore = create<UserStore>((set, get) => ({
       const isLocationEnabled = await Location.hasServicesEnabledAsync();
       if (!isLocationEnabled) {
         set({ locationPermissionGranted: false });
-        return false;
-      }
-
-      // 2. Request Foreground Permissions first
-      const { status: fgStatus } =
-        await Location.requestForegroundPermissionsAsync();
-
-      if (fgStatus !== "granted") {
-        set({ locationPermissionGranted: false });
-        return false;
-      }
-
-      // 3. Request Background Permissions for Riders (and Customers with active orders)
-      let bgStatus = "denied";
-      const needsBackground =
-        userType === "RIDER" ||
-        (userType === "CUSTOMER" &&
-          (await get().checkCustomerHasActiveOrder(userId!)));
-
-      if (needsBackground) {
-        const { status: currentBgStatus } =
-          await Location.getBackgroundPermissionsAsync();
-        bgStatus = currentBgStatus;
-
-        if (currentBgStatus !== "granted") {
-          Sentry.logger.info(
-            `[Location] Requesting background permissions for ${userType}`,
-          );
-          const { status: requestedBgStatus } =
-            await Location.requestBackgroundPermissionsAsync();
-          bgStatus = requestedBgStatus;
+        // Sync with database
+        if (userId) {
+          await updateBackgroundLocationStatus("denied", "denied");
         }
-      } else {
-        // Just check current status if not explicitly needed right now
-        const { status: currentBgStatus } =
-          await Location.getBackgroundPermissionsAsync();
-        bgStatus = currentBgStatus;
+        return false;
       }
+
+      // 2. Check Foreground Permissions
+      const { status: fgStatus } =
+        await Location.getForegroundPermissionsAsync();
+
+      // 3. Check Background Permissions
+      const { status: bgStatus } =
+        await Location.getBackgroundPermissionsAsync();
 
       const isAlwaysGranted = bgStatus === "granted";
 
       set({
-        locationPermissionGranted: true,
+        locationPermissionGranted: fgStatus === "granted",
         isIosBackgroundLocationEnabled:
           Platform.OS === "ios" ? isAlwaysGranted : null,
         isAndroidBackgroundLocationEnabled:
           Platform.OS === "android" ? isAlwaysGranted : null,
         locationAlwaysAndWhenInUsePermission: isAlwaysGranted,
-        locationWhenInUsePermission: true,
+        locationWhenInUsePermission: fgStatus === "granted",
       });
 
-      return true;
+      // Sync current device permission status with database
+      if (userId) {
+        await updateBackgroundLocationStatus(fgStatus, bgStatus);
+      }
+
+      return fgStatus === "granted";
     } catch (error) {
       Sentry.captureException(error, {
         tags: { action: "check_location_permission" },

@@ -158,11 +158,12 @@ const DeliveryScreen = () => {
               fetchNextPage();
             }
           }}
-          ListEmptyComponent={()=><EmptyList 
-  title="No deliveries yet" 
-  description="Send packages quickly and safely to anywhere with our reliable dispatch service. Press the + button below to get started."
-/>
-}
+          ListEmptyComponent={() => (
+            <EmptyList
+              title="No deliveries yet"
+              description="Send packages quickly and safely to anywhere with our reliable dispatch service. Press the > button below to get started."
+            />
+          )}
           onEndReachedThreshold={0.5}
           ListFooterComponent={() =>
             isFetchingNextPage ? (

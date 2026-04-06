@@ -30,6 +30,7 @@ import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Animated,
   Dimensions,
   Platform,
   Pressable,
@@ -64,6 +65,7 @@ const ProfileScreen = () => {
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
   const [deleteFeedback, setDeleteFeedback] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
+  const [pendingTheme, setPendingTheme] = useState<string | null>(null);
 
   const { data } = useQuery({
     queryKey: ["user-profile-image", user?.id],
@@ -594,48 +596,81 @@ const ProfileScreen = () => {
           <View className="gap-3">
             <Text className="text-secondary">Theme</Text>
             <View className="flex-row gap-3">
-              <View
-                className={`px-4 py-2 rounded-xl ${
-                  theme === "unspecified" ? "bg-brand-primary" : "bg-input"
+              <Pressable
+                className={`px-4 py-2 rounded-xl transition-all duration-200 ${
+                  theme === "unspecified" || pendingTheme === "unspecified" ? "bg-brand-primary" : "bg-input"
                 }`}
+                onPress={(e) => {
+                  const { pageX, pageY } = e.nativeEvent;
+                  setPendingTheme("unspecified");
+                  setTimeout(() => {
+                    setThemeOption("unspecified", pageX, pageY);
+                    setTimeout(() => setPendingTheme(null), 800);
+                  }, 50);
+                }}
+                style={({ pressed }) => [{
+                  transform: [{ scale: pressed ? 0.95 : 1 }],
+                  opacity: pressed ? 0.8 : 1,
+                }]}
               >
                 <Text
-                  className={`text-sm font-poppins-medium ${
-                    theme === "unspecified" ? "text-white" : "text-muted"
+                  className={`text-sm font-poppins-medium transition-colors duration-200 ${
+                    theme === "unspecified" || pendingTheme === "unspecified" ? "text-white" : "text-muted"
                   }`}
-                  onPress={() => setThemeOption("unspecified")}
                 >
                   System
                 </Text>
-              </View>
-              <View
-                className={`px-4 py-2 rounded-xl ${
-                  theme === "light" ? "bg-brand-primary" : "bg-input"
+              </Pressable>
+              <Pressable
+                className={`px-4 py-2 rounded-xl transition-all duration-200 ${
+                  theme === "light" || pendingTheme === "light" ? "bg-brand-primary" : "bg-input"
                 }`}
+                onPress={(e) => {
+                  const { pageX, pageY } = e.nativeEvent;
+                  setPendingTheme("light");
+                  setTimeout(() => {
+                    setThemeOption("light", pageX, pageY);
+                    setTimeout(() => setPendingTheme(null), 800);
+                  }, 50);
+                }}
+                style={({ pressed }) => [{
+                  transform: [{ scale: pressed ? 0.95 : 1 }],
+                  opacity: pressed ? 0.8 : 1,
+                }]}
               >
                 <Text
-                  className={`text-sm font-poppins-medium ${
-                    theme === "light" ? "text-white" : "text-muted"
+                  className={`text-sm font-poppins-medium transition-colors duration-200 ${
+                    theme === "light" || pendingTheme === "light" ? "text-white" : "text-muted"
                   }`}
-                  onPress={() => setThemeOption("light")}
                 >
                   Light
                 </Text>
-              </View>
-              <View
-                className={`px-4 py-2 rounded-xl ${
-                  theme === "dark" ? "bg-brand-primary" : "bg-input"
+              </Pressable>
+              <Pressable
+                className={`px-4 py-2 rounded-xl transition-all duration-200 ${
+                  theme === "dark" || pendingTheme === "dark" ? "bg-brand-primary" : "bg-input"
                 }`}
+                onPress={(e) => {
+                  const { pageX, pageY } = e.nativeEvent;
+                  setPendingTheme("dark");
+                  setTimeout(() => {
+                    setThemeOption("dark", pageX, pageY);
+                    setTimeout(() => setPendingTheme(null), 800);
+                  }, 50);
+                }}
+                style={({ pressed }) => [{
+                  transform: [{ scale: pressed ? 0.95 : 1 }],
+                  opacity: pressed ? 0.8 : 1,
+                }]}
               >
                 <Text
-                  className={`text-sm font-poppins-medium ${
-                    theme === "dark" ? "text-white" : "text-muted"
+                  className={`text-sm font-poppins-medium transition-colors duration-200 ${
+                    theme === "dark" || pendingTheme === "dark" ? "text-white" : "text-muted"
                   }`}
-                  onPress={() => setThemeOption("dark")}
                 >
                   Dark
                 </Text>
-              </View>
+              </Pressable>
             </View>
           </View>
 

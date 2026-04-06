@@ -1,4 +1,5 @@
 import ToastProvider from "@/components/ToastProvider";
+import { ThemeTransitionOverlay } from "@/components/ThemeTransitionOverlay ";
 import { HEADER_BG_DARK, HEADER_BG_LIGHT } from "@/constants/theme";
 import "@/global.css";
 import { useColorScheme } from "@/hooks/use-color-scheme";
@@ -33,21 +34,6 @@ Sentry.init({
   spotlight: __DEV__,
 });
 
-// // Sentry Logging Test - as requested
-// Sentry.logger.info("This is an info log");
-
-// Sentry.logger.warn("This is a warning log", {
-//   log_type: "test",
-// });
-
-// Sentry.logger.error("This is an error log");
-
-// // Using formatted messages with dynamic values
-// const testUser = "john_doe";
-// const testAction = "login";
-// Sentry.logger.info(
-//   Sentry.logger.fmt`User '${testUser}' performed '${testAction}'`,
-// );
 
 // Register background location task at module load
 defineLocationTask();
@@ -145,10 +131,11 @@ export default Sentry.wrap(function RootLayout() {
           <QueryClientProvider client={queryClient}>
             <BottomSheetModalProvider>
               <ToastProvider>
+                <ThemeTransitionOverlay />
                 <Stack
                   screenOptions={{
                     headerTintColor:
-                      colorScheme === "dark" ? HEADER_BG_DARK : HEADER_BG_LIGHT,
+                      colorScheme === "dark" ? HEADER_BG_LIGHT : HEADER_BG_DARK,
                     headerShadowVisible: false,
                     headerStyle: {
                       backgroundColor: BG_COLOR,

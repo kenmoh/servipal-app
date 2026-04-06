@@ -443,10 +443,10 @@ export const uploadDisputeImage = async (
     const timestamp = Date.now();
     const publicUrl = `${urlData.publicUrl}?t=${timestamp}`;
 
-    console.log("✅ Image uploaded:", publicUrl);
+ 
     return publicUrl;
   } catch (error) {
-    console.error("❌ Upload image error:", error);
+  
     Sentry.captureException(error, {
       tags: { action: "upload_dispute_image" },
     });

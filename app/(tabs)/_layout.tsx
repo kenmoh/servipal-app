@@ -6,9 +6,9 @@ import { useUserStore } from "@/store/userStore";
 import { NativeTabs } from "expo-router/build/native-tabs";
 
 export default function TabLayout() {
-  const theme = useColorScheme();
+  const colorScheme = useColorScheme();
   const { user } = useUserStore();
-  const BG_COLOR = theme === "dark" ? HEADER_BG_DARK : HEADER_BG_LIGHT;
+  const BG_COLOR = colorScheme === "dark" ? HEADER_BG_DARK : HEADER_BG_LIGHT;
   const ALLOWED_USER = ["CUSTOMER", "LAUNDRY_VENDOR", "RESTAURANT_VENDOR"];
   const isAllowed = ALLOWED_USER.includes(user?.user_metadata?.user_type!);
   const hideForRider = user?.user_metadata.user_type === "RIDER";

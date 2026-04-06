@@ -6,48 +6,68 @@ type ThemeTransitionCallback = (
   x: number,
   y: number,
   next: ColorSchemeName,
+  applyState: () => void,
 ) => void;
 const THEME_KEY = "user_theme";
 
 let transitionCallback: ThemeTransitionCallback | null = null;
+let cachedTheme: ColorSchemeName = "unspecified";
+let themeListeners: Set<(theme: ColorSchemeName) => void> = new Set();
 
 export const registerThemeTransition = (cb: ThemeTransitionCallback) => {
   transitionCallback = cb;
 };
 
-export function useTheme() {
-  const [theme, setTheme] = useState<ColorSchemeName>("unspecified");
+const notifyListeners = (newTheme: ColorSchemeName) => {
+  cachedTheme = newTheme;
+  themeListeners.forEach((listener) => listener(newTheme));
+};
 
-  // Load persisted theme on mount
+export function useTheme() {
+  const [theme, setTheme] = useState<ColorSchemeName>(cachedTheme);
+  const [isLoading, setIsLoading] = useState(cachedTheme === "unspecified");
+
   useEffect(() => {
-    SecureStore.getItemAsync(THEME_KEY).then((stored) => {
-      if (stored) {
-        applyTheme(stored as ColorSchemeName);
-      }
-    });
+    const listener = (newTheme: ColorSchemeName) => setTheme(newTheme);
+    themeListeners.add(listener);
+    
+    // Load from storage if still unspecified
+    if (cachedTheme === "unspecified") {
+       SecureStore.getItemAsync(THEME_KEY).then((stored) => {
+        const themeToApply = (stored as ColorSchemeName) || "unspecified";
+        if (themeToApply !== "unspecified") {
+          applyThemeState(themeToApply, true);
+        }
+        setIsLoading(false);
+      });
+    } else {
+      setIsLoading(false);
+    }
+
+    return () => {
+      themeListeners.delete(listener);
+    };
   }, []);
 
   // Listen to system theme changes
   useEffect(() => {
     const sub = Appearance.addChangeListener(({ colorScheme }) => {
-      if (theme === "unspecified") {
+      if (cachedTheme === "unspecified") {
         setTheme("unspecified");
       }
     });
     return () => sub.remove();
-  }, [theme]);
+  }, []);
 
-  const applyTheme = (option: ColorSchemeName) => {
-    setTheme(option);
+  const applyThemeState = (option: ColorSchemeName, immediate = false) => {
+    notifyListeners(option);
     if (option === "light" || option === "dark" || option === "unspecified") {
-      Appearance.setColorScheme(option);
+      if (immediate) {
+        Appearance.setColorScheme(option);
+      }
     }
   };
 
-  // const setThemeOption = async (option: ColorSchemeName) => {
-  //   applyTheme(option);
-  //   await SecureStore.setItemAsync(THEME_KEY, option);
-  // };
   const setThemeOption = async (
     option: ColorSchemeName,
     touchX?: number,
@@ -55,18 +75,25 @@ export function useTheme() {
   ) => {
     if (option === theme) return;
 
-    if (transitionCallback && touchX !== undefined && touchY !== undefined) {
-      transitionCallback(touchX, touchY, option);
-    } else {
-      applyTheme(option);
-    }
-
+    // Save to storage immediately
     await SecureStore.setItemAsync(THEME_KEY, option);
+
+    const applyState = () => {
+      applyThemeState(option, true);
+    };
+
+    if (transitionCallback && touchX !== undefined && touchY !== undefined) {
+      // Trigger transition animation — let the overlay decide when to call applyState
+      transitionCallback(touchX, touchY, option, applyState);
+    } else {
+      // Fallback: apply immediately
+      applyState();
+    }
   };
 
   // Resolved actual color scheme for components that need light/dark
   const colorScheme =
     theme === "unspecified" ? (Appearance.getColorScheme() ?? "light") : theme;
 
-  return { theme, colorScheme, setThemeOption };
+  return { theme, colorScheme, setThemeOption, isLoading };
 }

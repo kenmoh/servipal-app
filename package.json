@@ -29,6 +29,7 @@
     "@types/react": "~19.2.10",
     "apisauce": "^3.2.2",
     "date-fns": "^4.1.0",
+    "eas": "^0.1.0",
     "eslint-config-expo": "~55.0.0",
     "expo": "~55.0.2",
     "expo-checkbox": "~55.0.3",
