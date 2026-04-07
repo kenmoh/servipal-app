@@ -108,9 +108,9 @@ const StoreCard = ({
               {item?.business_name}
             </Text>
           </View>
-          {item?.distance_km && (
+          {!!item?.distance_km && (
             <Text className="text-xs text-gray-500 shrink-0 pt-[2px]">
-              {" | "} {item?.distance_km} km Away
+               {` | ${item?.distance_km} km Away`}
             </Text>
           )}
         </View>

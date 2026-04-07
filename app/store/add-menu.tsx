@@ -45,7 +45,7 @@ const schema = z
       .number({ message: "Price must be a number" })
       .positive("Price must be greater than 0"),
     // Ingredients (description) is only required when type is FOOD
-    description: z.string().optional(),
+    description: z.string().max(200, "Ingredients cannot exceed 200 characters").optional(),
     restaurant_item_type: z.string({ message: "Please select a type" }),
     sides: z.array(z.string()),
     sizes: z.array(
@@ -382,17 +382,23 @@ const addMenu = () => {
                   control={control}
                   name="description"
                   render={({ field: { onChange, onBlur, value } }) => (
-                    <AppTextInput
-                      label="Ingredients"
-                      placeholder="Ingredients"
-                      height={60}
-                      onBlur={onBlur}
-                      onChangeText={onChange}
-                      multiline={true}
-                      numberOfLines={4}
-                      value={value}
-                      errorMessage={errors.description?.message}
-                    />
+                    <View>
+                      <AppTextInput
+                        label="Ingredients"
+                        placeholder="Ingredients"
+                        height={60}
+                        onBlur={onBlur}
+                        onChangeText={onChange}
+                        multiline={true}
+                        numberOfLines={4}
+                        value={value}
+                        errorMessage={errors.description?.message}
+                        maxLength={200}
+                      />
+                      <Text className="text-[10px] text-gray-400 self-end mt-1 font-poppins px-1">
+                        {`${value?.length || 0}/200`}
+                      </Text>
+                    </View>
                   )}
                 />
 

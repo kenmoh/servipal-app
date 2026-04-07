@@ -626,7 +626,7 @@ const LaundryReceiptPage = () => {
                 icon={<AntDesign name="close" size={24} color="red" />}
                 variant="outline"
                 borderRadius={50}
-                //   width={"90%"}
+                width={"90%"}
                 color={"red"}
               />
             )}

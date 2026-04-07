@@ -13,7 +13,6 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withSpring,
-  withTiming,
 } from "react-native-reanimated";
 
 interface AppButtonProps extends Omit<PressableProps, "style"> {
@@ -127,17 +126,12 @@ export function AppButton({
 
   const animatedContainerStyle = useAnimatedStyle(() => {
     return {
-      backgroundColor: withTiming(resolveBackgroundColor(), {
-        duration: 300,
-      }),
-      borderColor: withTiming(
-        variant === "outline" ? actualBorderColor : "transparent",
-        { duration: 300 },
-      ),
+      backgroundColor: resolveBackgroundColor(),
+      borderColor: variant === "outline" ? actualBorderColor : "transparent",
       borderWidth: variant === "outline" ? borderWidth : 0,
       transform: [{ scale: pressScale.value }],
     };
-  });
+  }, [variant, backgroundColor, color, actualBorderColor, borderWidth]);
 
   const handlePressIn = () => {
     pressScale.value = withSpring(0.96);

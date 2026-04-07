@@ -1,9 +1,11 @@
 import ToastProvider from "@/components/ToastProvider";
-import { ThemeTransitionOverlay } from "@/components/ThemeTransitionOverlay ";
+import { ThemeTransitionOverlay } from "@/components/ThemeTransitionOverlay";
 import { HEADER_BG_DARK, HEADER_BG_LIGHT } from "@/constants/theme";
 import "@/global.css";
+import { useTheme } from "@/hooks/theme-toggle";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useUserStore } from "@/store/userStore";
+import { useColorScheme as useNativeWind } from "nativewind";
 import { defineLocationTask } from "@/utils/location-tracking";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import * as Sentry from "@sentry/react-native";
@@ -34,7 +36,6 @@ Sentry.init({
   spotlight: __DEV__,
 });
 
-
 // Register background location task at module load
 defineLocationTask();
 
@@ -53,8 +54,19 @@ const queryClient = new QueryClient({
 
 export default Sentry.wrap(function RootLayout() {
   const colorScheme = useColorScheme();
+  const { setColorScheme: setNWColorScheme } = useNativeWind();
+  const { theme: currentTheme } = useTheme();
+
   const BG_COLOR = colorScheme === "dark" ? HEADER_BG_DARK : HEADER_BG_LIGHT;
   const { user, hydrate, initialize } = useUserStore();
+
+  useEffect(() => {
+    if (currentTheme) {
+      setNWColorScheme(
+        currentTheme === "unspecified" ? "system" : currentTheme,
+      );
+    }
+  }, [currentTheme]);
 
   const [loaded] = useFonts({
     "Poppins-Bold": require("../assets/fonts/Poppins-Bold.ttf"),
@@ -131,7 +143,7 @@ export default Sentry.wrap(function RootLayout() {
           <QueryClientProvider client={queryClient}>
             <BottomSheetModalProvider>
               <ToastProvider>
-                <ThemeTransitionOverlay />
+                {/* <ThemeTransitionOverlay /> */}
                 <Stack
                   screenOptions={{
                     headerTintColor:
@@ -170,6 +182,12 @@ export default Sentry.wrap(function RootLayout() {
 
                   {/* Protected Screens */}
                   <Stack.Protected guard={!!user?.id}>
+                    <Stack.Screen
+                      name="index"
+                      options={{
+                        headerShown: false,
+                      }}
+                    />
                     <Stack.Screen
                       name="(tabs)"
                       options={{ headerShown: false }}

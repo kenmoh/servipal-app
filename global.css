@@ -9,10 +9,10 @@
   --color-surface-profile: rgba(249, 242, 245, 0.5);
 
   --color-profile-card-default: rgba(249, 242, 245, 0.5);
-  --color-input-default: "#eee";
+  --color-input-default: #eee;
 
-  --color-background-default: "#fff";
-  --color-bottom-sheet: "#1f1f1f";
+  --color-background-default: #fff;
+  --color-bottom-sheet: #1f1f1f;
 
   --color-brand-primary: #0000cd;
   --color-brand-secondary: orange;
@@ -51,12 +51,12 @@
 
     --color-background-default: #18191c;
 
-    --color-input-default: "rgba(30, 33, 39, 0.5)";
+    --color-input-default: rgba(30, 33, 39, 0.5);
 
     --color-text-primary: #fff;
     --color-text-secondary: #eee;
     --color-text-muted: #9ba1a6;
-    --color-bottom-sheet: "#1f1f1f";
+    --color-bottom-sheet: #1f1f1f;
 
     --color-icon-default: #ddd;
     --color-tab-inactive: #ddd;

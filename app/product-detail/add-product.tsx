@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import React, { useEffect } from "react";
 import { Controller, useForm } from "react-hook-form";
-import { ActivityIndicator, Alert, ScrollView, View } from "react-native";
+import { ActivityIndicator, Alert, ScrollView, Text, View } from "react-native";
 
 import {
   createProduct,
@@ -40,7 +40,8 @@ export const productCreateSchema = z.object({
 
   description: z
     .string()
-    .min(10, "Description must be at least 10 characters long"),
+    .nonempty({ message: "Description is required" })
+    .max(500, "Description cannot exceed 500 characters"),
 
   price: z.coerce
     .number("Price must be a number")
@@ -295,20 +296,28 @@ const AddProductScreen = () => {
         <Controller
           control={control}
           name="description"
-          render={({ field: { onChange, value, onBlur } }) => (
-            <AppTextInput
-              label="Product Description"
-              onChangeText={onChange}
-              onBlur={onBlur}
-              value={value}
-              multiline
-              width={"90%"}
-              height={45}
-              errorMessage={errors.description?.message}
-              editable={!isPending}
-            />
+          render={({ field: { onChange, onBlur, value } }) => (
+            <View>
+              <AppTextInput
+                label="Product Description"
+                placeholder="Describe your product here..."
+                onBlur={onBlur}
+                onChangeText={onChange}
+                value={value}
+                multiline
+                width={"90%"}
+                height={65}
+                errorMessage={errors.description?.message}
+                maxLength={500}
+                editable={!isPending}
+              />
+              <Text className="text-[10px] text-gray-400 self-end mr-[5%] mt-1 font-poppins px-1">
+                {`${(value?.length || 0).toString()}/500`}
+              </Text>
+            </View>
           )}
         />
+
         <View className="flex-row w-[90%] self-center justify-between">
           <Controller
             control={control}
@@ -324,6 +333,7 @@ const AddProductScreen = () => {
                 value={value?.toString() || ""}
                 keyboardType="numeric"
                 errorMessage={errors.price?.message}
+                editable={!isPending}
               />
             )}
           />

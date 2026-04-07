@@ -15,7 +15,7 @@ export default function Index() {
         className="flex-1 bg-background"
         style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
       >
-        <ActivityIndicator size="large" />
+        <ActivityIndicator color={"#ccc"} size="large" />
       </View>
     );
   }

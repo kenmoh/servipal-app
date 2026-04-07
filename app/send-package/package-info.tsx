@@ -42,7 +42,10 @@ export const sendItemSchema = z.object({
   distance: z.number(),
   dropoffLng: z.number().nullable(),
   receiverPhone: z.string().nonempty({ message: "Receiver phone is required" }),
-  description: z.string().nonempty({ message: "Description is required" }),
+  description: z
+    .string()
+    .nonempty({ message: "Description is required" })
+    .max(400, "Description cannot exceed 400 characters"),
   origin: z.string().nonempty({ message: "Origin is required" }),
   destination: z.string().nonempty({ message: "Destination is required" }),
   duration: z.string().nonempty({ message: "Duration is required" }),
@@ -297,15 +300,21 @@ const ItemInfo = () => {
               control={control}
               name="description"
               render={({ field: { onChange, onBlur, value } }) => (
-                <AppTextInput
-                  placeholder="Description"
-                  onBlur={onBlur}
-                  onChangeText={onChange}
-                  value={value}
-                  width={"90%"}
-                  errorMessage={errors.description?.message}
-                  multiline
-                />
+                <View>
+                  <AppTextInput
+                    placeholder="Description"
+                    onBlur={onBlur}
+                    onChangeText={onChange}
+                    value={value}
+                    width={"90%"}
+                    errorMessage={errors.description?.message}
+                    multiline
+                    maxLength={400}
+                  />
+                  <Text className="text-[10px] text-gray-400 self-end mr-[5%] mt-1 font-poppins">
+                    {value?.length || 0}/400
+                  </Text>
+                </View>
               )}
             />
 

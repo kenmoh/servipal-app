@@ -1,6 +1,6 @@
 import AppPicker from "@/components/AppPicker";
 import React, { useEffect } from "react";
-import { ActivityIndicator, ScrollView, View } from "react-native";
+import { ActivityIndicator, ScrollView, Text, View } from "react-native";
 
 import { fetchCategories } from "@/api/food";
 import {
@@ -29,7 +29,10 @@ const schema = z.object({
   price: z
     .number({ message: "Price must be a number" })
     .positive("Price must be greater than 0"),
-  description: z.string().min(1, "Description is a required field"),
+  description: z
+    .string()
+    .min(1, "Description is a required field")
+    .max(200, "Description cannot exceed 200 characters"),
   laundry_type: z.string({ message: "Please select a wash type" }),
   images: z.array(z.any()).nonempty({
     message: "Image is required",
@@ -57,6 +60,7 @@ const AddLaundryItem = () => {
     control,
     handleSubmit,
     reset,
+    watch,
     formState: { errors },
   } = useForm<LaundryFormData>({
     resolver: zodResolver(schema),
@@ -235,22 +239,28 @@ const AddLaundryItem = () => {
               )}
             />
           </View>
-          <Controller
-            control={control}
-            name="description"
-            render={({ field: { onChange, onBlur, value } }) => (
-              <AppTextInput
-                label="Description"
-                placeholder="Description"
-                onBlur={onBlur}
-                onChangeText={onChange}
-                multiline={true}
-                width={"90%"}
-                value={value}
-                errorMessage={errors.description?.message}
-              />
-            )}
-          />
+          <View>
+            <Controller
+              control={control}
+              name="description"
+              render={({ field: { onChange, onBlur, value } }) => (
+                <AppTextInput
+                  label="Description"
+                  placeholder="Description"
+                  onBlur={onBlur}
+                  onChangeText={onChange}
+                  multiline={true}
+                  width={"90%"}
+                  value={value}
+                  errorMessage={errors.description?.message}
+                  maxLength={200}
+                />
+              )}
+            />
+            <Text className="text-[10px] text-gray-400 self-end mr-[5%] mt-1 font-poppins">
+              {`${watch("description")?.length || 0}/200`}
+            </Text>
+          </View>
 
           <View className="w-[90%] self-center">
             <Controller

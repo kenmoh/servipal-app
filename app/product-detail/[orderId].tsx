@@ -520,7 +520,7 @@ const ProductDetail = () => {
               Delivery Info
             </Text>
             <Text className="text-sm text-slate-600 dark:text-slate-400 font-poppins-light">
-              {"📍 " + String(data.delivery_address)}
+              {String(data.delivery_address)}
             </Text>
             {!!data.delivery_option && (
               <Text className="text-xs text-slate-400 font-poppins-medium mt-1 uppercase">

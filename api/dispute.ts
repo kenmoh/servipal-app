@@ -424,7 +424,7 @@ export const uploadDisputeImage = async (
       });
 
     if (error) {
-      console.error("❌ Upload image failed:", error);
+     
       Sentry.captureException(error, {
         tags: { action: "upload_dispute_image" },
       });

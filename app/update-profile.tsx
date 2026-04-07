@@ -1,4 +1,5 @@
-import { fetchBanks, resolveBank, updateCurrentUserProfile } from "@/api/user";
+import { deleteUserAccount, fetchBanks, resolveBank, updateCurrentUserProfile } from "@/api/user";
+import AppModal from "@/components/AppModal";
 import AppPicker from "@/components/AppPicker";
 import BankSelectionSheet from "@/components/BankSelectionSheet";
 import CurrentLocationButton from "@/components/CurrentLocationButton";
@@ -67,6 +68,9 @@ const UpdateProfile = () => {
   const [isOpeningPickerVisible, setOpeningPickerVisibility] = useState(false);
   const [isClosingPickerVisible, setClosingPickerVisibility] = useState(false);
   const bankSheetRef = React.useRef<BottomSheetModal>(null);
+  const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
+  const [deleteFeedback, setDeleteFeedback] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const userType = user?.user_metadata?.user_type;
 
@@ -233,6 +237,34 @@ const UpdateProfile = () => {
     }
 
     updateMutation.mutate(updateData);
+  };
+
+  const confirmDeleteAccount = async () => {
+    setIsDeleting(true);
+    try {
+      await deleteUserAccount(deleteFeedback);
+      showSuccess("Success", "Your account has been deleted.");
+      setIsDeleteModalVisible(false);
+    } catch (error: any) {
+      showError("Error", error.message || "Failed to delete account");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      "Delete Account",
+      "Are you sure you want to delete your account? This action is permanent and cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => setIsDeleteModalVisible(true),
+        },
+      ],
+    );
   };
 
   if (!profile) return <LoadingIndicator />;
@@ -616,8 +648,73 @@ const UpdateProfile = () => {
                 width="100%"
               />
             </View>
+
+            <View className="mt-10 border-t border-border-subtle pt-6">
+              <Text className="text-red-500 font-poppins-semibold text-base mb-2">
+                Danger Zone
+              </Text>
+              <Text className="text-secondary text-sm mb-4">
+                Once you delete your account, there is no going back. Please be
+                certain.
+              </Text>
+              <AppButton
+                text="Delete Account"
+                variant="ghost"
+                color="crimson"
+                onPress={handleDeleteAccount}
+                borderRadius={12}
+                icon={<Feather name="trash-2" size={18} color="crimson" />}
+                width="100%"
+              />
+            </View>
           </View>
         </ScrollView>
+
+        <AppModal
+          visible={isDeleteModalVisible}
+          onClose={() => setIsDeleteModalVisible(false)}
+          height="60%"
+        >
+          <View className="gap-6 pt-4">
+            <View>
+              <Text className="text-xl font-poppins-semibold text-primary">
+                We're sorry to see you go
+              </Text>
+              <Text className="text-sm text-muted mt-2">
+                Please tell us why you're deleting your account. Your feedback
+                helps us improve.
+              </Text>
+            </View>
+
+            <AppTextInput
+              label="Feedback (Optional)"
+              placeholder="Tell us why you're leaving..."
+              multiline
+              height={120}
+              value={deleteFeedback}
+              onChangeText={setDeleteFeedback}
+              textAlignVertical="top"
+            />
+
+            <View className="gap-3 mt-4">
+              <AppButton
+                text={isDeleting ? "Deleting..." : "Permanently Delete Account"}
+                backgroundColor="bg-red-500"
+                color="white"
+                borderRadius={50}
+                onPress={confirmDeleteAccount}
+                disabled={isDeleting}
+              />
+              <AppButton
+                text="Cancel"
+                variant="outline"
+                borderRadius={50}
+                onPress={() => setIsDeleteModalVisible(false)}
+                disabled={isDeleting}
+              />
+            </View>
+          </View>
+        </AppModal>
 
         <BankSelectionSheet
           ref={bankSheetRef}

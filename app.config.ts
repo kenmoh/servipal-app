@@ -9,7 +9,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   orientation: "portrait",
   icon: "./assets/images/android-icon.png",
   scheme: "servipal",
-  userInterfaceStyle: "automatic",
+  userInterfaceStyle: "dark",
   // newArchEnabled: true,
   ios: {
     supportsTablet: true,

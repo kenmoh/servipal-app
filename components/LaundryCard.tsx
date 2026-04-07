@@ -85,12 +85,13 @@ const LaundryCard = ({
           />
         </View>
         <View className="w-[75%]">
-          <View className="flex-row items-center justify-between">
-            <Text className="text-primary tracking-tight font-poppins-medium text-sm">
-              {item.name}
-            </Text>
-            {item.laundry_type && (
-              <View className="bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-full">
+          <View className="flex-row items-center justify-between gap-2">
+            <Text 
+              className="text-primary tracking-tight font-poppins-medium text-sm flex-1"
+              numberOfLines={2}
+            >{item.name}</Text>
+            {!!item.laundry_type && (
+              <View className="bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-full shrink-0">
                 <Text className="text-slate-400 text-[10px] font-poppins">
                   {item.laundry_type.replace("_", " ")}
                 </Text>

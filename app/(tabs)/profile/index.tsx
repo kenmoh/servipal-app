@@ -1,12 +1,10 @@
 import { requestOtp } from "@/api/auth";
 import {
-  deleteUserAccount,
   fetchProfileImageUrls,
   ImageData,
   updateBackgroundLocationStatus,
   uploadImage,
 } from "@/api/user";
-import AppModal from "@/components/AppModal";
 import HDivider from "@/components/HDivider";
 import ProfileImagePicker from "@/components/ProfileImagePicker";
 import { useToast } from "@/components/ToastProvider";
@@ -62,10 +60,9 @@ const ProfileScreen = () => {
   const [canPickup, setCanPickup] = useState(
     profile?.can_pickup_and_dropoff ?? false,
   );
-  const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
-  const [deleteFeedback, setDeleteFeedback] = useState("");
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [pendingTheme, setPendingTheme] = useState<string | null>(null);
+  const [pendingTheme, setPendingTheme] = useState<"light" | "dark" | null>(
+    null,
+  );
 
   const { data } = useQuery({
     queryKey: ["user-profile-image", user?.id],
@@ -75,7 +72,6 @@ const ProfileScreen = () => {
   });
 
   const { showSuccess, showError } = useToast();
-
   const togglePickupMutation = useTogglePickupAndDropoff();
 
   const toggleOnlineMutation = useToggleOnlineStatus();
@@ -168,6 +164,13 @@ const ProfileScreen = () => {
       setCanPickup(profile.can_pickup_and_dropoff);
     }
   }, [profile?.can_pickup_and_dropoff]);
+
+  // Clear optimistic pending theme once the real theme has caught up
+  useEffect(() => {
+    if (pendingTheme !== null && theme === pendingTheme) {
+      setPendingTheme(null);
+    }
+  }, [theme, pendingTheme]);
 
   const handlePickupToggle = () => {
     // Optimistic update
@@ -266,8 +269,10 @@ const ProfileScreen = () => {
 
   const handleBackgroundToggle = async (newValue: boolean) => {
     try {
-      const isRider = user?.user_metadata?.user_type === "RIDER" || profile?.user_type === "RIDER";
-      
+      const isRider =
+        user?.user_metadata?.user_type === "RIDER" ||
+        profile?.user_type === "RIDER";
+
       if (!newValue) {
         if (profile?.has_delivery) {
           Alert.alert(
@@ -291,8 +296,10 @@ const ProfileScreen = () => {
                 text: "Disable in Settings",
                 onPress: async () => {
                   stopLocationTracking();
-                  const { status: fgStatus } = await Location.getForegroundPermissionsAsync();
-                  const { status: bgStatus } = await Location.getBackgroundPermissionsAsync();
+                  const { status: fgStatus } =
+                    await Location.getForegroundPermissionsAsync();
+                  const { status: bgStatus } =
+                    await Location.getBackgroundPermissionsAsync();
                   await updateBackgroundLocationStatus(fgStatus, bgStatus);
                   Linking.openSettings();
                 },
@@ -323,7 +330,7 @@ const ProfileScreen = () => {
         const message = isRider
           ? "Background location is set to 'Allow all the time'. This is required for receiving delivery assignments and providing real-time tracking."
           : "Delivery tracking is already enabled in your device settings.";
-        
+
         Alert.alert("Delivery Tracking Enabled", message, [{ text: "OK" }]);
         await checkLocationPermission();
         await startLocationTracking();
@@ -386,35 +393,6 @@ const ProfileScreen = () => {
       console.error("Error in background toggle:", error);
       showError("Error", "Failed to check permission.");
     }
-  };
-
-  const confirmDeleteAccount = async () => {
-    setIsDeleting(true);
-    try {
-      await deleteUserAccount(deleteFeedback);
-      showSuccess("Success", "Your account has been deleted.");
-      setIsDeleteModalVisible(false);
-      // signOut() is called inside deleteUserAccount
-    } catch (error: any) {
-      showError("Error", error.message || "Failed to delete account");
-    } finally {
-      setIsDeleting(false);
-    }
-  };
-
-  const handleDeleteAccount = () => {
-    Alert.alert(
-      "Delete Account",
-      "Are you sure you want to delete your account? This action is permanent and cannot be undone.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: () => setIsDeleteModalVisible(true),
-        },
-      ],
-    );
   };
 
   const handleStoreRedirect = () => {
@@ -593,34 +571,9 @@ const ProfileScreen = () => {
       <View className="mt-6 px-3">
         <View className="bg-surface-elevated rounded-2xl p-4 gap-4">
           <Text className="text-primary font-poppins-medium">Preferences</Text>
-          <View className="gap-3">
+          {/* <View className="gap-3">
             <Text className="text-secondary">Theme</Text>
             <View className="flex-row gap-3">
-              <Pressable
-                className={`px-4 py-2 rounded-xl transition-all duration-200 ${
-                  theme === "unspecified" || pendingTheme === "unspecified" ? "bg-brand-primary" : "bg-input"
-                }`}
-                onPress={(e) => {
-                  const { pageX, pageY } = e.nativeEvent;
-                  setPendingTheme("unspecified");
-                  setTimeout(() => {
-                    setThemeOption("unspecified", pageX, pageY);
-                    setTimeout(() => setPendingTheme(null), 800);
-                  }, 50);
-                }}
-                style={({ pressed }) => [{
-                  transform: [{ scale: pressed ? 0.95 : 1 }],
-                  opacity: pressed ? 0.8 : 1,
-                }]}
-              >
-                <Text
-                  className={`text-sm font-poppins-medium transition-colors duration-200 ${
-                    theme === "unspecified" || pendingTheme === "unspecified" ? "text-white" : "text-muted"
-                  }`}
-                >
-                  System
-                </Text>
-              </Pressable>
               <Pressable
                 className={`px-4 py-2 rounded-xl transition-all duration-200 ${
                   theme === "light" || pendingTheme === "light" ? "bg-brand-primary" : "bg-input"
@@ -628,10 +581,7 @@ const ProfileScreen = () => {
                 onPress={(e) => {
                   const { pageX, pageY } = e.nativeEvent;
                   setPendingTheme("light");
-                  setTimeout(() => {
-                    setThemeOption("light", pageX, pageY);
-                    setTimeout(() => setPendingTheme(null), 800);
-                  }, 50);
+                  setThemeOption("light", pageX, pageY);
                 }}
                 style={({ pressed }) => [{
                   transform: [{ scale: pressed ? 0.95 : 1 }],
@@ -653,10 +603,7 @@ const ProfileScreen = () => {
                 onPress={(e) => {
                   const { pageX, pageY } = e.nativeEvent;
                   setPendingTheme("dark");
-                  setTimeout(() => {
-                    setThemeOption("dark", pageX, pageY);
-                    setTimeout(() => setPendingTheme(null), 800);
-                  }, 50);
+                  setThemeOption("dark", pageX, pageY);
                 }}
                 style={({ pressed }) => [{
                   transform: [{ scale: pressed ? 0.95 : 1 }],
@@ -672,7 +619,7 @@ const ProfileScreen = () => {
                 </Text>
               </Pressable>
             </View>
-          </View>
+          </View> */}
 
           <View className="flex-row items-center justify-between">
             <View className="flex-row items-center gap-3">
@@ -787,68 +734,13 @@ const ProfileScreen = () => {
         <AppButton
           text="Logout"
           color={"#aaa"}
-          width="50%"
+          width="100%"
           borderRadius={50}
           variant="ghost"
           icon={<Ionicons name="log-out-outline" size={20} color="#aaa" />}
           onPress={signOut}
         />
-        <AppButton
-          text="Delete Account"
-          color="crimson"
-          width="50%"
-          borderRadius={50}
-          variant="ghost"
-          icon={<Ionicons name="trash-outline" size={20} color="crimson" />}
-          onPress={handleDeleteAccount}
-        />
       </View>
-
-      <AppModal
-        visible={isDeleteModalVisible}
-        onClose={() => setIsDeleteModalVisible(false)}
-        height="60%"
-      >
-        <View className="gap-6 pt-4">
-          <View>
-            <Text className="text-xl font-poppins-semibold text-primary">
-              We're sorry to see you go
-            </Text>
-            <Text className="text-sm text-muted mt-2">
-              Please tell us why you're deleting your account. Your feedback
-              helps us improve.
-            </Text>
-          </View>
-
-          <AppTextInput
-            label="Feedback (Optional)"
-            placeholder="Tell us why you're leaving..."
-            multiline
-            height={120}
-            value={deleteFeedback}
-            onChangeText={setDeleteFeedback}
-            textAlignVertical="top"
-          />
-
-          <View className="gap-3 mt-4">
-            <AppButton
-              text={isDeleting ? "Deleting..." : "Permanently Delete Account"}
-              backgroundColor="bg-red-500"
-              color="white"
-              borderRadius={50}
-              onPress={confirmDeleteAccount}
-              disabled={isDeleting}
-            />
-            <AppButton
-              text="Cancel"
-              variant="outline"
-              borderRadius={50}
-              onPress={() => setIsDeleteModalVisible(false)}
-              disabled={isDeleting}
-            />
-          </View>
-        </View>
-      </AppModal>
     </ScrollView>
   );
 };

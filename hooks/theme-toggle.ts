@@ -1,4 +1,5 @@
 import * as SecureStore from "expo-secure-store";
+import * as Sentry from "@sentry/react-native";
 import { useEffect, useState } from "react";
 import { Appearance, ColorSchemeName } from "react-native";
 
@@ -11,12 +12,21 @@ type ThemeTransitionCallback = (
 const THEME_KEY = "user_theme";
 
 let transitionCallback: ThemeTransitionCallback | null = null;
-let cachedTheme: ColorSchemeName = "unspecified";
+let cachedTheme: ColorSchemeName = "dark";
 let themeListeners: Set<(theme: ColorSchemeName) => void> = new Set();
 
-export const registerThemeTransition = (cb: ThemeTransitionCallback) => {
+export const registerThemeTransition = (cb: ThemeTransitionCallback | null) => {
   transitionCallback = cb;
 };
+
+/** NativeWind / css-interop expects "system", not RN's "unspecified". */
+export type NativeWindColorScheme = "light" | "dark" | "system";
+
+export function mapThemeToNativeWind(
+  theme: ColorSchemeName,
+): NativeWindColorScheme {
+  return (theme as NativeWindColorScheme) || "dark";
+}
 
 const notifyListeners = (newTheme: ColorSchemeName) => {
   cachedTheme = newTheme;
@@ -30,13 +40,15 @@ export function useTheme() {
   useEffect(() => {
     const listener = (newTheme: ColorSchemeName) => setTheme(newTheme);
     themeListeners.add(listener);
-    
+
     // Load from storage if still unspecified
     if (cachedTheme === "unspecified") {
-       SecureStore.getItemAsync(THEME_KEY).then((stored) => {
-        const themeToApply = (stored as ColorSchemeName) || "unspecified";
+      SecureStore.getItemAsync(THEME_KEY).then((stored) => {
+        const themeToApply = (stored as ColorSchemeName) || "dark";
         if (themeToApply !== "unspecified") {
           applyThemeState(themeToApply, true);
+        } else {
+          applyThemeState("dark", true);
         }
         setIsLoading(false);
       });
@@ -52,19 +64,19 @@ export function useTheme() {
   // Listen to system theme changes
   useEffect(() => {
     const sub = Appearance.addChangeListener(({ colorScheme }) => {
-      if (cachedTheme === "unspecified") {
-        setTheme("unspecified");
-      }
+      // If we are in "system" mode, we might want to update,
+      // but since we are removing "system", we skip this.
     });
     return () => sub.remove();
   }, []);
 
   const applyThemeState = (option: ColorSchemeName, immediate = false) => {
+    if (option !== "light" && option !== "dark") {
+      option = "dark";
+    }
     notifyListeners(option);
-    if (option === "light" || option === "dark" || option === "unspecified") {
-      if (immediate) {
-        Appearance.setColorScheme(option);
-      }
+    if (immediate) {
+      Appearance.setColorScheme(option);
     }
   };
 
@@ -75,25 +87,36 @@ export function useTheme() {
   ) => {
     if (option === theme) return;
 
-    // Save to storage immediately
-    await SecureStore.setItemAsync(THEME_KEY, option);
+    try {
+      await SecureStore.setItemAsync(THEME_KEY, option);
+    } catch (e) {
+      Sentry.captureException(e, { tags: { action: "theme_persist" } });
+    }
 
     const applyState = () => {
       applyThemeState(option, true);
     };
 
-    if (transitionCallback && touchX !== undefined && touchY !== undefined) {
-      // Trigger transition animation — let the overlay decide when to call applyState
-      transitionCallback(touchX, touchY, option, applyState);
+    const hasValidTouchCoords =
+      typeof touchX === "number" &&
+      typeof touchY === "number" &&
+      Number.isFinite(touchX) &&
+      Number.isFinite(touchY);
+
+    if (transitionCallback && hasValidTouchCoords) {
+      try {
+        transitionCallback(touchX, touchY, option, applyState);
+      } catch (e) {
+        Sentry.captureException(e, { tags: { action: "theme_transition" } });
+        applyState();
+      }
     } else {
-      // Fallback: apply immediately
       applyState();
     }
   };
 
   // Resolved actual color scheme for components that need light/dark
-  const colorScheme =
-    theme === "unspecified" ? (Appearance.getColorScheme() ?? "light") : theme;
+  const colorScheme = theme || "dark";
 
   return { theme, colorScheme, setThemeOption, isLoading };
 }

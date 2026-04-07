@@ -1,7 +1,6 @@
-// hooks/useColorScheme.ts
-import { useTheme } from "./theme-toggle";
+import { useColorScheme as useNativeWindColorScheme } from "nativewind";
 
 export function useColorScheme() {
-  const { colorScheme } = useTheme();
-  return colorScheme ?? "light";
+  const { colorScheme } = useNativeWindColorScheme();
+  return colorScheme ?? "dark";
 }

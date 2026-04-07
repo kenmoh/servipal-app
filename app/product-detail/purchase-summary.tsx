@@ -382,7 +382,11 @@ const PurchaseSummary = () => {
                   className="p-4 rounded-2xl text-slate-900 dark:text-white font-poppins-medium bg-background text-sm border border-slate-100 dark:border-slate-700 h-32"
                   placeholderTextColor="#94A3B8"
                   textAlignVertical="top"
+                  maxLength={500}
                 />
+                <Text className="text-[10px] text-gray-400 self-end mt-1 font-poppins px-1">
+                  {additionalInfo.length}/500
+                </Text>
                 {!additionalInfo && (
                   <View className="absolute right-4 bottom-4">
                     <Ionicons

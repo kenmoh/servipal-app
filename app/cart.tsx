@@ -53,18 +53,21 @@ const Cart = () => {
   const { setDeliveryOption, cart, clearCart, setAdditionalInfo, totalCost } =
     useCartStore();
 
-  const totalCostWithDeliveryFee = deliveryFee
-    ? totalCost + Number(deliveryFee)
-    : totalCost;
-
-  const vendorId = cart.order_items[0]?.vendor_id;
   const { delivery_option } = cart;
+  const vendorId = cart.order_items[0]?.vendor_id;
 
   const { data: vendorProfile } = useQuery({
     queryKey: ["vendor-profile", vendorId],
     queryFn: () => fetchProfile(vendorId),
     enabled: !!vendorId,
   });
+
+  const totalCostWithDeliveryFee =
+    deliveryFee &&
+    delivery_option === "VENDOR_DELIVERY" &&
+    vendorProfile?.can_pickup_and_dropoff
+      ? totalCost + Number(deliveryFee)
+      : totalCost;
 
   const { setDestination, destination } = useLocationStore();
 
@@ -300,16 +303,18 @@ const Cart = () => {
                   ₦{Number(totalCost).toFixed(2)}
                 </Text>
               </View>
-              {deliveryFee && delivery_option === "VENDOR_DELIVERY" && (
-                <View className="flex-row justify-between items-center">
-                  <Text className="text-gray-400 font-poppins-medium">
-                    Delivery Fee
-                  </Text>
-                  <Text className="text-primary font-poppins-semibold">
-                    ₦{Number(deliveryFee).toFixed(2)}
-                  </Text>
-                </View>
-              )}
+              {deliveryFee &&
+                delivery_option === "VENDOR_DELIVERY" &&
+                vendorProfile?.can_pickup_and_dropoff && (
+                  <View className="flex-row justify-between items-center">
+                    <Text className="text-gray-400 font-poppins-medium">
+                      Delivery Fee
+                    </Text>
+                    <Text className="text-primary font-poppins-semibold">
+                      ₦{Number(deliveryFee).toFixed(2)}
+                    </Text>
+                  </View>
+                )}
               <View className="h-[1px] dark:bg-gray-600 bg-gray-200 my-4" />
               <View className="flex-row justify-between items-center">
                 <Text className="text-lg font-poppins-bold text-primary">
@@ -396,21 +401,27 @@ const Cart = () => {
               <Text className="text-base font-poppins-bold text-primary mb-4">
                 Instructions
               </Text>
-              <AppTextInput
-                placeholder={
-                  isLaundryOrder
-                    ? "e.g. Use cold water, no bleach, handle delicates with care"
-                    : "e.g. Less spice, no onions, leave at the front desk"
-                }
-                multiline
-                disabled={isPending}
-                textAlignVertical="center"
-                value={instructions}
-                onChangeText={(text) => {
-                  setInstructions(text);
-                  setAdditionalInfo(text);
-                }}
-              />
+              <View>
+                <AppTextInput
+                  placeholder={
+                    isLaundryOrder
+                      ? "e.g. Use cold water, no bleach, handle delicates with care"
+                      : "e.g. Less spice, no onions, leave at the front desk"
+                  }
+                  multiline
+                  disabled={isPending}
+                  textAlignVertical="center"
+                  value={instructions}
+                  maxLength={400}
+                  onChangeText={(text) => {
+                    setInstructions(text);
+                    setAdditionalInfo(text);
+                  }}
+                />
+                <Text className="text-[10px] text-gray-400 self-end mt-1 font-poppins px-1">
+                  {instructions.length}/400
+                </Text>
+              </View>
             </View>
           </View>
 
