@@ -17,6 +17,7 @@ import {
   View,
 } from "react-native";
 import { useToast } from "./ToastProvider";
+import { useTrack } from "@/hooks/use-events";
 
 const FoodCard = ({
   item,
@@ -26,6 +27,7 @@ const FoodCard = ({
   onPress: (item: RestaurantMenuItemResponse) => void;
 }) => {
   const { user } = useUserStore();
+  const { track } = useTrack();
   const { showError, showSuccess } = useToast();
   const cartItems = useCartStore((state) => state.cart.order_items);
   const queryClient = useQueryClient();
@@ -53,25 +55,17 @@ const FoodCard = ({
     },
   });
 
-  const openDialog = () => {
-    Alert.alert("Warning", `Are you sure you want to delete ${item.name}`, [
-      {
-        text: "Cancel",
-        style: "cancel",
-      },
-      {
-        text: "OK",
-        onPress: () => {
-          deleteMutation.mutate();
-        },
-      },
-    ]);
+  const handleAddToCart = () => {
+    onPress(item);
+    if (!isOwner) {
+      track("add_to_cart", { item: item.name, price: item.price });
+    }
   };
 
   return (
     <TouchableOpacity
       disabled={isOwner}
-      onPress={() => onPress(item)}
+      onPress={handleAddToCart}
       className="my-1 p-2 bg-input rounded-md w-[95%] self-center"
     >
       {/* Edit/Delete buttons for owner */}

@@ -5,11 +5,12 @@ import { ReviewsService } from "@/api/review";
 import HDivider from "@/components/HDivider";
 import ProductDetailWrapper from "@/components/ProductDetailWrapper";
 import { AppButton } from "@/components/ui/app-button";
+import { useTrack } from "@/hooks/use-events";
 import { usePurchaseActions, usePurchaseSelectors } from "@/store/productStore";
 import { Ionicons } from "@expo/vector-icons";
 import Feather from "@expo/vector-icons/Feather";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams, usePathname, useRouter } from "expo-router";
 import React, { useEffect } from "react";
 import {
   ActivityIndicator,
@@ -41,6 +42,9 @@ const ProductDetail = () => {
   const { product, quantity, selectedSizes, selectedColors, availableSizes } =
     usePurchaseSelectors();
 
+  const { track } = useTrack();
+  const pathName = usePathname();
+
   const { data, isLoading } = useQuery({
     queryKey: ["product", productId],
     queryFn: () => {
@@ -66,6 +70,14 @@ const ProductDetail = () => {
       clearProduct();
     };
   }, [data, setProduct, clearProduct]);
+
+  useEffect(() => {
+    track("product_detail_screen_viewed", {
+      item_name: data?.name!,
+      item_price: data?.price!,
+      screen: pathName,
+    });
+  }, [track, pathName]);
 
   const buyMutation = useMutation({
     mutationFn: (data: any) => buyItem(productId!, data),

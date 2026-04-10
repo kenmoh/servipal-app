@@ -13,8 +13,11 @@ import * as Location from "expo-location";
 import HDivider from "@/components/HDivider";
 import RefreshButton from "@/components/RefreshButton";
 import { useColorScheme } from "@/hooks/use-color-scheme";
+import { useTrack } from "@/hooks/use-events";
 import { useUserStore } from "@/store/userStore";
 import { UserProfile } from "@/types/user-types";
+
+import { usePathname } from "expo-router";
 
 const LaundryScreen = () => {
   const theme = useColorScheme();
@@ -27,6 +30,8 @@ const LaundryScreen = () => {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [searchInput, setSearchInput] = useState("");
+  const { track } = useTrack();
+  const pathName = usePathname();
 
   const { data, isFetching, error, refetch } = useQuery({
     queryKey: ["laundry", searchQuery],
@@ -68,21 +73,31 @@ const LaundryScreen = () => {
     return () => clearTimeout(timer);
   }, [searchInput]);
 
-  const renderHeader = React.useMemo(() => (
-    <>
-      <View className="px-4 py-2">
-        <AppTextInput
-          placeholder="Search for laundry service providers..."
-          value={searchInput}
-          borderRadius="rounded-full"
-          height={45}
-          onChangeText={setSearchInput}
-          icon={<Feather name="search" size={20} color="gray" />}
-        />
-      </View>
-      <HDivider />
-    </>
-  ), [searchInput]);
+  useEffect(() => {
+    track("laundry_screen_viewed", {
+      user_type: user?.user_metadata.user_type!,
+      screen: pathName,
+    });
+  }, [track, pathName, user]);
+
+  const renderHeader = React.useMemo(
+    () => (
+      <>
+        <View className="px-4 py-2">
+          <AppTextInput
+            placeholder="Search for laundry service providers..."
+            value={searchInput}
+            borderRadius="rounded-full"
+            height={45}
+            onChangeText={setSearchInput}
+            icon={<Feather name="search" size={20} color="gray" />}
+          />
+        </View>
+        <HDivider />
+      </>
+    ),
+    [searchInput],
+  );
 
   if (!userLocation || (isFetching && !data)) {
     return <LoadingIndicator />;

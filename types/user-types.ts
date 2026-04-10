@@ -360,3 +360,33 @@ export interface TogglePickupResponse {
   can_pickup_and_dropoff: boolean;
   updated_at: string;
 }
+
+// Allowed service types
+export type AvailabilityType = "PICKUP" | "VENDOR_DELIVERY";
+
+// Input for creating or updating vendor availability (bulk operation)
+export interface VendorAvailabilityInput {
+  day_of_week: number; // 0 = Sunday, 6 = Saturday
+  service_type: AvailabilityType; // 'PICKUP' or 'VENDOR_DELIVERY'
+  start_time: string; // 'HH:MM:SS' (24-hour format)
+  end_time: string; // 'HH:MM:SS' (24-hour format)
+  slot_interval: number; // slot interval in minutes
+  capacity: number; // max orders per slot
+  express_fee?: number; // optional, express fee if is_express is true
+}
+
+// Table row type for vendor_availability
+export interface VendorAvailability {
+  id: string; // UUID, primary key
+  vendor_id: string; // UUID of the vendor
+  day_of_week: number; // 0 = Sunday, 6 = Saturday
+  service_type: AvailabilityType; // 'PICKUP' or 'VENDOR_DELIVERY'
+  start_time: string; // 'HH:MM:SS' (24-hour format)
+  end_time: string; // 'HH:MM:SS'
+  slot_interval: number; // slot interval in minutes
+  capacity: number; // max orders per slot
+  is_express: boolean; // true if express service
+  express_fee: number; // express fee amount (0 if not express)
+  created_at: string; // ISO timestamp
+  updated_at: string; // ISO timestamp
+}

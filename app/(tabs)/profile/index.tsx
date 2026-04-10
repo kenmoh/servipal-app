@@ -9,7 +9,7 @@ import HDivider from "@/components/HDivider";
 import ProfileImagePicker from "@/components/ProfileImagePicker";
 import { useToast } from "@/components/ToastProvider";
 import { AppButton } from "@/components/ui/app-button";
-import { AppTextInput } from "@/components/ui/app-text-input";
+import EvilIcons from "@expo/vector-icons/EvilIcons";
 import {
   useToggleOnlineStatus,
   useTogglePickupAndDropoff,
@@ -528,6 +528,14 @@ const ProfileScreen = () => {
                 icon={<Ionicons name="create-outline" size={18} color="gray" />}
               />
 
+              <AppLink
+                onPress={() =>
+                  router.push("/laundry-store/vendor-availability")
+                }
+                name="Set Availibility"
+                icon={<EvilIcons name="calendar" size={24} color="gray" />}
+              />
+
               <HDivider />
               <AppLink
                 onPress={() => router.push("/change-password")}
@@ -715,7 +723,9 @@ const ProfileScreen = () => {
                 size={18}
                 color="gray"
                 onPress={() =>
-                  WebBrowser.openBrowserAsync("https://serv-ipal.com/support")
+                  WebBrowser.openBrowserAsync(
+                    "https://www.servi-pal.com/support",
+                  )
                 }
               />
             </View>

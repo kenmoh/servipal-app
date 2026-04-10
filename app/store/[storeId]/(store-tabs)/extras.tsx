@@ -6,16 +6,19 @@ import { RestaurantMenuItemResponse, SizeOption } from "@/types/item-types";
 import { BottomSheetModal } from "@gorhom/bottom-sheet";
 import { FlashList } from "@shopify/flash-list";
 import { useQuery } from "@tanstack/react-query";
-import { useGlobalSearchParams } from "expo-router";
-import { useCallback, useRef, useState } from "react";
+import { useGlobalSearchParams, usePathname } from "expo-router";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { View } from "react-native";
 
 import { fetchVendorMenuItems } from "@/api/food";
+import { useTrack } from "@/hooks/use-events";
 import { useUserStore } from "@/store/userStore";
 
 const ExtrasMenu = () => {
   const { storeId } = useGlobalSearchParams<{ storeId: string }>();
   const { profile } = useUserStore();
+  const { track } = useTrack();
+  const pathName = usePathname();
   const { addItem, removeItem } = useCartStore();
   const [checkedItems, setCheckedItems] = useState<Set<string>>(new Set());
   const [selectedItem, setSelectedItem] =
@@ -99,6 +102,13 @@ const ExtrasMenu = () => {
     },
     [addItem, profile?.id],
   );
+
+  useEffect(() => {
+    track("extras_menu_viewed", {
+      store_id: storeId,
+      screen: pathName,
+    });
+  }, [track, pathName]);
 
   return (
     <View className="flex-1 bg-background p-2">

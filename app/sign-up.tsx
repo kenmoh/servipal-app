@@ -22,6 +22,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as Linking from "expo-linking";
 import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
+import { useTrack } from "@/hooks/use-events";
 
 const roleData = [
   { id: "CUSTOMER", name: "Customer" },
@@ -63,7 +64,8 @@ type SignUpFormValues = z.infer<typeof signUpSchema>;
 const SignUp = () => {
   const { showError, showInfo } = useToast();
   const { selectedUserType, user } = useUserStore();
-  
+  const { track } = useTrack();
+
   const {
     control,
     handleSubmit,
@@ -134,6 +136,9 @@ const SignUp = () => {
   const onSubmit = (values: SignUpFormValues) => {
     if (!selectedUserType) return;
     mutate({ ...values, userType: selectedUserType });
+    track("sign_up", {
+      userType: selectedUserType,
+    });
   };
 
   return (

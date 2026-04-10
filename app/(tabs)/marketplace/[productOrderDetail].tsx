@@ -1,8 +1,9 @@
 import { HEADER_BG_DARK, HEADER_BG_LIGHT } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
-import { Stack, useLocalSearchParams } from "expo-router";
-import React from "react";
+import { Stack, useLocalSearchParams, usePathname } from "expo-router";
+import React, { useEffect } from "react";
 import { Image, ScrollView, Text, View } from "react-native";
+import { useTrack } from "@/hooks/use-events";
 
 const ProductOrder = () => {
   const { price, name, quantity, sizes, image } = useLocalSearchParams();
@@ -10,6 +11,16 @@ const ProductOrder = () => {
   // const selectedColors: string[] = JSON.parse(colors as string[])
 
   const theme = useColorScheme();
+  const { track } = useTrack();
+  const pathName = usePathname();
+
+  useEffect(() => {
+    track("product_order_viewed", {
+      item_name: name,
+      item_price: price,
+      screen: pathName,
+    });
+  }, [track, pathName]);
 
   return (
     <>

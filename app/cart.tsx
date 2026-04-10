@@ -11,6 +11,7 @@ import { AppButton } from "@/components/ui/app-button";
 import { AppTextInput } from "@/components/ui/app-text-input";
 import { HEADER_BG_DARK, HEADER_BG_LIGHT } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
+import { useTrack } from "@/hooks/use-events";
 import { useCartStore } from "@/store/cartStore";
 import { useLocationStore } from "@/store/locationStore";
 import { useUserStore } from "@/store/userStore";
@@ -47,6 +48,7 @@ const Cart = () => {
     deliveryFee: string;
   }>();
   const { showError } = useToast();
+  const { track } = useTrack();
 
   const isLaundryOrder = isLaundry === "true";
 
@@ -175,11 +177,19 @@ const Cart = () => {
   const handleOrderCreate = () => {
     if (!delivery_option) {
       showError("Error", "Please select a delivery option");
+      track("order_failed", {
+        reason: "No delivery option selected",
+        serviceType: isLaundryOrder ? "LAUNDRY" : "FOOD",
+      });
       return;
     }
 
     if (delivery_option === "VENDOR_DELIVERY" && !destination) {
       showError("Error", "Please enter a delivery address");
+      track("order_failed", {
+        reason: "No delivery address selected",
+        serviceType: isLaundryOrder ? "LAUNDRY" : "FOOD",
+      });
       setModalVisible(true);
       return;
     }
@@ -191,6 +201,10 @@ const Cart = () => {
       !destination
     ) {
       showError("Error", "Please select a delivery address");
+      track("order_failed", {
+        reason: "No delivery address selected",
+        serviceType: isLaundryOrder ? "LAUNDRY" : "FOOD",
+      });
       setModalVisible(true);
       return;
     }
@@ -225,8 +239,14 @@ const Cart = () => {
 
     if (isLaundryOrder) {
       laundryMutate(basePayload);
+      track("order_created", {
+        serviceType: "LAUNDRY",
+      });
     } else {
       foodMutate(basePayload);
+      track("order_created", {
+        serviceType: "FOOD",
+      });
     }
   };
 
@@ -375,7 +395,7 @@ const Cart = () => {
                     <Pressable
                       onPress={() => setModalVisible(true)}
                       hitSlop={8}
-                      className="py-1 px -3 bg-orange-500/20 rounded-full active:opacity-50"
+                      className="py-1 px-3 bg-orange-500/20 rounded-full active:opacity-50"
                     >
                       <Text className="text-sm font-poppins-medium text-button-primary">
                         Change
@@ -450,7 +470,7 @@ const Cart = () => {
         <AppModal
           visible={modalVisible}
           onClose={() => setModalVisible(false)}
-          height="75%"
+          height="9%"
         >
           <View className="flex-1 pt-2">
             <Text className="text-xl font-poppins-bold text-primary mb-6">

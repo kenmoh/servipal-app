@@ -8,6 +8,7 @@ import {
   UpdateRiderData,
   UserProfile,
   UserProfileUpdate,
+  VendorAvailabilityInput,
   WalletResponse,
 } from "@/types/user-types";
 import { apiClient } from "@/utils/client";
@@ -929,9 +930,9 @@ export const updateBackgroundLocationStatus = async (
 
     const { error } = await supabase
       .from("profiles")
-      .update({ 
+      .update({
         foreground_location_permission: foregroundStatus,
-        background_location_permission: backgroundStatus 
+        background_location_permission: backgroundStatus,
       })
       .eq("id", userId);
 
@@ -981,3 +982,33 @@ export const resolveBank = async (
     throw error;
   }
 };
+
+export async function upsertVendorAvailabilityBulk(
+  availability: VendorAvailabilityInput[],
+) {
+  try {
+    const { data: session } = await supabase.auth.getSession();
+    if (!session.session) {
+      throw new Error("User not authenticated");
+    }
+
+    const vendorId = session.session?.user?.id;
+    const { data, error } = await supabase.rpc(
+      "upsert_vendor_availability_bulk",
+      {
+        p_availability: availability,
+        p_vendor_id: vendorId,
+      },
+    );
+
+    if (error) {
+      console.error("RPC Error:", error);
+      throw new Error(error.message);
+    }
+
+    return data;
+  } catch (err) {
+    console.error("Upsert availability failed:", err);
+    throw err;
+  }
+}

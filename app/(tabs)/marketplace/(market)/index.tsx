@@ -12,11 +12,15 @@ import Feather from "@expo/vector-icons/Feather";
 import BottomSheet, { BottomSheetScrollView } from "@gorhom/bottom-sheet";
 import { FlashList } from "@shopify/flash-list";
 import { useQuery } from "@tanstack/react-query";
-import React, { useCallback, useRef, useState } from "react";
+import { usePathname } from "expo-router";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useTrack } from "@/hooks/use-events";
 
 const MarketPlace = () => {
   const { user } = useUserStore();
+  const { track } = useTrack();
+  const pathName = usePathname();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const { navigateTo } = useVerifiedNavigation();
   const theme = useColorScheme();
@@ -48,6 +52,13 @@ const MarketPlace = () => {
     queryKey: ["categories"],
     queryFn: getCategoriesWithSubcategories,
   });
+
+  useEffect(() => {
+    track("marketplace_screen_viewed", {
+      user_type: user?.user_metadata.user_type!,
+      screen: pathName,
+    });
+  }, [track, user, pathName]);
 
   // Transform hierarchical categories into a flat list for the header
   const { headerSubcategories, allSubcategories } = React.useMemo(() => {

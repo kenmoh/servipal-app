@@ -12,12 +12,16 @@ import FontAwesome5 from "@expo/vector-icons/FontAwesome5";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { FlashList } from "@shopify/flash-list";
 import { useQuery } from "@tanstack/react-query";
+import { usePathname } from "expo-router";
 
-import React, { useCallback, useMemo } from "react";
+import React, { useCallback, useEffect, useMemo } from "react";
 import { View } from "react-native";
+import { useTrack } from "@/hooks/use-events";
 
 const LaundryOrdersScreen = () => {
   const { user } = useUserStore();
+  const { track } = useTrack();
+  const pathName = usePathname();
 
   const {
     data: orders,
@@ -148,6 +152,13 @@ const LaundryOrdersScreen = () => {
     [statItems],
   );
 
+  useEffect(() => {
+    track("laundry_tab_viewed", {
+      user_type: user?.user_metadata.user_type!,
+      screen: pathName,
+    });
+  }, [track, user, pathName]);
+
   if (isLoading || isPending) return <LoadingIndicator />;
 
   return (
@@ -158,12 +169,12 @@ const LaundryOrdersScreen = () => {
           keyExtractor={keyExtractor}
           renderItem={renderItem}
           ListHeaderComponent={renderHeader}
-          ListEmptyComponent={()=><EmptyList 
-  title="No laundry orders yet" 
-  description="Find trusted laundry services near you and get your clothes cleaned with ease"
-/>
-
-}
+          ListEmptyComponent={() => (
+            <EmptyList
+              title="No laundry orders yet"
+              description="Find trusted laundry services near you and get your clothes cleaned with ease"
+            />
+          )}
           refreshing={isFetching}
           onRefresh={refetch}
           showsVerticalScrollIndicator={false}

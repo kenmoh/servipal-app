@@ -3,6 +3,7 @@ import RadioButton from "@/components/RadioButton";
 import { AppButton } from "@/components/ui/app-button";
 import { HEADER_BG_DARK, HEADER_BG_LIGHT } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
+import { useTrack } from "@/hooks/use-events";
 import { usePurchaseActions, usePurchaseSelectors } from "@/store/productStore";
 import { useUserStore } from "@/store/userStore";
 import { ProductOrderCreateRequest } from "@/types/product-types";
@@ -10,7 +11,7 @@ import { navigateToPayment } from "@/utils/payment-utils";
 import { Ionicons } from "@expo/vector-icons";
 import Feather from "@expo/vector-icons/Feather";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Stack, useRouter } from "expo-router";
+import { Stack, usePathname, useRouter } from "expo-router";
 import React, { useEffect } from "react";
 import {
   ActivityIndicator,
@@ -48,6 +49,16 @@ const PurchaseSummary = () => {
     setDeliveryOption,
   } = usePurchaseActions();
 
+  const pathName = usePathname();
+  const { track } = useTrack();
+
+  useEffect(() => {
+    track("purchase_summary", {
+      screen: pathName,
+      user_type: user?.user_metadata.user_type!,
+    });
+  }, [track, pathName, user]);
+
   // Redirect if no product data
   useEffect(() => {
     if (!product) {
@@ -64,12 +75,21 @@ const PurchaseSummary = () => {
       resetPurchase();
       navigateToPayment({ ...responseData, serviceType: "PRODUCT" });
       queryClient.invalidateQueries({ queryKey: ["products", user?.id] });
+      track("order_success", {
+        screen: pathName,
+        user_type: user?.user_metadata.user_type!,
+      });
     },
     onError: (error: any) => {
       Alert.alert(
         "Order Failed",
         error.message || "Failed to process your order. Please try again.",
       );
+      track("order_failed", {
+        error: error.message,
+        screen: pathName,
+        user_type: user?.user_metadata.user_type!,
+      });
     },
   });
 

@@ -3,13 +3,14 @@ import CartInfoBtn from "@/components/CartInfoBtn";
 import EmptyList from "@/components/EmptyList";
 import FoodCard from "@/components/FoodCard";
 import ItemCustomizationSheet from "@/components/ItemCustomizationSheet";
+import { useTrack } from "@/hooks/use-events";
 import { useCartStore } from "@/store/cartStore";
 import { useUserStore } from "@/store/userStore";
 import { RestaurantMenuItemResponse, SizeOption } from "@/types/item-types";
 import { BottomSheetModal } from "@gorhom/bottom-sheet";
 import { FlashList } from "@shopify/flash-list";
 import { useQuery } from "@tanstack/react-query";
-import { router, useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams, usePathname } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Text, View } from "react-native";
 
@@ -30,6 +31,9 @@ const FoodMenu = () => {
   const [selectedItem, setSelectedItem] =
     useState<RestaurantMenuItemResponse | null>(null);
   const bottomSheetRef = useRef<BottomSheetModal>(null);
+
+  const { track } = useTrack();
+  const pathName = usePathname();
 
   // Present the sheet only after selectedItem state has committed
   useEffect(() => {
@@ -82,7 +86,7 @@ const FoodMenu = () => {
           return newChecked;
         });
       } else {
-      if (hasOptions) {
+        if (hasOptions) {
           setSelectedItem(item);
         } else {
           addItem(storeId as string, item.id, 1, {
@@ -138,6 +142,13 @@ const FoodMenu = () => {
     },
     [addItem, profile?.id],
   );
+
+  useEffect(() => {
+    track("restaurant_vendor_menu_screen_viewed", {
+      storeId: storeId!,
+      screen: pathName,
+    });
+  }, [track, pathName]);
 
   return (
     <View className="flex-1 bg-background p-2">

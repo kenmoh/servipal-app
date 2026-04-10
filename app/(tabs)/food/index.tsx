@@ -13,12 +13,17 @@ import * as Location from "expo-location";
 import HDivider from "@/components/HDivider";
 import RefreshButton from "@/components/RefreshButton";
 import { useColorScheme } from "@/hooks/use-color-scheme";
+import { useTrack } from "@/hooks/use-events";
 import { useUserStore } from "@/store/userStore";
 import { UserProfile } from "@/types/user-types";
+
+import { usePathname } from "expo-router";
 
 const RestaurantScreen = () => {
   const theme = useColorScheme();
   const { user } = useUserStore();
+  const { track } = useTrack();
+  const pathName = usePathname();
 
   const [userLocation, setCurrentUserLocation] = useState<{
     latitude: number;
@@ -68,21 +73,31 @@ const RestaurantScreen = () => {
     return () => clearTimeout(timer);
   }, [searchInput]);
 
-  const renderHeader = React.useMemo(() => (
-    <>
-      <View className="px-4 py-2">
-        <AppTextInput
-          placeholder="Search for food or restaurants..."
-          value={searchInput}
-          borderRadius="rounded-full"
-          height={45}
-          onChangeText={setSearchInput}
-          icon={<Feather name="search" size={20} color="gray" />}
-        />
-      </View>
-      <HDivider />
-    </>
-  ), [searchInput]);
+  useEffect(() => {
+    track("restaurants_screen_viewed", {
+      user_type: user?.user_metadata.user_type!,
+      screen: pathName,
+    });
+  }, [track, user, pathName]);
+
+  const renderHeader = React.useMemo(
+    () => (
+      <>
+        <View className="px-4 py-2">
+          <AppTextInput
+            placeholder="Search for food or restaurants..."
+            value={searchInput}
+            borderRadius="rounded-full"
+            height={45}
+            onChangeText={setSearchInput}
+            icon={<Feather name="search" size={20} color="gray" />}
+          />
+        </View>
+        <HDivider />
+      </>
+    ),
+    [searchInput],
+  );
 
   if (!userLocation || (isFetching && !data)) {
     return <LoadingIndicator />;

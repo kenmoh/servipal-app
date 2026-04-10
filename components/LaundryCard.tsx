@@ -17,6 +17,7 @@ import {
   View,
 } from "react-native";
 import { useToast } from "./ToastProvider";
+import { useTrack } from "@/hooks/use-events";
 
 const LaundryCard = ({
   item,
@@ -27,6 +28,7 @@ const LaundryCard = ({
 }) => {
   const { user } = useUserStore();
   const { showError, showSuccess } = useToast();
+  const { track } = useTrack();
   const cartItems = useCartStore((state) => state.cart.order_items);
   const queryClient = useQueryClient();
 
@@ -53,25 +55,17 @@ const LaundryCard = ({
     },
   });
 
-  const openDialog = () => {
-    Alert.alert("Warning", `Are you sure you want to delete ${item.name}`, [
-      {
-        text: "Cancel",
-        style: "cancel",
-      },
-      {
-        text: "OK",
-        onPress: () => {
-          deleteMutation.mutate();
-        },
-      },
-    ]);
+  const handleAddToCart = () => {
+    onPress(item);
+    if (!isOwner) {
+      track("add_to_cart", { item: item.name, price: item.price });
+    }
   };
 
   return (
     <TouchableOpacity
       disabled={isOwner}
-      onPress={() => onPress(item)}
+      onPress={handleAddToCart}
       className="my-1 p-3 bg-input rounded-md w-[95%] self-center"
     >
       <View className="flex-row gap-4">
@@ -86,10 +80,12 @@ const LaundryCard = ({
         </View>
         <View className="w-[75%]">
           <View className="flex-row items-center justify-between gap-2">
-            <Text 
+            <Text
               className="text-primary tracking-tight font-poppins-medium text-sm flex-1"
               numberOfLines={2}
-            >{item.name}</Text>
+            >
+              {item.name}
+            </Text>
             {!!item.laundry_type && (
               <View className="bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-full shrink-0">
                 <Text className="text-slate-400 text-[10px] font-poppins">

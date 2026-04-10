@@ -12,9 +12,10 @@ import { LaundryItemResponse } from "@/types/item-types";
 import { AntDesign } from "@expo/vector-icons";
 import { FlashList } from "@shopify/flash-list";
 import { useQuery } from "@tanstack/react-query";
-import { router, useLocalSearchParams } from "expo-router";
-import React, { useCallback, useState } from "react";
+import { router, useLocalSearchParams, usePathname } from "expo-router";
+import React, { useCallback, useEffect, useState } from "react";
 import { View } from "react-native";
+import { useTrack } from "@/hooks/use-events";
 
 const LaundryStore = () => {
   const { storeId, deliveryFee } = useLocalSearchParams<{
@@ -25,6 +26,8 @@ const LaundryStore = () => {
   const { cart, addItem, totalCost, removeItem } = useCartStore();
   const [checkedItems, setCheckedItems] = useState<Set<string>>(new Set());
   const { navigateTo } = useVerifiedNavigation();
+  const { track } = useTrack();
+  const pathName = usePathname();
 
   const { data, refetch, isFetching } = useQuery({
     queryKey: ["laundryItems", storeId],
@@ -65,6 +68,13 @@ const LaundryStore = () => {
   const renderItem = ({ item }: { item: LaundryItemResponse }) => (
     <LaundryCard item={item} onPress={handleAddToCart} />
   );
+
+  useEffect(() => {
+    track("laundry_vendor_screen_viewed", {
+      storeId: storeId!,
+      screen: pathName,
+    });
+  }, [track, pathName]);
 
   if (isFetching && !data) return <LoadingIndicator />;
 

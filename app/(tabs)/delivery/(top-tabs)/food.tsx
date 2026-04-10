@@ -5,6 +5,7 @@ import FoodLaundryOrderCard from "@/components/food-laundry-order-card";
 import HDivider from "@/components/HDivider";
 import LoadingIndicator from "@/components/LoadingIndicator";
 import StatCard from "@/components/StatCard";
+import { useTrack } from "@/hooks/use-events";
 import { useUserStore } from "@/store/userStore";
 import { UnifiedOrderResponse } from "@/types/order-types";
 import Feather from "@expo/vector-icons/Feather";
@@ -13,12 +14,14 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import SimpleLineIcons from "@expo/vector-icons/SimpleLineIcons";
 import { FlashList } from "@shopify/flash-list";
 import { useQuery } from "@tanstack/react-query";
+import { usePathname } from "expo-router";
 
-import React, { useCallback, useMemo } from "react";
+import React, { useCallback, useEffect, useMemo } from "react";
 import { View } from "react-native";
 
 const FoodOrdersScreen = () => {
   const { user } = useUserStore();
+  const { track } = useTrack();
 
   const {
     data: orders,
@@ -38,6 +41,7 @@ const FoodOrdersScreen = () => {
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 
+  const pathName = usePathname();
   const data = useMemo(() => {
     return orders || [];
   }, [orders]);
@@ -148,6 +152,13 @@ const FoodOrdersScreen = () => {
     ),
     [statItems],
   );
+
+  useEffect(() => {
+    track("food_tab_viewed", {
+      user_type: user?.user_metadata.user_type!,
+      screen: pathName,
+    });
+  }, [track, user, pathName]);
 
   if (isLoading || isPending) return <LoadingIndicator />;
 

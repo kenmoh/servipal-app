@@ -23,8 +23,9 @@ import FontAwesome5 from "@expo/vector-icons/FontAwesome5";
 import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
 import * as Sentry from "@sentry/react-native";
 import { FlashList } from "@shopify/flash-list";
-import { useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, usePathname } from "expo-router";
 import { Alert, FlatList, Image, Text, View } from "react-native";
+import { useTrack } from "@/hooks/use-events";
 
 // Helper: Calculate distance in meters (Haversine)
 const getDistanceMeters = (
@@ -63,6 +64,8 @@ const RidersScreen = () => {
   }>();
 
   const theme = useColorScheme();
+  const { track } = useTrack();
+  const pathName = usePathname();
 
   const HANDLE_INDICATOR_STYLE =
     theme === "dark" ? HEADER_BG_LIGHT : HEADER_BG_DARK;
@@ -182,6 +185,13 @@ const RidersScreen = () => {
   }, [user]);
 
   useEffect(() => {
+    track("riders_screen_viewed", {
+      user_type: user?.user_metadata.user_type!,
+      screen: pathName,
+    });
+  }, [track, user, pathName]);
+
+  useEffect(() => {
     checkLocationPermission();
   }, [checkLocationPermission]);
 
@@ -282,7 +292,7 @@ const RidersScreen = () => {
 
   // ============ FETCH RIDERS ============
   const {
-    data: riders,
+    data: riderData,
     isLoading,
     error,
     refetch,
@@ -366,7 +376,7 @@ const RidersScreen = () => {
       <HDivider />
 
       <FlashList
-        data={riders || []}
+        data={riderData?.riders || []}
         keyExtractor={keyExtractor}
         renderItem={renderItem}
         ItemSeparatorComponent={renderSeparator}
