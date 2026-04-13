@@ -188,6 +188,7 @@ export const fetchVendorLaundryItems = async (
 export const initiateLaundryOrderPayment = async (
   item: OrderCreate,
 ): Promise<InitiatePaymentResponse> => {
+  console.log(item);
   try {
     const response = await apiClient.post(`${BASE_URL}/initiate-payment`, item);
 

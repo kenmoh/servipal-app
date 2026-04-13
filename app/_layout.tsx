@@ -215,6 +215,14 @@ export default Sentry.wrap(function RootLayout() {
                           animation: "slide_from_bottom",
                         }}
                       />
+
+                      <Stack.Screen
+                        name="restaurant-reservation"
+                        options={{
+                          headerShown: false,
+                          animation: "slide_from_bottom",
+                        }}
+                      />
                       <Stack.Screen
                         name="wallet/fund"
                         options={{

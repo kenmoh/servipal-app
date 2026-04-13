@@ -37,6 +37,14 @@ const StoreDetailLayout = () => {
           animation: "slide_from_bottom",
         }}
       />
+      <Stack.Screen
+        name="[storeId]/create-reservation"
+        options={{
+          title: "Book a Table",
+          animation: "slide_from_bottom",
+          headerShown: true,
+        }}
+      />
     </Stack>
   );
 };

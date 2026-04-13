@@ -50,7 +50,7 @@ const StoreHeader = ({ storeId }: StoreHeaderProps) => {
           <Image
             source={{ uri: displayProfile?.backdrop_image_url! }}
             style={{
-              height: 150,
+              height: 100,
               width: "100%",
               objectFit: "cover",
             }}
@@ -72,11 +72,44 @@ const StoreHeader = ({ storeId }: StoreHeaderProps) => {
             </View>
 
             <View className="mt-3">
-              <View className="flex-row gap-2 items-center mt-4">
-                <FontAwesome6 name="landmark" color="gray" size={12} />
-                <Text className="text-primary text-sm font-poppins-semibold uppercase">
-                  {displayProfile?.business_name}
-                </Text>
+              <View className="flex-row items-center justify-between gap-4 mt-4">
+                <View className="flex-row gap-2 items-center flex-1">
+                  <FontAwesome6 name="landmark" color="gray" size={12} />
+                  <Text
+                    numberOfLines={1}
+                    className="text-primary text-sm font-poppins-semibold uppercase flex-1"
+                  >
+                    {displayProfile?.business_name}
+                  </Text>
+                </View>
+                {displayProfile?.enable_reservation && (
+                  <Pressable
+                    onPress={() =>
+                      router.push({
+                        pathname: "/store/[storeId]/create-reservation",
+                        params: {
+                          storeId,
+                          name: displayProfile?.business_name,
+                        },
+                      })
+                    }
+                    // disabled={isOwnStore}
+                    className={`flex-row items-center bg-gray-100 dark:bg-gray-800 px-3 py-1.5 rounded-full ${isOwnStore ? "opacity-50" : "active:opacity-80"}`}
+                  >
+                    <View className="flex-row items-center gap-1.5 pr-2">
+                      <Ionicons name="calendar" size={14} color="#FFB800" />
+                      <Text className="text-primary font-poppins-bold text-sm">
+                        Book a Table
+                      </Text>
+                    </View>
+                    <Ionicons
+                      name="chevron-forward"
+                      size={12}
+                      color="gray"
+                      className="ml-1"
+                    />
+                  </Pressable>
+                )}
               </View>
               <View className="flex-row items-center gap-2 mt-2">
                 <Feather name="map-pin" color="gray" size={12} />

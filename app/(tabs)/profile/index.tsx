@@ -11,6 +11,7 @@ import { useToast } from "@/components/ToastProvider";
 import { AppButton } from "@/components/ui/app-button";
 import EvilIcons from "@expo/vector-icons/EvilIcons";
 import {
+  useToggleEnableReservation,
   useToggleOnlineStatus,
   useTogglePickupAndDropoff,
 } from "@/hooks/status-toggle";
@@ -57,6 +58,9 @@ const ProfileScreen = () => {
   } = useUserStore();
 
   const [isOnline, setIsOnline] = useState(profile?.is_online ?? false);
+  const [reservationEnabled, setReservationEnabled] = useState(
+    profile?.enable_reservation,
+  );
   const [canPickup, setCanPickup] = useState(
     profile?.can_pickup_and_dropoff ?? false,
   );
@@ -75,6 +79,7 @@ const ProfileScreen = () => {
   const togglePickupMutation = useTogglePickupAndDropoff();
 
   const toggleOnlineMutation = useToggleOnlineStatus();
+  const toggleReservation = useToggleEnableReservation();
 
   const { setThemeOption, theme } = useTheme();
 
@@ -86,6 +91,12 @@ const ProfileScreen = () => {
       setIsOnline(profile.is_online);
     }
   }, [profile?.is_online]);
+
+  useEffect(() => {
+    if (profile?.enable_reservation !== undefined) {
+      setReservationEnabled(profile.enable_reservation);
+    }
+  }, [profile?.enable_reservation]);
 
   const {
     mutate: uploadProfileImageMutation,
@@ -527,14 +538,32 @@ const ProfileScreen = () => {
                 name="Update Profile"
                 icon={<Ionicons name="create-outline" size={18} color="gray" />}
               />
+              {user?.user_metadata?.user_type === "LAUNDRY_VENDOR" && (
+                <>
+                  <HDivider />
+                  <AppLink
+                    onPress={() =>
+                      router.push("/laundry-store/vendor-availability")
+                    }
+                    name="Set Availibility"
+                    icon={<EvilIcons name="calendar" size={24} color="gray" />}
+                  />
+                </>
+              )}
 
-              <AppLink
-                onPress={() =>
-                  router.push("/laundry-store/vendor-availability")
-                }
-                name="Set Availibility"
-                icon={<EvilIcons name="calendar" size={24} color="gray" />}
-              />
+              {user?.user_metadata.user_type === "RESTAURANT_VENDOR" &&
+                profile?.enable_reservation && (
+                  <>
+                    <HDivider />
+                    <AppLink
+                      onPress={() => router.push("/restaurant-reservation")}
+                      name="Reservation Settings"
+                      icon={
+                        <EvilIcons name="calendar" size={24} color="gray" />
+                      }
+                    />
+                  </>
+                )}
 
               <HDivider />
               <AppLink
@@ -638,9 +667,34 @@ const ProfileScreen = () => {
               {toggleOnlineMutation.isPending && (
                 <ActivityIndicator color={"#eee"} size={"small"} />
               )}
-              <Switch value={isOnline} onValueChange={handleToggle} />
+              <Switch
+                value={isOnline}
+                onValueChange={handleToggle}
+                trackColor={{ false: "#ccc", true: "#FF6600" }}
+                thumbColor="#fff"
+              />
             </View>
           </View>
+
+          {profile?.user_type === "RESTAURANT_VENDOR" && (
+            <View className="flex-row items-center justify-between">
+              <View className="flex-row items-center gap-3">
+                <Ionicons name="radio-outline" size={20} color="gray" />
+                <Text className="text-muted">Enable Reservations</Text>
+              </View>
+              <View className="flex-row gap-1">
+                {toggleReservation.isPending && (
+                  <ActivityIndicator color={"#eee"} size={"small"} />
+                )}
+                <Switch
+                  value={reservationEnabled}
+                  onValueChange={() => toggleReservation.mutate()}
+                  trackColor={{ false: "#ccc", true: "#FF6600" }}
+                  thumbColor="#fff"
+                />
+              </View>
+            </View>
+          )}
           <View className="flex-row items-center justify-between">
             <View className="flex-row items-center gap-3">
               <Ionicons name="location-outline" size={20} color="gray" />
@@ -650,6 +704,8 @@ const ProfileScreen = () => {
               <Switch
                 value={!!locationWhenInUsePermission}
                 onValueChange={handleForegroundToggle}
+                trackColor={{ false: "#ccc", true: "#FF6600" }}
+                thumbColor="#fff"
               />
             </View>
           </View>
@@ -669,6 +725,8 @@ const ProfileScreen = () => {
                       : !!isAndroidBackgroundLocationEnabled
                   }
                   onValueChange={handleBackgroundToggle}
+                  trackColor={{ false: "#ccc", true: "#FF6600" }}
+                  thumbColor="#fff"
                 />
               </View>
             </View>
@@ -690,7 +748,12 @@ const ProfileScreen = () => {
                 {togglePickupMutation.isPending && (
                   <ActivityIndicator color={"#eee"} size={"small"} />
                 )}
-                <Switch value={canPickup} onValueChange={handlePickupToggle} />
+                <Switch
+                  value={canPickup}
+                  onValueChange={handlePickupToggle}
+                  trackColor={{ false: "#ccc", true: "#FF6600" }}
+                  thumbColor="#fff"
+                />
               </View>
             </View>
           )}

@@ -47,21 +47,21 @@ export const generateAvailabilityInputs = (
   serviceType: "PICKUP" | "VENDOR_DELIVERY",
   selectedDays: number[],
   dayConfigs: Record<number, DayConfig>,
-  isExpressEnabled: boolean,
-  expressFee: number,
+  // isExpressEnabled: boolean,
+  // expressFee: number,
 ): VendorAvailabilityInput[] => {
   return selectedDays.map((dayOfWeek) => {
     const config = dayConfigs[dayOfWeek];
     return {
       vendor_id: vendorId,
       day_of_week: dayOfWeek,
-      service_type: serviceType,
+      type: serviceType,
       start_time: `${config.startTime}:00`, // Convert HH:MM to HH:MM:SS
       end_time: `${config.endTime}:00`, // Convert HH:MM to HH:MM:SS
       slot_interval: config.slotInterval,
       capacity: config.capacity,
-      is_express: isExpressEnabled,
-      express_fee: isExpressEnabled ? expressFee : undefined,
+      is_express: config.isExpress,
+      express_fee: config.expressFee,
     };
   });
 };

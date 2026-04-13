@@ -1,12 +1,13 @@
-// @/hooks/useToggleOnlineStatus.ts
 import { useToast } from "@/components/ToastProvider";
 import { useUserStore } from "@/store/userStore";
-import { ToggleOnlineResponse, TogglePickupResponse } from "@/types/user-types";
+import {
+  EnableReservationResponse,
+  ToggleOnlineResponse,
+  TogglePickupResponse,
+} from "@/types/user-types";
 import { supabase } from "@/utils/supabase";
 import * as Sentry from "@sentry/react-native";
-import { useMutation } from "@tanstack/react-query";
-
-
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 export const useToggleOnlineStatus = () => {
   const { showSuccess, showError } = useToast();
@@ -14,8 +15,6 @@ export const useToggleOnlineStatus = () => {
 
   return useMutation({
     mutationFn: async () => {
-      console.log("🔄 Toggling online status...");
-
       const { data, error } = await supabase.rpc("toggle_online_status");
 
       if (error) {
@@ -27,8 +26,6 @@ export const useToggleOnlineStatus = () => {
     },
 
     onSuccess: (data) => {
-      console.log("✅ Online status toggled:", data.is_online);
-
       if (profile) {
         setProfile({
           ...profile,
@@ -39,19 +36,88 @@ export const useToggleOnlineStatus = () => {
 
       showSuccess(
         "Success",
-        `You are now ${data.is_online ? "online" : "offline"}`
+        `You are now ${data.is_online ? "online" : "offline"}`,
       );
     },
 
     onError: (error: Error) => {
-      console.error("❌ Error toggling online status:", error);
-      Sentry.captureException(error, { tags: { action: "toggle_online_status" } });
+      Sentry.captureException(error, {
+        tags: { action: "toggle_online_status" },
+      });
       showError("Error", error.message || "Failed to update status");
     },
   });
 };
 
+export const useToggleEnableReservation = () => {
+  const { showSuccess, showError } = useToast();
+  const { profile, setProfile } = useUserStore();
+  const queryClient = useQueryClient();
 
+  const { data: activeCount = 0 } = useQuery({
+    queryKey: ["reservation-count", profile?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc(
+        "get_vendor_active_reservations_count",
+      );
+
+      if (error) throw new Error(error.message);
+      return data as number;
+    },
+    enabled: !!profile?.id,
+    staleTime: 30_000,
+  });
+
+  return useMutation({
+    mutationFn: async () => {
+      if (activeCount > 0) {
+        throw new Error(
+          `You have ${activeCount} uncompleted reservation(s). Please complete or cancel them first.`,
+        );
+      }
+
+      const { data, error } = await supabase.rpc("toggle_enable_reservation");
+
+      if (error) {
+        throw new Error(
+          error.message || "Failed to toggle reservation setting",
+        );
+      }
+
+      return data as EnableReservationResponse;
+    },
+
+    onSuccess: (data) => {
+      if (profile) {
+        setProfile({
+          ...profile,
+          enable_reservation: data.enable_reservation,
+        });
+      }
+
+      queryClient.invalidateQueries({ queryKey: ["reservation-count"] });
+
+      showSuccess(
+        "Success",
+        `Reservations ${data.enable_reservation ? "enabled" : "disabled"}`,
+      );
+    },
+
+    onError: (error: Error) => {
+      if (error.message.includes("uncompleted reservation")) {
+        showError("Cannot Toggle", error.message);
+      } else {
+        Sentry.captureException(error, {
+          tags: { action: "toggle_enable_reservation" },
+        });
+        showError(
+          "Error",
+          error.message || "Failed to update reservation status",
+        );
+      }
+    },
+  });
+};
 
 export const useTogglePickupAndDropoff = () => {
   const { showSuccess, showError } = useToast();
@@ -59,8 +125,6 @@ export const useTogglePickupAndDropoff = () => {
 
   return useMutation({
     mutationFn: async () => {
-      console.log("🔄 Toggling pickup and dropoff...");
-
       const { data, error } = await supabase.rpc("toggle_pickup_and_dropoff");
 
       if (error) {
@@ -72,8 +136,6 @@ export const useTogglePickupAndDropoff = () => {
     },
 
     onSuccess: (data) => {
-      console.log("✅ Pickup preference toggled:", data.can_pickup_and_dropoff);
-
       if (profile) {
         setProfile({
           ...profile,
@@ -84,12 +146,11 @@ export const useTogglePickupAndDropoff = () => {
 
       showSuccess(
         "Success",
-        `Pickup & delivery ${data.can_pickup_and_dropoff ? "enabled" : "disabled"}`
+        `Pickup & delivery ${data.can_pickup_and_dropoff ? "enabled" : "disabled"}`,
       );
     },
 
     onError: (error: Error) => {
-      console.error("❌ Error toggling pickup preference:", error);
       Sentry.captureException(error, { tags: { action: "toggle_pickup" } });
       showError("Error", error.message || "Failed to update preference");
     },

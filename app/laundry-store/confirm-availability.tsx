@@ -40,7 +40,7 @@ const ConfirmAvailability = () => {
     onSuccess: () => {
       showSuccess("Success", "Availability published successfully");
       resetFormData();
-      router.push("/laundry");
+      router.push("/laundry-store/vendor-availability");
     },
     onError: (error: any) => {
       showError("Error", error.message || "Failed to publish availability");
@@ -77,11 +77,9 @@ const ConfirmAvailability = () => {
       endTime: slot.end_time.substring(0, 5),
       slotInterval: slot.slot_interval,
       capacity: slot.capacity,
+      isExpress: slot.is_express,
+      expressFee: slot.express_fee || 0,
     };
-  };
-
-  const handleEdit = () => {
-    router.back();
   };
 
   const handleConfirm = async () => {
@@ -91,12 +89,7 @@ const ConfirmAvailability = () => {
     }
 
     try {
-      // TODO: Call API to create availability
-      // await createVendorAvailability(generatedSlots);
-
-      showSuccess("Success", "Availability updated successfully");
-      resetFormData();
-      router.push("/laundry-store/vendor-availability");
+      upsertMutation.mutate(generatedSlots);
     } catch (error: any) {
       showError("Error", error.message || "Failed to save availability");
     }
@@ -198,7 +191,7 @@ const ConfirmAvailability = () => {
                   </Text>
                 </View>
                 <Text className="text-primary font-poppins-semibold">
-                  Vendor Pickup/Delivery
+                  {formData.serviceType}
                 </Text>
               </View>
 
@@ -308,9 +301,16 @@ const ConfirmAvailability = () => {
                         </Text>
                       </View>
                       <View className="flex-1">
-                        <Text className="font-poppins-semibold text-primary">
-                          {getDayName(dayOfWeek)}
-                        </Text>
+                        <View className="flex-row items-center gap-2">
+                          <Text className="font-poppins-semibold text-primary">
+                            {getDayName(dayOfWeek)}
+                          </Text>
+                          {slot.is_express && (
+                            <Text className="text-muted text-xs font-poppins">
+                              ⚡
+                            </Text>
+                          )}
+                        </View>
                         <Text className="text-muted text-xs font-poppins">
                           {slot.start_time.substring(0, 5)} -{" "}
                           {slot.end_time.substring(0, 5)}
@@ -362,6 +362,16 @@ const ConfirmAvailability = () => {
                         </Text>
                         <Text className="text-primary font-poppins-semibold text-sm">
                           {slot.capacity}
+                        </Text>
+                      </View>
+
+                      {/* Express Fee Row */}
+                      <View className="flex-row items-center justify-between">
+                        <Text className="text-muted text-sm font-poppins">
+                          Express Fee
+                        </Text>
+                        <Text className="text-primary font-poppins-semibold text-sm">
+                          ₦{slot.express_fee}
                         </Text>
                       </View>
 

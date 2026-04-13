@@ -8,6 +8,7 @@ import {
   UpdateRiderData,
   UserProfile,
   UserProfileUpdate,
+  VendorAvailability,
   VendorAvailabilityInput,
   WalletResponse,
 } from "@/types/user-types";
@@ -17,6 +18,7 @@ import * as Sentry from "@sentry/react-native";
 import { ApiResponse } from "apisauce";
 import { fetch } from "expo/fetch";
 import { ErrorResponse } from "./auth";
+import { RequireDelivery } from "@/types/order-types";
 
 const BASE_URL = "/users";
 const AUTH_URL = "/auth";
@@ -31,10 +33,17 @@ export async function fetchProfileWithReviews(
   userId: string,
   reviewLimit: number = 50,
 ): Promise<UserProfile> {
-  const { data, error } = await supabase.rpc("get_user_profile_with_reviews", {
-    target_user_id: userId,
-    review_limit: reviewLimit,
-  });
+  const [{ data: rpcData, error }, { data: profile }] = await Promise.all([
+    supabase.rpc("get_user_profile_with_reviews", {
+      target_user_id: userId,
+      review_limit: reviewLimit,
+    }),
+    supabase
+      .from("profiles")
+      .select("enable_reservation")
+      .eq("id", userId)
+      .single(),
+  ]);
 
   if (error) {
     Sentry.captureException(error, {
@@ -42,7 +51,10 @@ export async function fetchProfileWithReviews(
     });
   }
 
-  return data as UserProfile;
+  return {
+    ...(rpcData as UserProfile),
+    enable_reservation: profile?.enable_reservation,
+  } as UserProfile;
 }
 
 export const fetchProfile = async (userId: string): Promise<UserProfile> => {
@@ -1012,3 +1024,78 @@ export async function upsertVendorAvailabilityBulk(
     throw err;
   }
 }
+
+/**
+ * Available slot returned from DB
+ */
+export interface AvailableSlot {
+  slot_start: string; // ISO timestamp
+  slot_end: string; // ISO timestamp
+  available_capacity: number;
+  express_fee?: number;
+}
+
+/**
+ * Get vendor available slots
+ */
+export async function getAvailableSlots(
+  vendor_id: string,
+  delivery_option: RequireDelivery,
+  date: string,
+): Promise<AvailableSlot[]> {
+  const { data, error } = await supabase.rpc("get_available_slots", {
+    p_vendor_id: vendor_id,
+    p_type: delivery_option,
+    p_date: date,
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data ?? []) as AvailableSlot[];
+}
+
+/**
+ * Fetch vendor availability rows (for express fee / availability info)
+ */
+export async function fetchVendorAvailability(): Promise<VendorAvailability[]> {
+  const { data: session } = await supabase.auth.getSession();
+  if (!session.session) {
+    throw new Error("User not authenticated");
+  }
+
+  const vendorId = session.session?.user?.id;
+  const { data, error } = await supabase
+    .from("vendor_availability")
+    .select("*")
+    .eq("vendor_id", vendorId);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data ?? []) as VendorAvailability[];
+}
+
+/**
+ * Fetch vendor availability rows (for express fee / availability info)
+ */
+// export async function getAvailableSlots(vendorId: string): Promise<AvailableSlot[]> {
+//   const { data: session } = await supabase.auth.getSession();
+//   if (!session.session) {
+//     throw new Error("User not authenticated");
+//   }
+
+//   const { data, error } = await supabase
+//     .from("available_slots")
+//     .select("*")
+//     .eq("vendor_id", vendorId);
+
+//   if (error) {
+//     throw new Error(error.message);
+//   }
+
+//   console.log("Available slots:", data);
+//   return (data ?? []) as AvailableSlot[];
+// }

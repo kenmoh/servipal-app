@@ -78,6 +78,7 @@ export interface UserProfile {
   account_status?: AccountStatus;
   is_verified?: boolean;
   is_online?: boolean;
+  enable_reservation?: boolean;
   is_blocked?: boolean;
   has_delivery?: boolean;
   last_seen_at?: string;
@@ -355,6 +356,12 @@ export interface ToggleOnlineResponse {
   last_seen_at: string;
 }
 
+export interface EnableReservationResponse {
+  id: string;
+  enable_reservation: boolean;
+  updated_at: string;
+}
+
 export interface TogglePickupResponse {
   id: string;
   can_pickup_and_dropoff: boolean;
@@ -363,15 +370,16 @@ export interface TogglePickupResponse {
 
 // Allowed service types
 export type AvailabilityType = "PICKUP" | "VENDOR_DELIVERY";
-
+export type DayOfWeek = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 // Input for creating or updating vendor availability (bulk operation)
 export interface VendorAvailabilityInput {
   day_of_week: number; // 0 = Sunday, 6 = Saturday
-  service_type: AvailabilityType; // 'PICKUP' or 'VENDOR_DELIVERY'
+  type: AvailabilityType; // 'PICKUP' or 'VENDOR_DELIVERY'
   start_time: string; // 'HH:MM:SS' (24-hour format)
   end_time: string; // 'HH:MM:SS' (24-hour format)
   slot_interval: number; // slot interval in minutes
   capacity: number; // max orders per slot
+  is_express: boolean;
   express_fee?: number; // optional, express fee if is_express is true
 }
 
@@ -380,7 +388,7 @@ export interface VendorAvailability {
   id: string; // UUID, primary key
   vendor_id: string; // UUID of the vendor
   day_of_week: number; // 0 = Sunday, 6 = Saturday
-  service_type: AvailabilityType; // 'PICKUP' or 'VENDOR_DELIVERY'
+  type: AvailabilityType; // 'PICKUP' or 'VENDOR_DELIVERY'
   start_time: string; // 'HH:MM:SS' (24-hour format)
   end_time: string; // 'HH:MM:SS'
   slot_interval: number; // slot interval in minutes

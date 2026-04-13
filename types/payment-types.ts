@@ -77,6 +77,13 @@ export interface InitiatePaymentResponse {
   duration?: string;
   package_name?: string;
   serviceType?: "PRODUCT" | "WALLET" | "DELIVERY" | "FOOD" | "LAUNDRY";
+
+  // Laundry specific optional field
+  pickup_at?: string;
+  delivery_at?: string;
+  delivery_time?: string;
+  is_express?: boolean;
+  express_fee?: number;
 }
 
 export interface FlutterwavePayload {

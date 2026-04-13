@@ -6,6 +6,8 @@ export interface DayConfig {
   endTime: string; // HH:MM format
   slotInterval: number; // minutes
   capacity: number;
+  isExpress: boolean;
+  expressFee: number;
 }
 
 interface AvailabilityFormData {
@@ -31,6 +33,8 @@ export const DEFAULT_DAY_CONFIG: DayConfig = {
   endTime: "17:00",
   slotInterval: 30,
   capacity: 5,
+  isExpress: false,
+  expressFee: 0,
 };
 
 const defaultFormData: AvailabilityFormData = {

@@ -103,7 +103,7 @@ const GoogleTextInput = ({
       color: "#888888",
     },
     clearButtonText: {
-      color: "#aaa",
+      color: "red",
       fontSize: 20,
     },
   });
@@ -134,7 +134,6 @@ const GoogleTextInput = ({
         onBlur={() => setIsFocused(false)}
         onPlaceSelect={(data: any) => {
           if (data?.details) {
-            // Support both New and Legacy Places API structures
             const text =
               data.details.displayName?.text ||
               data.details.name ||
@@ -143,23 +142,20 @@ const GoogleTextInput = ({
             const rawAddress = data.details.formattedAddress || "";
             const secondaryText = rawAddress.replace(/,? ?Nigeria$/i, "");
 
-            // Avoid duplicating the main name if it's already in the formatted address
             let address =
               secondaryText.includes(text) || !text
                 ? secondaryText
                 : text + ", " + secondaryText;
 
-            // Remove Plus Codes (e.g., FH97+8XG) and Postal Codes (e.g., 106104) and clean up
             address = address
-              .replace(/\b[A-Z0-9]{4,8}\+[A-Z0-9]{2,}\b/gi, "") // Remove plus code
-              .replace(/\b\d{6}\b/g, "") // Remove 6-digit postal code
-              .replace(/^[ ,]+|[ ,]+$/g, "") // Trim leading/trailing commas/spaces
-              .replace(/ ,[ ,]+/g, ", ") // Fix double commas
+              .replace(/\b[A-Z0-9]{4,8}\+[A-Z0-9]{2,}\b/gi, "")
+              .replace(/\b\d{6}\b/g, "")
+              .replace(/^[ ,]+|[ ,]+$/g, "")
+              .replace(/ ,[ ,]+/g, ", ")
               .trim();
 
             setInputValue(address);
 
-            // Directly update the input text if the ref supports it
             if (
               ref.current &&
               typeof ref.current.setAddressText === "function"

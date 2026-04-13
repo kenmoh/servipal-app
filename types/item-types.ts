@@ -71,6 +71,16 @@ export interface OrderCreate {
   delivery_option: "PICKUP" | "VENDOR_DELIVERY";
   instructions: string;
   delivery_address: string;
+
+  // Laundry booking fields (optional — only for laundry orders)
+  pickup_date?: string; // YYYY-MM-DD
+  delivery_date?: string;
+  pickup_time?: string; // ISO slot start time
+  delivery_time?: string;
+  is_express?: boolean;
+  express_fee?: number;
+  // express_delivery_date?: string; // YYYY-MM-DD
+  // express_delivery_time?: string; // ISO slot start time
 }
 
 export interface RestaurantOrderCreate extends OrderCreate {

@@ -41,6 +41,27 @@ type CartType = {
   vendor_id: string | null;
   instructions: string;
   delivery_address: string;
+
+  // Laundry booking
+  pickup_date: string;
+  pickup_slot_start: string;
+  pickup_slot_end: string;
+  is_express: boolean;
+  express_fee: number;
+  express_delivery_date: string;
+  express_delivery_slot_start: string;
+  express_delivery_slot_end: string;
+};
+
+export type LaundryBookingData = {
+  pickup_date: string;
+  pickup_slot_start: string;
+  pickup_slot_end: string;
+  is_express: boolean;
+  express_fee: number;
+  express_delivery_date: string;
+  express_delivery_slot_start: string;
+  express_delivery_slot_end: string;
 };
 
 type CartState = {
@@ -55,7 +76,11 @@ type CartState = {
   ) => "VENDOR_MISMATCH" | "CART_TYPE_MISMATCH" | "OK";
 
   removeItem: (item_id: string, selectedSize?: string) => void;
-  updateItemQuantity: (item_id: string, quantity: number, selectedSize?: string) => void;
+  updateItemQuantity: (
+    item_id: string,
+    quantity: number,
+    selectedSize?: string,
+  ) => void;
   setDeliveryOption: (option: RequireDelivery) => void;
   setAdditionalInfo: (info: string) => void;
 
@@ -74,6 +99,10 @@ type CartState = {
     destinationCoords: [number, number] | null;
   }) => any;
   prepareLaundryOrderForServer: () => any;
+
+  // Laundry booking
+  setLaundryBooking: (booking: LaundryBookingData) => void;
+  resetLaundryBooking: () => void;
 };
 
 export const useCartStore = create<CartState>((set, get) => ({
@@ -85,6 +114,14 @@ export const useCartStore = create<CartState>((set, get) => ({
     vendor_id: null,
     instructions: "",
     delivery_address: "",
+    pickup_date: "",
+    pickup_slot_start: "",
+    pickup_slot_end: "",
+    is_express: false,
+    express_fee: 0,
+    express_delivery_date: "",
+    express_delivery_slot_start: "",
+    express_delivery_slot_end: "",
   },
   totalCost: 0,
 
@@ -172,7 +209,10 @@ export const useCartStore = create<CartState>((set, get) => ({
     set((state) => {
       const updatedItems = state.cart.order_items.filter(
         (item) =>
-          !(item.item_id === item_id && item.selected_size?.size === selectedSize),
+          !(
+            item.item_id === item_id &&
+            item.selected_size?.size === selectedSize
+          ),
       );
       const newTotalCost = updatedItems.reduce(
         (acc, item) => acc + (item.price || 0) * item.quantity,
@@ -236,6 +276,14 @@ export const useCartStore = create<CartState>((set, get) => ({
         vendor_id: null,
         instructions: "",
         delivery_address: "",
+        pickup_date: "",
+        pickup_slot_start: "",
+        pickup_slot_end: "",
+        is_express: false,
+        express_fee: 0,
+        express_delivery_date: "",
+        express_delivery_slot_start: "",
+        express_delivery_slot_end: "",
       },
       totalCost: 0,
     }));
@@ -284,6 +332,37 @@ export const useCartStore = create<CartState>((set, get) => ({
       })),
     };
   },
+
+  // Laundry booking
+  setLaundryBooking: (booking) =>
+    set((state) => ({
+      cart: {
+        ...state.cart,
+        pickup_date: booking.pickup_date,
+        pickup_slot_start: booking.pickup_slot_start,
+        pickup_slot_end: booking.pickup_slot_end,
+        is_express: booking.is_express,
+        express_fee: booking.express_fee,
+        express_delivery_date: booking.express_delivery_date,
+        express_delivery_slot_start: booking.express_delivery_slot_start,
+        express_delivery_slot_end: booking.express_delivery_slot_end,
+      },
+    })),
+
+  resetLaundryBooking: () =>
+    set((state) => ({
+      cart: {
+        ...state.cart,
+        pickup_date: "",
+        pickup_slot_start: "",
+        pickup_slot_end: "",
+        is_express: false,
+        express_fee: 0,
+        express_delivery_date: "",
+        express_delivery_slot_start: "",
+        express_delivery_slot_end: "",
+      },
+    })),
 }));
 
 // import { RequireDelivery } from "@/types/order-types";
