@@ -1,4 +1,5 @@
 // services/reservation.service.ts
+import { InitiatePaymentResponse } from "@/types/payment-types";
 import {
   AvailableSlot,
   BookingStatus,
@@ -13,6 +14,7 @@ import {
   RestaurantAvailabilityInput,
   RestaurantTable,
 } from "@/types/reservation-types";
+import { apiClient } from "@/utils/client";
 import { supabase } from "@/utils/supabase";
 
 async function getVendorId() {
@@ -244,6 +246,8 @@ export async function getVendorReservationRules(
 /**
  * Customer: Create a new reservation
  */
+const BASE_URL = "/reservations";
+
 export async function createReservation(data: {
   vendor_id: string;
   table_id?: string;
@@ -256,12 +260,33 @@ export async function createReservation(data: {
   deposit_paid?: number;
   notes?: string;
 }) {
-  const { data: res, error } = await supabase.rpc(
-    "create_customer_reservation",
-    data,
-  );
-  if (error) throw new Error(`Create failed: ${error.message}`);
-  return res;
+  try {
+    const { data: session, error } = await supabase.auth.getSession();
+    if (error) throw new Error(error.message);
+    const customerId = session?.session?.user?.id;
+    const response = await apiClient.post(
+      `${BASE_URL}/initiate-payment`,
+      { customer_id: customerId, ...data },
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      },
+    );
+
+    if (!response.ok) {
+      const errorData = response.data as any;
+      throw new Error(
+        errorData?.detail ||
+          errorData?.message ||
+          "Failed to initiate delivery request",
+      );
+    }
+
+    return response.data as InitiatePaymentResponse;
+  } catch (error) {
+    throw error;
+  }
 }
 
 /**

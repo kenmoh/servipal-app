@@ -6,6 +6,7 @@ import { AppButton } from "@/components/ui/app-button";
 import { AppTextInput } from "@/components/ui/app-text-input";
 import { useUserStore } from "@/store/userStore";
 import { AvailableSlot } from "@/types/reservation-types";
+import { formatReservationDate } from "@/utils/utils";
 import { Ionicons } from "@expo/vector-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
@@ -243,7 +244,7 @@ export default function CreateReservation() {
                 contentContainerStyle={{ paddingHorizontal: 20 }}
               >
                 <View className="flex-row gap-3">
-                  {[1, 2, 3, 4, 5, 6, 7, 8].map((size) => (
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((size) => (
                     <TouchableOpacity
                       key={size}
                       onPress={() => {
@@ -268,16 +269,16 @@ export default function CreateReservation() {
                       setPartySize(10);
                       setSelectedSlot(null);
                     }}
-                    className={`px-4 h-12 rounded-full items-center justify-center border ${
+                    className={`h-12 w-12 rounded-full items-center justify-center border ${
                       partySize >= 9
                         ? "bg-button-primary border-button-primary"
                         : "bg-input border-border-subtle"
                     }`}
                   >
                     <Text
-                      className={`font-poppins-bold ${partySize >= 9 ? "text-white" : "text-primary"}`}
+                      className={`font-poppins-bold ${partySize >= 10 ? "text-white" : "text-primary"}`}
                     >
-                      8+
+                      10+
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -299,7 +300,7 @@ export default function CreateReservation() {
             </View>
 
             {availableSlots && availableSlots.length > 0 ? (
-              <View className="flex-row flex-wrap gap-3">
+              <View className="flex-row flex-wrap gap-3 ml-5">
                 {availableSlots.map((slot, index) => {
                   const isSelected =
                     selectedSlot?.slot_start === slot.slot_start;
@@ -350,6 +351,42 @@ export default function CreateReservation() {
 
                 <View className="gap-4">
                   <View className="flex-row items-center gap-3">
+                    <Ionicons name="calendar" size={18} color="#FF8C00" />
+                    <Text className="text-secondary font-poppins text-sm">
+                      Arrival Date:{" "}
+                      <Text className="font-poppins-bold text-primary">
+                        {formatReservationDate(selectedSlot.slot_start)}
+                      </Text>
+                    </Text>
+                  </View>
+                  <View className="flex-row items-center gap-3">
+                    <Ionicons name="time-outline" size={18} color="#FF8C00" />
+                    <Text className="text-secondary font-poppins text-sm">
+                      Start Time:{"  "}
+                      <Text className="font-poppins-bold text-primary">
+                        {formatSlotTime(selectedSlot.slot_start)}
+                      </Text>
+                    </Text>
+                  </View>
+                  <View className="flex-row items-center gap-3">
+                    <Ionicons name="time-outline" size={18} color="#FF8C00" />
+                    <Text className="text-secondary font-poppins text-sm">
+                      End Time:{"  "}
+                      <Text className="font-poppins-bold text-primary">
+                        {formatSlotTime(selectedSlot.slot_start)}
+                      </Text>
+                    </Text>
+                  </View>
+                  <View className="flex-row items-center gap-3">
+                    <Ionicons name="people-outline" size={18} color="#FF8C00" />
+                    <Text className="text-secondary font-poppins text-sm">
+                      Party Size:{" "}
+                      <Text className="font-poppins-bold text-primary">
+                        {partySize}
+                      </Text>
+                    </Text>
+                  </View>
+                  <View className="flex-row items-center gap-3">
                     <Ionicons name="time-outline" size={18} color="#FF8C00" />
                     <Text className="text-secondary font-poppins text-sm">
                       Cancellation Window:{" "}
@@ -367,7 +404,6 @@ export default function CreateReservation() {
                         <Text className="font-poppins-bold text-primary">
                           ₦{selectedSlot.min_deposit.toLocaleString()}
                         </Text>{" "}
-                        (Refundable)
                       </Text>
                     </View>
                   ) : (
