@@ -34,7 +34,7 @@ const ReservationFormSheet = forwardRef<BottomSheetModal, Props>(
     const queryClient = useQueryClient();
 
     const [formData, setFormData] = useState<ReservationSettingsInput>({
-      min_deposit: 0,
+      min_deposit_adult: 0,
       deposit_type: "FIXED",
       min_party_size: 1,
       max_party_size: 10,
@@ -46,7 +46,7 @@ const ReservationFormSheet = forwardRef<BottomSheetModal, Props>(
     useEffect(() => {
       if (initialData) {
         setFormData({
-          min_deposit: initialData.min_deposit,
+          min_deposit_adult: initialData.min_deposit_adult,
           deposit_type: initialData.deposit_type,
           min_party_size: initialData.min_party_size,
           max_party_size: initialData.max_party_size,
@@ -113,7 +113,7 @@ const ReservationFormSheet = forwardRef<BottomSheetModal, Props>(
               <AppTextInput
                 placeholder="0.00"
                 keyboardType="numeric"
-                value={formData.min_deposit?.toString()}
+                value={formData.min_deposit_adult?.toString()}
                 onChangeText={(val) =>
                   setFormData((prev) => ({
                     ...prev,

@@ -52,7 +52,7 @@ const RuleFormSheet = forwardRef<BottomSheetModal, Props>(
       min_party_size: undefined,
       max_party_size: undefined,
       day_of_week: -1,
-      deposit: 0,
+      min_deposit_adult: 0,
       cancellation_fee: 0,
       no_show_fee: 0,
       priority: 0,
@@ -64,7 +64,7 @@ const RuleFormSheet = forwardRef<BottomSheetModal, Props>(
           min_party_size: initialData.min_party_size,
           max_party_size: initialData.max_party_size,
           day_of_week: initialData.day_of_week ?? -1,
-          deposit: initialData.deposit,
+          min_deposit_adult: initialData.min_deposit_adult,
           cancellation_fee: initialData.cancellation_fee,
           no_show_fee: initialData.no_show_fee,
           priority: initialData.priority,
@@ -74,7 +74,7 @@ const RuleFormSheet = forwardRef<BottomSheetModal, Props>(
           min_party_size: undefined,
           max_party_size: undefined,
           day_of_week: -1,
-          deposit: 0,
+          min_deposit_adult: 0,
           cancellation_fee: 0,
           no_show_fee: 0,
           priority: 0,
@@ -211,7 +211,7 @@ const RuleFormSheet = forwardRef<BottomSheetModal, Props>(
                 onChangeText={(val) =>
                   setFormData((prev) => ({
                     ...prev,
-                    priority: parseInt(val) || 0,
+                    priority: val === "" ? 0 : parseInt(val) || 0,
                   }))
                 }
               />
@@ -224,16 +224,16 @@ const RuleFormSheet = forwardRef<BottomSheetModal, Props>(
 
             <View>
               <Text className="text-secondary font-poppins-medium mb-2">
-                Override Deposit (₦)
+                Override Min. Deposit/Adult (₦)
               </Text>
               <AppTextInput
                 placeholder="0.00"
                 keyboardType="numeric"
-                value={formData.deposit?.toString()}
+                value={formData.min_deposit_adult?.toString()}
                 onChangeText={(val) =>
                   setFormData((prev) => ({
                     ...prev,
-                    deposit: parseFloat(val) || 0,
+                    min_deposit_adult: val === "" ? undefined : parseFloat(val),
                   }))
                 }
               />
@@ -250,7 +250,24 @@ const RuleFormSheet = forwardRef<BottomSheetModal, Props>(
                 onChangeText={(val) =>
                   setFormData((prev) => ({
                     ...prev,
-                    no_show_fee: parseFloat(val) || 0,
+                    no_show_fee: val === "" ? undefined : parseFloat(val),
+                  }))
+                }
+              />
+            </View>
+
+            <View>
+              <Text className="text-secondary font-poppins-medium mb-2">
+                Cancellation Fee (₦)
+              </Text>
+              <AppTextInput
+                placeholder="0.00"
+                keyboardType="numeric"
+                value={formData.cancellation_fee?.toString()}
+                onChangeText={(val) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    cancellation_fee: val === "" ? undefined : parseFloat(val),
                   }))
                 }
               />

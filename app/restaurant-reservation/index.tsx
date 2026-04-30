@@ -1,10 +1,9 @@
 import {
-  deleteAvailability,
-  deleteRestaurantTable,
-  getVendorAvailability,
+  deleteServingPeriod,
+  getVendorServingPeriods,
   getVendorReservations,
-  getVendorTables,
   updateReservationStatus,
+  getUserReservations,
 } from "@/api/reservation";
 import HDivider from "@/components/HDivider";
 import LoadingIndicator from "@/components/LoadingIndicator";
@@ -14,15 +13,16 @@ import { HEADER_BG_DARK, HEADER_BG_LIGHT } from "@/constants/theme";
 import {
   BookingStatus,
   Reservation,
-  RestaurantAvailability,
-  RestaurantTable,
+  GetServingPeriod,
+  GetUserReservationsItem,
 } from "@/types/reservation-types";
+import { useUserStore } from "@/store/userStore";
 import { Ionicons } from "@expo/vector-icons";
-import { FlashList } from "@shopify/flash-list";
+import { FlashList, FlashListRef } from "@shopify/flash-list";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format, parseISO } from "date-fns";
-import { router, useNavigation } from "expo-router";
-import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { router, Stack } from "expo-router";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Alert,
   RefreshControl,
@@ -32,15 +32,13 @@ import {
   useColorScheme,
   View,
 } from "react-native";
-import AvailabilityFormSheet from "./availability-form-sheet";
-import TableFormSheet from "./table-form-sheet";
+import ServingPeriodFormSheet from "./serving-period-form-sheet";
 
 const TABS: { label: string; value: string }[] = [
   { label: "Upcoming", value: "upcoming" },
   { label: "Pending", value: "PENDING" },
   { label: "History", value: "history" },
-  { label: "Tables", value: "tables" },
-  { label: "Availability", value: "availability" },
+  { label: "Periods", value: "periods" },
 ];
 
 const DAYS = [
@@ -55,25 +53,28 @@ const DAYS = [
 
 export default function ReservationDashboard() {
   const [activeTab, setActiveTab] = useState("upcoming");
-  const [isTableSheetVisible, setIsTableSheetVisible] = useState(false);
-  const [editingTable, setEditingTable] = useState<RestaurantTable | null>(
+  const [isSheetVisible, setIsSheetVisible] = useState(false);
+  const [selectedPeriod, setSelectedPeriod] = useState<GetServingPeriod | null>(
     null,
   );
-  const [isAvailabilitySheetVisible, setIsAvailabilitySheetVisible] =
-    useState(false);
-  const [editingAvailability, setEditingAvailability] =
-    useState<RestaurantAvailability | null>(null);
+
+  const { profile, user } = useUserStore();
+  const userType = user?.user_metadata?.user_type || profile?.user_type;
+  const isVendor = userType === "RESTAURANT_VENDOR";
 
   const theme = useColorScheme();
-  const navigation = useNavigation();
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
-  const tabsRef = useRef<FlashList<any>>(null);
+  const tabsRef = useRef<FlashListRef<any>>(null);
 
   const HEADER_BG = theme === "dark" ? HEADER_BG_DARK : HEADER_BG_LIGHT;
 
+  const visibleTabs = React.useMemo(() => {
+    return TABS.filter((tab) => tab.value !== "periods" || isVendor);
+  }, [isVendor]);
+
   useEffect(() => {
-    const activeIndex = TABS.findIndex((t) => t.value === activeTab);
+    const activeIndex = visibleTabs.findIndex((t) => t.value === activeTab);
     if (activeIndex !== -1 && tabsRef.current) {
       tabsRef.current.scrollToIndex({
         index: activeIndex,
@@ -81,62 +82,39 @@ export default function ReservationDashboard() {
         viewPosition: 0.5,
       });
     }
-  }, [activeTab]);
+  }, [activeTab, visibleTabs]);
 
   // Reservations Query
   const {
-    data: reservations,
+    data: reservationsResponse,
     isLoading: loadingReservations,
     refetch: refetchReservations,
     isRefetching: isRefetchingReservations,
   } = useQuery({
     queryKey: ["vendor-reservations"],
-    queryFn: getVendorReservations,
+    queryFn: () => getUserReservations(),
   });
 
-  // Tables Query
+  // Serving Periods Query
   const {
-    data: tablesData,
-    isLoading: loadingTables,
-    refetch: refetchTables,
-    isRefetching: isRefetchingTables,
+    data: servingPeriods,
+    isLoading: loadingPeriods,
+    refetch: refetchPeriods,
+    isRefetching: isRefetchingPeriods,
   } = useQuery({
-    queryKey: ["vendor-tables"],
-    queryFn: () => getVendorTables(1, 100),
-    enabled: activeTab === "tables",
+    queryKey: ["vendor-serving-periods"],
+    queryFn: () => getVendorServingPeriods(),
+    enabled: activeTab === "periods",
   });
 
-  // Availability Query
-  const {
-    data: availabilityData,
-    isLoading: loadingAvailability,
-    refetch: refetchAvailability,
-    isRefetching: isRefetchingAvailability,
-  } = useQuery({
-    queryKey: ["vendor-availability"],
-    queryFn: () => getVendorAvailability(1),
-    enabled: activeTab === "availability",
-  });
-
-  const { mutate: deleteTable } = useMutation({
-    mutationFn: deleteRestaurantTable,
+  const { mutate: performDeletePeriod } = useMutation({
+    mutationFn: deleteServingPeriod,
     onSuccess: () => {
-      showSuccess("Success", "Table deleted successfully");
-      queryClient.invalidateQueries({ queryKey: ["vendor-tables"] });
+      showSuccess("Success", "Serving period removed");
+      queryClient.invalidateQueries({ queryKey: ["vendor-serving-periods"] });
     },
     onError: (error: Error) => {
-      showError("Error", error.message || "Failed to delete table");
-    },
-  });
-
-  const { mutate: performDeleteAvailability } = useMutation({
-    mutationFn: deleteAvailability,
-    onSuccess: () => {
-      showSuccess("Success", "Availability removed");
-      queryClient.invalidateQueries({ queryKey: ["vendor-availability"] });
-    },
-    onError: (error: Error) => {
-      showError("Error", error.message || "Failed to delete availability");
+      showError("Error", error.message || "Failed to delete serving period");
     },
   });
 
@@ -152,72 +130,58 @@ export default function ReservationDashboard() {
     },
   });
 
-  const handleDeleteTable = (id: string) => {
+  const handleOpenPeriodSheet = () => {
+    setSelectedPeriod(null);
+    setIsSheetVisible(true);
+  };
+
+  const handleEditPeriod = (period: GetServingPeriod) => {
+    setSelectedPeriod(period);
+    setIsSheetVisible(true);
+  };
+
+  const handleDeletePeriod = (id: string) => {
     Alert.alert(
-      "Delete Table",
-      "Are you sure you want to delete this table? This cannot be undone.",
+      "Delete Serving Period",
+      "Are you sure you want to remove this serving period?",
       [
         { text: "Cancel", style: "cancel" },
         {
           text: "Delete",
           style: "destructive",
-          onPress: () => deleteTable(id),
+          onPress: () => performDeletePeriod(id),
         },
       ],
     );
   };
-
-  const handleDeleteAvailability = (id: string) => {
-    Alert.alert(
-      "Delete Availability",
-      "Are you sure you want to remove this availability slot?",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: () => performDeleteAvailability(id),
-        },
-      ],
-    );
-  };
-
-  useLayoutEffect(() => {
-    navigation.setOptions({
-      headerRight: () => (
-        <View className="flex-row items-center gap-4 mr-2">
-          <TouchableOpacity
-            onPress={() => router.push("/restaurant-reservation/rules")}
-          >
-            <Ionicons name="list-outline" size={24} color="#ccc" />
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => router.push("/restaurant-reservation/settings")}
-          >
-            <Ionicons name="settings-outline" size={24} color="#ccc" />
-          </TouchableOpacity>
-        </View>
-      ),
-    });
-  }, [navigation, activeTab]);
 
   const { filteredData, counts } = React.useMemo(() => {
-    const upcoming = (reservations || []).filter(
-      (r) =>
-        r.reservation_status === "CONFIRMED" &&
-        new Date(`${r.reservation_time}T${r.reservation_time}`) >= new Date(),
-    );
-    const pending = (reservations || []).filter(
+    const reservations = reservationsResponse?.data || [];
+
+    const upcoming = reservations.filter((r) => {
+      const dateStr = r.reservation_date?.includes("T")
+        ? r.reservation_date
+        : `${r.reservation_date}T${r.reservation_time}`;
+      return (
+        r.reservation_status === "CONFIRMED" && new Date(dateStr) >= new Date()
+      );
+    });
+    const pending = reservations.filter(
       (r) => r.reservation_status === "PENDING",
     );
-    const history = (reservations || []).filter(
-      (r) =>
-        ["COMPLETED", "CANCELLED", "NO_SHOW"].includes(r.reservation_status) ||
-        (r.reservation_status === "CONFIRMED" &&
-          new Date(`${r.reservation_time}T${r.reservation_time}`) < new Date()),
-    );
+    const history = reservations.filter((r) => {
+      const dateStr = r.reservation_date?.includes("T")
+        ? r.reservation_date
+        : `${r.reservation_date}T${r.reservation_time}`;
+      return (
+        ["COMPLETED", "CANCELLED", "NO_SHOW"].includes(
+          r.reservation_status || "",
+        ) ||
+        (r.reservation_status === "CONFIRMED" && new Date(dateStr) < new Date())
+      );
+    });
 
-    let current: Reservation[] = [];
+    let current: GetUserReservationsItem[] = [];
     if (activeTab === "upcoming") current = upcoming;
     else if (activeTab === "PENDING") current = pending;
     else if (activeTab === "history") current = history;
@@ -228,23 +192,42 @@ export default function ReservationDashboard() {
         upcoming: upcoming.length,
         PENDING: pending.length,
         history: history.length,
-        tables: tablesData?.total || 0,
-        availability: availabilityData?.total || 0,
+        periods: servingPeriods?.length || 0,
       },
     };
-  }, [reservations, activeTab, tablesData, availabilityData]);
+  }, [reservationsResponse, activeTab, servingPeriods]);
 
-  const renderItem = ({ item }: { item: Reservation }) => {
-    const reservationDateTime = parseISO(
-      `${item.reservation_time}T${item.reservation_time}`,
-    );
+  const groupedPeriods = React.useMemo(() => {
+    if (!servingPeriods) return [];
+    const groups: { [key: number]: GetServingPeriod[] } = {};
+
+    servingPeriods.forEach((p) => {
+      if (!groups[p.day_of_week]) groups[p.day_of_week] = [];
+      groups[p.day_of_week].push(p);
+    });
+
+    return Object.entries(groups)
+      .sort(([a], [b]) => Number(a) - Number(b))
+      .map(([day, periods]) => ({
+        day: Number(day),
+        periods: periods.sort((a, b) =>
+          a.start_time.localeCompare(b.start_time),
+        ),
+      }));
+  }, [servingPeriods]);
+
+  const renderItem = ({ item }: { item: GetUserReservationsItem }) => {
+    const dateStr = item.reservation_date?.includes("T")
+      ? item.reservation_date
+      : `${item.reservation_date}T${item.reservation_time}`;
+    const reservationDateTime = parseISO(dateStr);
 
     return (
-      <View className="bg-surface-elevated m-2 p-4 rounded-2xl shadow-sm border border-border-subtle">
+      <View className="bg-input m-2 p-4 rounded-2xl shadow-sm border border-border-subtle">
         <View className="flex-row justify-between items-start mb-3">
           <View>
             <Text className="text-primary font-poppins-semibold text-lg">
-              {item.customer?.full_name || "Guest"}
+              {item.counterparty?.full_name || "Guest"}
             </Text>
             <Text className="text-secondary text-sm">
               {format(reservationDateTime, "EEEE, MMM d")} at{" "}
@@ -252,7 +235,7 @@ export default function ReservationDashboard() {
             </Text>
           </View>
           <View
-            className={`px-3 py-1 rounded-full ${getStatusColor(item.reservation_status as BookingStatus)}`}
+            className={`px-3 py-1 rounded-full ${getStatusColor((item.reservation_status as BookingStatus) || "PENDING")}`}
           >
             <Text className="text-white text-xs font-poppins-medium uppercase">
               {item.reservation_status}
@@ -265,21 +248,17 @@ export default function ReservationDashboard() {
             <Ionicons name="people-outline" size={16} color="gray" />
             <Text className="text-muted text-sm">{item.party_size} People</Text>
           </View>
-          {item.deposit_required ? (
+          {item.deposit_paid ? (
             <View className="flex-row items-center gap-1">
               <Ionicons name="card-outline" size={16} color="gray" />
-              <Text className="text-muted text-sm">
-                ₦{item.deposit_required} Deposit
-              </Text>
+              <Text className="text-muted text-sm">Deposit Paid</Text>
             </View>
           ) : null}
         </View>
 
         {item.notes && (
           <View className="bg-input p-2 rounded-lg mb-4">
-            <Text className="text-secondary text-xs italic">
-              "{item.notes}"
-            </Text>
+            <Text className="text-secondary text-xs italic">{item.notes}</Text>
           </View>
         )}
 
@@ -304,14 +283,19 @@ export default function ReservationDashboard() {
           <View className="flex-row gap-3">
             <AppButton
               text="Mark Completed"
-              className="flex-1"
+              color="#2f4550"
+              width={"65%"}
+              height={35}
+              borderRadius={50}
               onPress={() => updateStatus({ id: item.id, status: "COMPLETED" })}
             />
             <AppButton
               text="No Show"
-              variant="outline"
-              color="#FF9500"
-              className="flex-1"
+              variant="ghost"
+              color="#9ba1a6"
+              width="30%"
+              height={35}
+              borderRadius={50}
               onPress={() => updateStatus({ id: item.id, status: "NO_SHOW" })}
             />
           </View>
@@ -320,112 +304,90 @@ export default function ReservationDashboard() {
     );
   };
 
-  const renderTableItem = ({ item }: { item: RestaurantTable }) => (
-    <View className="bg-surface-elevated m-2 p-4 rounded-2xl shadow-sm border border-border-subtle flex-row justify-between items-center">
+  const renderServingPeriodItem = ({ item }: { item: GetServingPeriod }) => (
+    <TouchableOpacity
+      activeOpacity={0.7}
+      onPress={() => handleEditPeriod(item)}
+      className="bg-input p-4 rounded-2xl flex-row justify-between items-center"
+    >
       <View className="flex-row items-center gap-4">
-        <View className="bg-orange-500/10 p-3 rounded-2xl">
-          <Ionicons name="restaurant-outline" size={24} color="#FF8C00" />
+        <View className="bg-gray-500/10 p-3 rounded-2xl">
+          <Ionicons name="time-outline" size={24} color="gray" />
         </View>
         <View>
-          <Text className="text-primary font-poppins-semibold text-lg">
-            {item.name || "Unnamed Table"}
+          <Text className="text-primary font-poppins-semibold text-base">
+            {item.period}
+            {!item.is_active && (
+              <Text className="text-red-500 text-[9px] font-poppins ml-2 uppercase">
+                {"  "}(Inactive)
+              </Text>
+            )}
           </Text>
-          <View className="flex-row items-center gap-2">
-            <Text className="text-secondary text-sm">
-              {item.capacity} Seats
-            </Text>
-            <View className="w-1 h-1 rounded-full bg-gray-300" />
-            <Text
-              className={`text-xs font-poppins-medium uppercase ${item.is_active ? "text-green-500" : "text-red-500"}`}
-            >
-              {item.is_active ? "Active" : "Inactive"}
-            </Text>
-          </View>
-        </View>
-      </View>
-
-      <View className="flex-row gap-2">
-        <TouchableOpacity
-          onPress={() => {
-            setEditingTable(item);
-            setIsTableSheetVisible(true);
-          }}
-          className="bg-input p-2 rounded-xl"
-        >
-          <Ionicons name="create-outline" size={20} color="#FF8C00" />
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={() => handleDeleteTable(item.id)}
-          className="bg-red-500/10 p-2 rounded-xl"
-        >
-          <Ionicons name="trash-outline" size={20} color="#EF4444" />
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-
-  const renderAvailabilityItem = ({
-    item,
-  }: {
-    item: RestaurantAvailability;
-  }) => (
-    <View className="bg-surface-elevated m-2 p-4 rounded-2xl shadow-sm border border-border-subtle flex-row justify-between items-center">
-      <View className="flex-row items-center gap-4">
-        <View className="bg-orange-500/10 p-3 rounded-2xl">
-          <Ionicons name="time-outline" size={24} color="#FF8C00" />
-        </View>
-        <View>
-          <Text className="text-primary font-poppins-semibold text-lg">
-            {DAYS[item.day_of_week]}
-          </Text>
-          <View className="flex-row items-center gap-2">
-            <Text className="text-secondary text-sm">
-              {item.open_time.slice(0, 5)} - {item.close_time.slice(0, 5)}
-            </Text>
-            <View className="w-1 h-1 rounded-full bg-gray-300" />
+          <View className="flex-row items-center gap-1">
+            <Ionicons name="time-outline" size={12} color="#666" />
             <Text className="text-muted text-xs">
-              {item.slot_interval}m slots
+              {item.start_time.slice(0, 5)} - {item.end_time.slice(0, 5)}
+              {"  "}(Cap: {item.capacity})
             </Text>
           </View>
         </View>
       </View>
 
-      <View className="flex-row gap-2">
-        <TouchableOpacity
-          onPress={() => {
-            setEditingAvailability(item);
-            setIsAvailabilitySheetVisible(true);
-          }}
-          className="bg-input p-2 rounded-xl"
-        >
-          <Ionicons name="create-outline" size={20} color="#FF8C00" />
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={() => handleDeleteAvailability(item.id)}
-          className="bg-red-500/10 p-2 rounded-xl"
-        >
-          <Ionicons name="trash-outline" size={20} color="#EF4444" />
-        </TouchableOpacity>
-      </View>
-    </View>
+      <TouchableOpacity
+        onPress={() => {
+          Alert.alert(
+            "Delete Period",
+            "Are you sure you want to delete this serving period?",
+            [
+              { text: "Cancel", style: "cancel" },
+              {
+                text: "Delete",
+                onPress: () => handleDeletePeriod(item.id),
+                style: "destructive",
+              },
+            ],
+          );
+        }}
+        className="bg-red-500/10 p-2 rounded-xl"
+      >
+        <Ionicons name="trash-outline" size={16} color="#EF4444" />
+      </TouchableOpacity>
+    </TouchableOpacity>
   );
 
-  if (
-    loadingReservations ||
-    (activeTab === "tables" && loadingTables) ||
-    (activeTab === "availability" && loadingAvailability)
-  ) {
+  if (loadingReservations || (activeTab === "periods" && loadingPeriods)) {
     return <LoadingIndicator />;
   }
 
-  const showFAB = activeTab === "tables" || activeTab === "availability";
+  const showFAB = activeTab === "periods";
 
   return (
     <View className="flex-1 bg-background">
+      <Stack.Screen
+        options={{
+          headerRight: () =>
+            isVendor ? (
+              <View className="flex-row items-center gap-4 mr-2">
+                <TouchableOpacity
+                  onPress={() => router.push("/restaurant-reservation/rules")}
+                >
+                  <Ionicons name="list-outline" size={24} color="#ccc" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() =>
+                    router.push("/restaurant-reservation/settings")
+                  }
+                >
+                  <Ionicons name="settings-outline" size={24} color="#ccc" />
+                </TouchableOpacity>
+              </View>
+            ) : null,
+        }}
+      />
       <View className="h-16">
         <FlashList
           ref={tabsRef}
-          data={TABS}
+          data={visibleTabs}
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={{ paddingHorizontal: 15, paddingVertical: 12 }}
@@ -451,69 +413,49 @@ export default function ReservationDashboard() {
 
       <HDivider />
 
-      {activeTab === "tables" ? (
+      {activeTab === "periods" ? (
         <FlashList
-          data={tablesData?.data || []}
-          renderItem={renderTableItem}
-          keyExtractor={(item) => item.id}
-          ListEmptyComponent={
-            <View className="flex-1 items-center justify-center pt-20">
-              <Ionicons name="restaurant-outline" size={64} color="#ddd" />
-              <Text className="text-muted font-poppins-medium mt-4">
-                No tables created yet
-              </Text>
-              <TouchableOpacity
-                onPress={() => {
-                  setEditingTable(null);
-                  setIsTableSheetVisible(true);
-                }}
-                className="mt-4"
-              >
-                <Text className="text-button-primary font-poppins-semibold">
-                  + Add your first table
+          showsVerticalScrollIndicator={false}
+          data={groupedPeriods}
+          renderItem={({ item: group }) => (
+            <View className="mb-6 px-4">
+              <View className="flex-row items-center gap-2 mb-2 ml-2">
+                <View className="w-1.5 h-1.5 rounded-full bg-button-primary" />
+                <Text className="text-secondary font-poppins-semibold text-sm uppercase tracking-widest">
+                  {DAYS[group.day]}
                 </Text>
-              </TouchableOpacity>
+              </View>
+              {group.periods.map((period) => (
+                <View key={period.id} className="mb-2">
+                  {renderServingPeriodItem({ item: period })}
+                </View>
+              ))}
             </View>
-          }
-          refreshControl={
-            <RefreshControl
-              refreshing={isRefetchingTables}
-              onRefresh={refetchTables}
-            />
-          }
-          contentContainerStyle={{ paddingBottom: 100 }}
-        />
-      ) : activeTab === "availability" ? (
-        <FlashList
-          data={availabilityData?.data || []}
-          renderItem={renderAvailabilityItem}
-          keyExtractor={(item) => item.id}
+          )}
+          keyExtractor={(item) => item.day.toString()}
           ListEmptyComponent={
             <View className="flex-1 items-center justify-center pt-20">
               <Ionicons name="time-outline" size={64} color="#ddd" />
               <Text className="text-muted font-poppins-medium mt-4">
-                No availability set
+                No serving periods set
               </Text>
               <TouchableOpacity
-                onPress={() => {
-                  setEditingAvailability(null);
-                  setIsAvailabilitySheetVisible(true);
-                }}
+                onPress={() => setIsSheetVisible(true)}
                 className="mt-4"
               >
                 <Text className="text-button-primary font-poppins-semibold">
-                  + Set your hours
+                  + Add your first period
                 </Text>
               </TouchableOpacity>
             </View>
           }
           refreshControl={
             <RefreshControl
-              refreshing={isRefetchingAvailability}
-              onRefresh={refetchAvailability}
+              refreshing={isRefetchingPeriods}
+              onRefresh={refetchPeriods}
             />
           }
-          contentContainerStyle={{ paddingBottom: 100 }}
+          contentContainerStyle={{ paddingBottom: 100, paddingTop: 20 }}
         />
       ) : (
         <FlashList
@@ -542,21 +484,13 @@ export default function ReservationDashboard() {
       {showFAB && (
         <TouchableOpacity
           activeOpacity={0.8}
-          onPress={() => {
-            if (activeTab === "tables") {
-              setEditingTable(null);
-              setIsTableSheetVisible(true);
-            } else {
-              setEditingAvailability(null);
-              setIsAvailabilitySheetVisible(true);
-            }
-          }}
+          onPress={handleOpenPeriodSheet}
           style={{
             position: "absolute",
-            bottom: 30,
+            bottom: 50,
             right: 25,
-            width: 60,
-            height: 60,
+            width: 50,
+            height: 50,
             borderRadius: 30,
             backgroundColor: "#FF8C00",
             alignItems: "center",
@@ -572,16 +506,10 @@ export default function ReservationDashboard() {
         </TouchableOpacity>
       )}
 
-      <TableFormSheet
-        isVisible={isTableSheetVisible}
-        onClose={() => setIsTableSheetVisible(false)}
-        table={editingTable}
-      />
-
-      <AvailabilityFormSheet
-        isVisible={isAvailabilitySheetVisible}
-        onClose={() => setIsAvailabilitySheetVisible(false)}
-        availability={editingAvailability}
+      <ServingPeriodFormSheet
+        isVisible={isSheetVisible}
+        onClose={() => setIsSheetVisible(false)}
+        initialData={selectedPeriod}
       />
     </View>
   );
@@ -590,16 +518,16 @@ export default function ReservationDashboard() {
 const getStatusColor = (status: BookingStatus) => {
   switch (status) {
     case "PENDING":
-      return "bg-amber-500";
+      return "bg-amber-500/15";
     case "CONFIRMED":
-      return "bg-green-500";
+      return "bg-green-500/15";
     case "COMPLETED":
-      return "bg-blue-500";
+      return "bg-blue-500/15";
     case "CANCELLED":
-      return "bg-red-500";
+      return "bg-red-500/15";
     case "NO_SHOW":
-      return "bg-gray-500";
+      return "bg-gray-500/15";
     default:
-      return "bg-gray-400";
+      return "bg-gray-400/15";
   }
 };

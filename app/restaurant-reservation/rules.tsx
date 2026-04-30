@@ -98,7 +98,7 @@ export default function ReservationRulesPage() {
               </View>
             }
             renderItem={({ item }) => (
-              <View className="bg-surface-elevated rounded-2xl p-4 mb-4 border border-border-subtle shadow-sm">
+              <View className="bg-input rounded-2xl p-4 mb-4">
                 <View className="flex-row justify-between items-start mb-2">
                   <View className="bg-orange-500/10 rounded-full px-4 py-1">
                     <Text className="text-button-primary text-[10px] font-poppins-bold uppercase">
@@ -136,7 +136,7 @@ export default function ReservationRulesPage() {
                   <View className="flex-row items-center gap-1">
                     <Ionicons name="card-outline" size={14} color="gray" />
                     <Text className="text-muted text-xs">
-                      ₦{item.deposit ?? 0} Deposit
+                      ₦{item.min_deposit_adult ?? 0} Deposit
                     </Text>
                   </View>
                 </View>

@@ -58,7 +58,7 @@ const payment = () => {
 
   const { clearCart } = useCartStore();
 
-  const redirect = (data: WalletPaymentResponse | RedirectParams) => {
+  const redirect = (data: RedirectParams) => {
     showSuccess(
       "Payment Successful",
       `${serviceType === "DELIVERY" ? "Your payment was successful. Please select a rider." : "Your payment was successful."}`,
@@ -88,13 +88,13 @@ const payment = () => {
         params: { txRef: data.tx_ref, paymentStatus: data.status },
       });
     }
-    if (serviceType === "WALLET") {
+    if (serviceType === "RESERVATION") {
       queryClient.invalidateQueries({
-        queryKey: ["user-wallet", user?.id],
+        queryKey: ["user-reservations", user?.id],
       });
 
       router.push({
-        pathname: "/wallet",
+        pathname: "/restaurant-reservation",
         params: { txRef: data.tx_ref, paymentStatus: data.status },
       });
     }
@@ -104,30 +104,6 @@ const payment = () => {
     clearCart();
     redirect(data);
   };
-
-  const handleOnWalletRedirect = (data: WalletPaymentResponse) => {
-    clearCart();
-    redirect(data);
-  };
-
-  const paymentWithWalletMutaion = useMutation({
-    mutationFn: (data: PayWithWalletData) => payWithWallet(data),
-    onSuccess: handleOnWalletRedirect,
-    onError: (error) => {
-      showError("Error", error.message);
-    },
-  });
-
-  const handlePayWithWallet = () => {
-    paymentWithWalletMutaion.mutate({
-      amount: Number(amount),
-      tx_ref: txRef,
-    });
-  };
-
-  if (paymentWithWalletMutaion.isPending) {
-    return <LoadingIndicator />;
-  }
 
   return (
     <View className="flex-1 bg-background px-3 pt-8 w-full">
@@ -181,22 +157,13 @@ const payment = () => {
       </View>
 
       <View className="flex-1 justify-end pb-16 w-full gap-3">
-        {serviceType !== "WALLET" && (
-          <AppButton
-            text={`PAY WITH WALLET ₦${amount}`}
-            onPress={handlePayWithWallet}
-            borderRadius={50}
-            variant="outline"
-            icon={<Ionicons name="wallet-outline" size={22} color="orange" />}
-          />
-        )}
         <PayWithFlutterwave
           onRedirect={handleOnRedirect}
           options={{
             tx_ref: txRef,
             amount: Number(amount),
             currency: "NGN",
-            authorization: publicKey,
+            authorization: "FLWPUBK_TEST-8d37c5a0a80727a45d17dfa0064b0fec-X",
             payment_options: "card, banktransfer",
             customer: {
               email: email || "customer@servipal.com",

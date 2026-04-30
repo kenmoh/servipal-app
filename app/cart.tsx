@@ -987,8 +987,7 @@ const Cart = () => {
       )}
 
       {/* ─── Shared Modal ────────────────────────────────────────────── */}
-      <KeyboardAvoidingView>
-        <AppModal
+      <AppModal
           visible={modalVisible}
           onClose={() => {
             setModalVisible(false);
@@ -1011,11 +1010,13 @@ const Cart = () => {
                 /* ════════════════════════════════════════════════════
                    LAUNDRY BOOKING MODAL
                    ════════════════════════════════════════════════════ */
-                <BottomSheetScrollView
-                  showsVerticalScrollIndicator={false}
-                  keyboardShouldPersistTaps="handled"
-                  contentContainerStyle={{ paddingBottom: 40 }}
-                >
+                <>
+                  <BottomSheetScrollView
+                    className="flex-1"
+                    showsVerticalScrollIndicator={false}
+                    keyboardShouldPersistTaps="handled"
+                    contentContainerStyle={{ paddingBottom: 100 }}
+                  >
                   <View className="px-5">
                     <Text className="text-xl font-poppins-bold text-primary mb-4">
                       Book Laundry Slot
@@ -1289,9 +1290,9 @@ const Cart = () => {
                       )}
                     </>
                   )}
-
+                </BottomSheetScrollView>
                   {/* ── Confirm button ───────────────── */}
-                  <View className="mt-2 px-5 mb-5">
+                  <View className="absolute bottom-0 w-full px-5 pt-4 pb-10 bg-background border-t border-gray-100 dark:border-gray-800">
                     <AppButton
                       text="Confirm Booking"
                       onPress={handleLaundryBookingConfirm}
@@ -1308,7 +1309,7 @@ const Cart = () => {
                       }
                     />
                   </View>
-                </BottomSheetScrollView>
+                </>
               ) : (
                 /* ════════════════════════════════════════════════════
                    RESTAURANT DELIVERY ADDRESS MODAL
@@ -1393,7 +1394,6 @@ const Cart = () => {
             </Animated.View>
           )}
         </AppModal>
-      </KeyboardAvoidingView>
     </View>
   );
 };

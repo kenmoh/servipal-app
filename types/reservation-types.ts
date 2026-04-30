@@ -1,6 +1,6 @@
 // types/reservation.ts
 export interface ReservationSettingsInput {
-  min_deposit?: number;
+  min_deposit_adult?: number;
   deposit_type?: "FIXED" | "PERCENTAGE";
   min_party_size?: number;
   max_party_size?: number;
@@ -20,7 +20,7 @@ export interface ReservationRulesInput {
   min_party_size?: number;
   max_party_size?: number;
   day_of_week?: number; // 0=Sun, 1=Mon, ... 6=Sat
-  deposit?: number;
+  min_deposit_adult?: number;
   cancellation_fee?: number;
   no_show_fee?: number;
   priority?: number;
@@ -133,50 +133,9 @@ export type ReservationSummary = {
   };
 };
 
-// types/tables.ts
-export type RestaurantTable = {
-  id: string;
-  vendor_id: string;
-  name: string | null;
-  capacity: number;
-  is_active: boolean | null;
-  created_at: string;
-};
+// Table types removed
 
-export type PaginatedTables<T = RestaurantTable> = {
-  data: T[];
-  total: number;
-  page: number;
-  page_size: number;
-  has_next: boolean;
-  has_prev: boolean;
-};
-
-// types/availability.ts
-export type PaginatedResult<T> = {
-  data: T[];
-  total: number;
-  page: number;
-  page_size: number;
-  has_next: boolean;
-  has_prev: boolean;
-};
-
-export type RestaurantAvailabilityInput = {
-  day_of_week: number;
-  open_time: string; // "HH:MM:SS"
-  close_time: string; // "HH:MM:SS"
-  slot_interval: number | null;
-  reservation_duration: number | null;
-  buffer_minutes: number | null;
-  is_active: boolean | null;
-};
-
-export type RestaurantAvailability = RestaurantAvailabilityInput & {
-  id: string;
-  vendor_id: string;
-  created_at: string;
-};
+// Availability types removed
 
 export interface AvailableSlot {
   slot_start: string;
@@ -186,4 +145,112 @@ export interface AvailableSlot {
   max_party_size: number;
   min_deposit: number;
   min_party_size: number;
+}
+
+export interface CreateReservationIntent {
+  vendor_id: string;
+  customer_id: string;
+  reservation_time: string;
+  reservation_date: string;
+  serving_period: string;
+  party_size: number;
+  number_of_children: number;
+  number_of_adults: number;
+  min_deposit_adult: number;
+  day_of_week: string;
+  notes?: string;
+  business_name: string;
+}
+
+export type ServingPeriod = "BREAKFAST" | "LUNCH" | "DINNER";
+
+export interface CreateServingPeriod {
+  day_of_week: number;
+  period: ServingPeriod;
+  start_time: string;
+  end_time: string;
+  capacity: number;
+}
+
+export interface GetServingPeriod {
+  id: string;
+  vendor_id: string;
+  day_of_week: number;
+  period: ServingPeriod;
+  start_time: string;
+  end_time: string;
+  capacity: number;
+  is_active: boolean;
+}
+
+export interface UpdateServingPeriod {
+  id: string;
+  start_time: string;
+  period: ServingPeriod;
+  end_time: string;
+  capacity: number;
+  is_active: boolean;
+}
+
+export type ReservationPolicySource = "SETTINGS" | "RULE";
+
+export interface ReservationPolicy {
+  source: ReservationPolicySource;
+  rule_id?: string;
+
+  min_deposit_adult: number;
+  min_party_size: number;
+  max_party_size: number;
+
+  cancellation_fee: number;
+  no_show_fee: number;
+
+  cancellation_window_minutes: number;
+
+  terms: string | null;
+}
+
+export type ViewerRole = "vendor" | "customer";
+
+export interface ReservationCounterparty {
+  full_name: string;
+  phone_number: string | null;
+  email: string | null;
+}
+
+export interface GetUserReservationsItem {
+  id: string;
+  vendor_id: string;
+  customer_id: string;
+
+  reservation_time: string;
+  reservation_date: string;
+
+  serving_period: string | null;
+  party_size: number | null;
+
+  number_of_adults: number | null;
+  number_of_children: number | null;
+
+  reservation_status: string | null;
+  deposit_paid: boolean | null;
+
+  payment_status: string | null;
+  expires_at: string | null;
+
+  notes: string | null;
+
+  created_at: string;
+
+  viewer_role: ViewerRole;
+  counterparty: ReservationCounterparty;
+}
+
+export interface GetUserReservationsResponse {
+  data: GetUserReservationsItem[];
+  total: number;
+  page: number;
+  page_size: number;
+  has_next: boolean;
+  has_prev: boolean;
 }

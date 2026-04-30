@@ -44,29 +44,6 @@ const WalletScreen = () => {
               <Text className="text-white font-poppins-medium ml-1">Back</Text>
             </Pressable>
           </View>
-          {/* Available Balance */}
-          <View className="mt-4">
-            <Text className="text-white/60 text-xs font-poppins-medium tracking-wide uppercase">
-              Available Balance
-            </Text>
-            <View className="flex-row items-center justify-between">
-              <Text className="text-white text-3xl font-poppins-bold mt-1">
-                ₦{data?.balance.toLocaleString() || 0.0}
-              </Text>
-              {/* Escrow Balance - Compact Inline */}
-              <View className="flex-row self-baseline items-center bg-white/10 rounded-xl px-3 py-2.5">
-                <Ionicons
-                  name="lock-closed"
-                  size={14}
-                  color="rgba(255,255,255,0.7)"
-                />
-                <Text className="text-white/60 text-xs ml-2">Escrow:</Text>
-                <Text className="text-white font-poppins-semibold text-sm ml-1">
-                  ₦{data?.escrow_balance.toLocaleString() || 0.0}
-                </Text>
-              </View>
-            </View>
-          </View>
 
           {/*Account Details - Compact Row */}
           {profile?.bank_account_number && profile?.bank_name && (
@@ -92,35 +69,13 @@ const WalletScreen = () => {
           <View className="flex-row gap-3 my-5">
             <View className="flex-1">
               <AppButton
-                text="Withdraw"
-                variant="outline"
+                text="Add Payout Account"
                 height={40}
                 borderRadius={50}
-                color="rgba(255,255,255,0.3)"
-                textColor="#FFFFFF"
-                icon={
-                  <Ionicons
-                    name="arrow-up-circle-outline"
-                    size={18}
-                    color="#FFFFFF"
-                  />
-                }
-              />
-            </View>
-            <View className="flex-1">
-              <AppButton
-                text="Fund Wallet"
-                height={40}
-                borderRadius={50}
+                width={"70%"}
                 color="rgba(255,255,255,0.15)"
                 textColor="#FFFFFF"
-                icon={
-                  <Ionicons
-                    name="add-circle-outline"
-                    size={18}
-                    color="#FFFFFF"
-                  />
-                }
+                icon={<Ionicons name="add-outline" size={18} color="#FFFFFF" />}
                 onPress={() => router.push("/wallet/fund")}
               />
             </View>

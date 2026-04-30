@@ -224,7 +224,7 @@ export default Sentry.wrap(function RootLayout() {
                         }}
                       />
                       <Stack.Screen
-                        name="wallet/fund"
+                        name="wallet/add-payout-account"
                         options={{
                           headerShadowVisible: false,
                           presentation: "formSheet",

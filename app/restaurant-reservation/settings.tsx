@@ -38,7 +38,7 @@ export default function ReservationSettingsPage() {
       setProfile(updatedProfile);
       showSuccess(
         "Success",
-        `Reservations ${updatedProfile.enable_reservation ? "enabled" : "disabled"}`
+        `Reservations ${updatedProfile.enable_reservation ? "enabled" : "disabled"}`,
       );
     },
     onError: (error: Error) => {
@@ -125,8 +125,8 @@ export default function ReservationSettingsPage() {
             <HDivider />
             <SettingItem
               icon="card-outline"
-              label="Min. Deposit"
-              value={`₦ ${settings?.min_deposit || 0}`}
+              label="Min. Deposit/Adult"
+              value={`₦ ${settings?.min_deposit_adult || 0}`}
             />
             <HDivider />
             <SettingItem

@@ -1,22 +1,24 @@
-import {
-  createAvailability,
-  updateAvailability,
-} from "@/api/reservation";
+import { createServingPeriod, updateServingPeriod } from "@/api/reservation";
 import AppModal from "@/components/AppModal";
 import { useToast } from "@/components/ToastProvider";
 import { AppButton } from "@/components/ui/app-button";
 import { AppTextInput } from "@/components/ui/app-text-input";
-import { RestaurantAvailability } from "@/types/reservation-types";
+import {
+  CreateServingPeriod,
+  GetServingPeriod,
+  ServingPeriod,
+  UpdateServingPeriod,
+} from "@/types/reservation-types";
 import { Ionicons } from "@expo/vector-icons";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import React, { useEffect, useState } from "react";
 import { ScrollView, Switch, Text, TouchableOpacity, View } from "react-native";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 
-interface AvailabilityFormSheetProps {
+interface ServingPeriodFormSheetProps {
   isVisible: boolean;
   onClose: () => void;
-  availability?: RestaurantAvailability | null;
+  initialData?: GetServingPeriod | null;
 }
 
 const DAYS = [
@@ -29,75 +31,86 @@ const DAYS = [
   "Saturday",
 ];
 
-export default function AvailabilityFormSheet({
+const PERIOD_TYPES: ServingPeriod[] = ["BREAKFAST", "LUNCH", "DINNER"];
+
+export default function ServingPeriodFormSheet({
   isVisible,
   onClose,
-  availability,
-}: AvailabilityFormSheetProps) {
+  initialData,
+}: ServingPeriodFormSheetProps) {
   const [dayOfWeek, setDayOfWeek] = useState(1);
-  const [openTime, setOpenTime] = useState("09:00:00");
-  const [closeTime, setCloseTime] = useState("22:00:00");
-  const [slotInterval, setSlotInterval] = useState("30");
-  const [reservationDuration, setReservationDuration] = useState("60");
-  const [bufferMinutes, setBufferMinutes] = useState("15");
+  const [period, setPeriod] = useState<ServingPeriod>("LUNCH");
+  const [startTime, setStartTime] = useState("09:00:00");
+  const [endTime, setEndTime] = useState("22:00:00");
+  const [capacity, setCapacity] = useState("20");
   const [isActive, setIsActive] = useState(true);
 
+  useEffect(() => {
+    if (initialData) {
+      setDayOfWeek(initialData.day_of_week);
+      setPeriod(initialData.period);
+      setStartTime(initialData.start_time);
+      setEndTime(initialData.end_time);
+      setCapacity(initialData.capacity.toString());
+      setIsActive(initialData.is_active);
+    } else {
+      // Reset for new
+      setDayOfWeek(1);
+      setPeriod("LUNCH");
+      setStartTime("09:00:00");
+      setEndTime("22:00:00");
+      setCapacity("20");
+      setIsActive(true);
+    }
+  }, [initialData, isVisible]);
+
   const [isTimePickerVisible, setTimePickerVisible] = useState(false);
-  const [pickingType, setPickingType] = useState<"open" | "close">("open");
+  const [pickingType, setPickingType] = useState<"start" | "end">("start");
 
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
 
-  useEffect(() => {
-    if (availability) {
-      setDayOfWeek(availability.day_of_week);
-      setOpenTime(availability.open_time);
-      setCloseTime(availability.close_time);
-      setSlotInterval(availability.slot_interval?.toString() || "30");
-      setReservationDuration(
-        availability.reservation_duration?.toString() || "60",
-      );
-      setBufferMinutes(availability.buffer_minutes?.toString() || "15");
-      setIsActive(availability.is_active ?? true);
-    } else {
-      setDayOfWeek(1);
-      setOpenTime("09:00:00");
-      setCloseTime("22:00:00");
-      setSlotInterval("30");
-      setReservationDuration("60");
-      setBufferMinutes("15");
-      setIsActive(true);
-    }
-  }, [availability, isVisible]);
-
   const { mutate: performSave, isPending } = useMutation({
     mutationFn: async () => {
-      const payload = {
-        day_of_week: dayOfWeek,
-        open_time: openTime,
-        close_time: closeTime,
-        slot_interval: parseInt(slotInterval),
-        reservation_duration: parseInt(reservationDuration),
-        buffer_minutes: parseInt(bufferMinutes),
-        is_active: isActive,
-      };
-
-      if (availability) {
-        return updateAvailability(availability.id, payload);
+      if (initialData) {
+        const payload: UpdateServingPeriod = {
+          id: initialData.id,
+          period: period,
+          start_time: startTime,
+          end_time: endTime,
+          capacity: parseInt(capacity) || 0,
+          is_active: isActive,
+        };
+        return updateServingPeriod(payload);
       } else {
-        return createAvailability(payload);
+        const payload: CreateServingPeriod = {
+          day_of_week: dayOfWeek,
+          period: period,
+          start_time: startTime,
+          end_time: endTime,
+          capacity: parseInt(capacity) || 0,
+        };
+        return createServingPeriod(payload);
       }
     },
     onSuccess: () => {
       showSuccess(
         "Success",
-        `Availability ${availability ? "updated" : "created"} successfully`,
+        initialData
+          ? "Serving period updated successfully"
+          : "Serving period created successfully",
       );
-      queryClient.invalidateQueries({ queryKey: ["vendor-availability"] });
+      queryClient.invalidateQueries({ queryKey: ["vendor-serving-periods"] });
       onClose();
     },
     onError: (error: Error) => {
-      showError("Error", error.message || "Failed to save availability");
+      showError(
+        "Error",
+        error.message ||
+          (initialData
+            ? "Failed to update serving period"
+            : "Failed to create serving period"),
+      );
     },
   });
 
@@ -106,8 +119,8 @@ export default function AvailabilityFormSheet({
     const minutes = date.getMinutes().toString().padStart(2, "0");
     const formatted = `${hours}:${minutes}:00`;
 
-    if (pickingType === "open") setOpenTime(formatted);
-    else setCloseTime(formatted);
+    if (pickingType === "start") setStartTime(formatted);
+    else setEndTime(formatted);
 
     setTimePickerVisible(false);
   };
@@ -116,7 +129,7 @@ export default function AvailabilityFormSheet({
     <AppModal
       visible={isVisible}
       onClose={onClose}
-      title={availability ? "Edit Availability" : "Add Availability"}
+      title={initialData ? "Edit Serving Period" : "Add Serving Period"}
     >
       <ScrollView className="pb-10" showsVerticalScrollIndicator={false}>
         <View className="gap-6">
@@ -130,9 +143,9 @@ export default function AvailabilityFormSheet({
                 <TouchableOpacity
                   key={day}
                   onPress={() => setDayOfWeek(index)}
-                  className={`px-3 py-2 rounded-xl border ${
+                  className={`px-3 py-2 rounded-full border ${
                     dayOfWeek === index
-                      ? "bg-orange-500 border-orange-500"
+                      ? "bg-orange-500/20 border-button-primary"
                       : "bg-input border-border-subtle"
                   }`}
                 >
@@ -148,95 +161,113 @@ export default function AvailabilityFormSheet({
             </View>
           </View>
 
+          {/* Period Type */}
+          <View>
+            <Text className="text-secondary font-poppins-medium text-xs mb-3 uppercase ml-1">
+              Serving Period
+            </Text>
+            <View className="flex-row gap-2">
+              {PERIOD_TYPES.map((p) => (
+                <TouchableOpacity
+                  key={p}
+                  onPress={() => setPeriod(p)}
+                  className={`flex-1 px-3 py-3 rounded-full border items-center ${
+                    period === p
+                      ? "bg-orange-500/20 border-button-primary"
+                      : "bg-input border-border-subtle"
+                  }`}
+                >
+                  <Text
+                    className={`font-poppins-medium text-xs ${
+                      period === p ? "text-white" : "text-secondary"
+                    }`}
+                  >
+                    {p}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
           {/* Time Pickers */}
           <View className="flex-row gap-4">
             <View className="flex-1">
               <Text className="text-secondary font-poppins-medium text-xs mb-2 uppercase ml-1">
-                Open Time
+                Start Time
               </Text>
               <TouchableOpacity
                 onPress={() => {
-                  setPickingType("open");
+                  setPickingType("start");
                   setTimePickerVisible(true);
                 }}
                 className="bg-input p-4 rounded-2xl border border-border-subtle flex-row justify-between items-center"
               >
                 <Text className="text-primary font-poppins">
-                  {openTime.slice(0, 5)}
+                  {startTime.slice(0, 5)}
                 </Text>
                 <Ionicons name="time-outline" size={20} color="#666" />
               </TouchableOpacity>
             </View>
             <View className="flex-1">
               <Text className="text-secondary font-poppins-medium text-xs mb-2 uppercase ml-1">
-                Close Time
+                End Time
               </Text>
               <TouchableOpacity
                 onPress={() => {
-                  setPickingType("close");
+                  setPickingType("end");
                   setTimePickerVisible(true);
                 }}
                 className="bg-input p-4 rounded-2xl border border-border-subtle flex-row justify-between items-center"
               >
                 <Text className="text-primary font-poppins">
-                  {closeTime.slice(0, 5)}
+                  {endTime.slice(0, 5)}
                 </Text>
                 <Ionicons name="time-outline" size={20} color="#666" />
               </TouchableOpacity>
             </View>
           </View>
 
-          {/* Configuration */}
-          <View className="gap-3">
-            <View>
-              <Text className="text-secondary font-poppins-medium text-xs mb-2 uppercase ml-1">
-                Slot Interval (Minutes)
-              </Text>
-              <AppTextInput
-                placeholder="e.g. 30"
-                value={slotInterval}
-                onChangeText={setSlotInterval}
-                keyboardType="numeric"
-              />
-            </View>
-            <View>
-              <Text className="text-secondary font-poppins-medium text-xs mb-2 uppercase ml-1">
-                Avg. Reservation Duration (Minutes)
-              </Text>
-              <AppTextInput
-                placeholder="e.g. 60"
-                value={reservationDuration}
-                onChangeText={setReservationDuration}
-                keyboardType="numeric"
-              />
-            </View>
+          {/* Capacity */}
+          <View>
+            <Text className="text-secondary font-poppins-medium text-xs mb-2 uppercase ml-1">
+              Total Capacity (Seats)
+            </Text>
+            <AppTextInput
+              placeholder="e.g. 20"
+              value={capacity}
+              onChangeText={setCapacity}
+              keyboardType="numeric"
+            />
           </View>
 
+          {/* Status Toggle */}
           <View className="flex-row items-center justify-between bg-input p-4 rounded-2xl border border-border-subtle">
             <View>
-              <Text className="text-primary font-poppins-semibold">
-                Status
+              <Text className="text-primary font-poppins-semibold text-sm">
+                Active Status
               </Text>
-              <Text className="text-muted text-xs font-poppins">
-                Enable or disable this time slot
+              <Text className="text-secondary font-poppins text-xs mt-0.5">
+                {isActive
+                  ? "This period is active and accepting bookings"
+                  : "This period is currently disabled"}
               </Text>
             </View>
             <Switch
               value={isActive}
               onValueChange={setIsActive}
               trackColor={{ false: "#767577", true: "#FF8C00" }}
-              thumbColor={isActive ? "#fff" : "#f4f3f4"}
+              thumbColor={isActive ? "#f4f3f4" : "#f4f3f4"}
             />
           </View>
 
-          <View className="mt-4">
+          <View className="mt-8">
             <AppButton
               text={
                 isPending
                   ? "Saving..."
-                  : availability
-                  ? "Update Availability"
-                  : "Save Availability"
+                  : initialData
+                    ? "Update Serving Period"
+                    : "Save Serving Period"
               }
               onPress={() => performSave()}
               disabled={isPending}

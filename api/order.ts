@@ -233,7 +233,7 @@ export const updateFoodOrderStatus = async (
     if (!session) throw new Error("No session found");
 
     const response = await apiClient.put(
-      `${FOOD_BASE_URL}/${orderId}/update-food-order-status?order_id`,
+      `${FOOD_BASE_URL}/${orderId}/update-food-order-status`,
       {
         new_status: data.new_status,
       },

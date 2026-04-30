@@ -56,7 +56,6 @@ const BankSelectionSheet = forwardRef<
     ({ item }: { item: Bank }) => (
       <TouchableOpacity
         onPress={() => {
-          console.log(item);
           onSelect(item);
           setSearchQuery("");
           // @ts-ignore

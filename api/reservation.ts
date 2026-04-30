@@ -3,19 +3,23 @@ import { InitiatePaymentResponse } from "@/types/payment-types";
 import {
   AvailableSlot,
   BookingStatus,
-  PaginatedResult,
-  PaginatedTables,
   Reservation,
   ReservationRulesInput,
   ReservationRulesOutput,
   ReservationSettingsInput,
   ReservationSettingsOutput,
-  RestaurantAvailability,
-  RestaurantAvailabilityInput,
-  RestaurantTable,
+  CreateReservationIntent,
+  CreateServingPeriod,
+  GetServingPeriod,
+  UpdateServingPeriod,
+  ReservationPolicy,
+  GetUserReservationsResponse,
 } from "@/types/reservation-types";
 import { apiClient } from "@/utils/client";
 import { supabase } from "@/utils/supabase";
+import { SupabaseClient } from "@supabase/supabase-js";
+
+const INTENT_URL = "/reservations";
 
 async function getVendorId() {
   const {
@@ -90,6 +94,29 @@ export async function getvendorReservationRules(): Promise<
  Get vendor reservation rule
 
 */
+
+export const getReservationPolicy = async ({
+  vendorId,
+  dayOfWeek,
+  partySize,
+}: {
+  vendorId: string;
+  dayOfWeek: number; // 0–6 (Sunday–Saturday)
+  partySize: number;
+}): Promise<ReservationPolicy> => {
+  const { data, error } = await supabase.rpc("get_reservation_policy", {
+    p_vendor_id: vendorId,
+    p_day_of_week: dayOfWeek,
+    p_party_size: partySize,
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data as ReservationPolicy;
+};
+
 export async function getVendorReservationRule(
   ruleId: string,
 ): Promise<ReservationRulesOutput> {
@@ -162,7 +189,7 @@ export async function getReservationSettings(): Promise<ReservationSettingsOutpu
 export async function getVendorReservations(): Promise<Reservation[]> {
   const vendorId = await getVendorId();
   const { data, error } = await supabase
-    .from("reservations")
+    .from("restaurant_reservations")
     .select("*, customer:profiles(full_name, phone_number, email)")
     .eq("vendor_id", vendorId)
     .order("reservation_date", { ascending: true })
@@ -172,6 +199,35 @@ export async function getVendorReservations(): Promise<Reservation[]> {
   return (data || []) as any[];
 }
 
+export async function getUserReservations(params?: {
+  page?: number;
+  pageSize?: number;
+  startDate?: string | Date | null;
+  endDate?: string | Date | null;
+  status?: string | null;
+}): Promise<GetUserReservationsResponse> {
+  const {
+    page = 1,
+    pageSize = 20,
+    startDate = null,
+    endDate = null,
+    status = null,
+  } = params ?? {};
+
+  const toTsTz = (d: string | Date | null) =>
+    d == null ? null : typeof d === "string" ? d : d.toISOString();
+
+  const { data, error } = await supabase.rpc("get_user_reservations", {
+    p_page: page,
+    p_page_size: pageSize,
+    p_start_date: toTsTz(startDate),
+    p_end_date: toTsTz(endDate),
+    p_status: status,
+  });
+
+  if (error) throw error;
+  return data as unknown as GetUserReservationsResponse;
+}
 /**
  * Update reservation status
  */
@@ -244,32 +300,23 @@ export async function getVendorReservationRules(
 }
 
 /**
- * Customer: Create a new reservation
+ * Customer: Create a new reservation intent
  */
 const BASE_URL = "/reservations";
 
-export async function createReservation(data: {
-  vendor_id: string;
-  table_id?: string;
-  reservation_time: string;
-  end_time?: string;
-  party_size: number;
-  number_of_children?: number;
-  number_of_adult?: number;
-  deposit_required?: number;
-  deposit_paid?: number;
-  notes?: string;
-}) {
+export async function createReservationIntent(
+  data: CreateReservationIntent,
+): Promise<InitiatePaymentResponse> {
   try {
     const { data: session, error } = await supabase.auth.getSession();
     if (error) throw new Error(error.message);
     const customerId = session?.session?.user?.id;
     const response = await apiClient.post(
       `${BASE_URL}/initiate-payment`,
-      { customer_id: customerId, ...data },
+      { ...data, customer_id: customerId },
       {
         headers: {
-          "Content-Type": "multipart/form-data",
+          "Content-Type": "application/json",
         },
       },
     );
@@ -340,158 +387,45 @@ export async function getVendorReservationDetail(id: string) {
 }
 
 /**
- * Vendor: Create a new restaurant table
+ * Vendor: Serving Periods
  */
-export async function createRestaurantTable(
-  name: string,
-  capacity: number,
-): Promise<RestaurantTable> {
-  const { data, error } = await supabase.rpc("create_restaurant_table", {
-    p_name: name,
-    p_capacity: capacity,
+
+export async function getVendorServingPeriods(
+  vendorId?: string,
+): Promise<GetServingPeriod[]> {
+  const id = vendorId || (await getVendorId());
+  const { data, error } = await supabase.rpc("get_serving_periods", {
+    p_vendor_id: id,
   });
 
-  if (error) throw new Error(`Create table failed: ${error.message}`);
-  return data as RestaurantTable;
+  if (error) throw new Error(`Fetch serving periods failed: ${error.message}`);
+  return (data || []) as GetServingPeriod[];
 }
 
-/**
- * Vendor: List restaurant tables
- */
-export async function getVendorTables(
-  page = 1,
-  pageSize = 20,
-  search?: string,
-  isActive?: boolean,
-): Promise<PaginatedTables> {
-  const { data, error } = await supabase.rpc("get_vendor_tables", {
-    p_page: page,
-    p_page_size: pageSize,
-    p_search: search || null,
-    p_is_active: isActive ?? null,
+export async function updateServingPeriod(
+  data: UpdateServingPeriod,
+): Promise<GetServingPeriod> {
+  const { data: res, error } = await supabase.rpc("update_serving_period", {
+    p_id: data.id,
+    p_period: data.period,
+    p_start_time: data.start_time,
+    p_end_time: data.end_time,
+    p_is_active: data.is_active,
+    p_capacity: data.capacity,
   });
-
-  if (error) throw new Error(`Fetch tables failed: ${error.message}`);
-  return data as PaginatedTables;
+  if (error) throw new Error(`Update failed: ${error.message}`);
+  return res;
 }
 
-/**
- * Vendor: Get restaurant table detail
- */
-export async function getRestaurantTable(id: string): Promise<RestaurantTable> {
-  const { data, error } = await supabase.rpc("get_restaurant_table", {
-    p_table_id: id,
-  });
+export async function deleteServingPeriod(id: string): Promise<void> {
+  const vendorId = await getVendorId();
+  const { error } = await supabase
+    .from("serving_periods")
+    .delete()
+    .eq("id", id)
+    .eq("vendor_id", vendorId);
 
-  if (error) throw new Error(`Fetch table detail failed: ${error.message}`);
-  return data as RestaurantTable;
-}
-
-/**
- * Vendor: Update restaurant table
- */
-export async function updateRestaurantTable(
-  id: string,
-  updates: { name?: string; capacity?: number; is_active?: boolean },
-): Promise<RestaurantTable> {
-  const { data, error } = await supabase.rpc("update_restaurant_table", {
-    p_table_id: id,
-    ...updates,
-  });
-
-  if (error) throw new Error(`Update table failed: ${error.message}`);
-  return data as RestaurantTable;
-}
-
-/**
- * Vendor: Delete restaurant table
- */
-export async function deleteRestaurantTable(id: string): Promise<void> {
-  const { error } = await supabase.rpc("delete_restaurant_table", {
-    p_table_id: id,
-  });
-
-  if (error) throw new Error(`Delete table failed: ${error.message}`);
-}
-
-/**
- * Vendor: Create restaurant availability
- */
-export async function createAvailability(
-  availabilityData: RestaurantAvailabilityInput,
-): Promise<RestaurantAvailability> {
-  const { data, error } = await supabase.rpc("create_availability", {
-    p_day_of_week: availabilityData.day_of_week,
-    p_open_time: availabilityData.open_time,
-    p_close_time: availabilityData.close_time,
-    p_slot_interval: availabilityData.slot_interval,
-    p_reservation_duration: availabilityData.reservation_duration,
-    p_buffer_minutes: availabilityData.buffer_minutes,
-    p_is_active: availabilityData.is_active,
-  });
-
-  if (error) {
-    throw new Error(`Create availability failed: ${error.message}`);
-  }
-  return data as RestaurantAvailability;
-}
-
-/**
- * Vendor: List restaurant availability
- */
-export async function getVendorAvailability(
-  page = 1,
-  isActive?: boolean,
-): Promise<PaginatedResult<RestaurantAvailability>> {
-  const { data, error } = await supabase.rpc("get_vendor_availability", {
-    p_page: page,
-    p_is_active: isActive ?? null,
-  });
-
-  if (error) throw new Error(`Fetch availability failed: ${error.message}`);
-  return data as PaginatedResult<RestaurantAvailability>;
-}
-
-/**
- * Vendor: Get availability detail
- */
-export async function getAvailabilityDetail(
-  id: string,
-): Promise<RestaurantAvailability> {
-  const { data, error } = await supabase.rpc("get_availability_detail", {
-    p_id: id,
-  });
-
-  if (error)
-    throw new Error(`Fetch availability detail failed: ${error.message}`);
-  return data as RestaurantAvailability;
-}
-
-/**
- * Vendor: Update restaurant availability
- */
-export async function updateAvailability(
-  id: string,
-  updates: Partial<RestaurantAvailabilityInput>,
-): Promise<RestaurantAvailability> {
-  const { data, error } = await supabase.rpc("update_availability", {
-    p_id: id,
-    ...updates,
-  });
-
-  if (error) throw new Error(`Update availability failed: ${error.message}`);
-  return data as RestaurantAvailability;
-}
-
-/**
- * Vendor: Delete restaurant availability
- */
-export async function deleteAvailability(id: string): Promise<void> {
-  const { error } = await supabase.rpc("delete_availability", {
-    p_id: id,
-  });
-
-  if (error) throw new Error(`Delete availability failed: ${error.message}`);
+  if (error) throw new Error(`Delete serving period failed: ${error.message}`);
 }
 
 /**
@@ -508,14 +442,33 @@ export async function getAvailableSlots({
   partySize: number;
 }): Promise<AvailableSlot[]> {
   const { data, error } = await supabase.rpc(
-    "get_available_reservation_slots",
+    "get_available_reservation_slots_new",
     {
       p_vendor_id: vendorId,
       p_date: date,
       p_party_size: partySize,
     },
   );
-  console.log(data);
+
   if (error) throw new Error(`Fetch slots failed: ${error.message}`);
   return data as AvailableSlot[];
+}
+
+export async function createServingPeriod(
+  servingPeriodData: CreateServingPeriod,
+): Promise<GetServingPeriod> {
+  const vendorId = await getVendorId();
+  const { data, error } = await supabase.rpc("create_serving_period", {
+    p_vendor_id: vendorId,
+    p_day_of_week: servingPeriodData.day_of_week,
+    p_period: servingPeriodData.period,
+    p_start_time: servingPeriodData.start_time,
+    p_end_time: servingPeriodData.end_time,
+    p_capacity: servingPeriodData.capacity,
+  });
+
+  if (error) {
+    throw new Error(`Create serving period failed: ${error.message}`);
+  }
+  return data as GetServingPeriod;
 }

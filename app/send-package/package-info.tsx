@@ -112,7 +112,6 @@ const ItemInfo = () => {
         queryKey: ["delivery-orders"],
       });
 
-      // showInfo("Payment Successful", "Please select a rider ");
       reset();
 
       router.push({

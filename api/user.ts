@@ -1,8 +1,10 @@
 import {
   CreateRiderData,
   DispatchRidersResponse,
+  GetUserWalletDetailsResponse,
   LocationCoordinates,
   NearbyVendorsResponse,
+  PayoutAccount,
   RiderResponse,
   UpdateLocationResponse,
   UpdateRiderData,
@@ -21,7 +23,7 @@ import { ErrorResponse } from "./auth";
 import { RequireDelivery } from "@/types/order-types";
 
 const BASE_URL = "/users";
-const AUTH_URL = "/auth";
+const BENEFICIARIES_URL = "/beneficiaries";
 
 export interface ImageData {
   uri: string;
@@ -471,6 +473,40 @@ export const fetchServiceProviders = async (
     }
 
     return data as UserProfile[];
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const fetchUserTransactions = async (
+  userId: string,
+  pageParam: number = 0,
+  limit: number = 15,
+): Promise<GetUserWalletDetailsResponse> => {
+  try {
+    // Ensure user is authenticated
+    const { data: session, error: sessionError } =
+      await supabase.auth.getSession();
+
+    if (sessionError || !session) {
+      throw new Error("User not authenticated");
+    }
+
+    // Get user wallet via rpc
+    const { data, error } = await supabase.rpc(
+      "get_user_wallet_details_paginated",
+      {
+        p_user_id: userId,
+        p_limit: limit,
+        p_offset: pageParam * limit,
+      },
+    );
+
+    if (error) {
+      throw new Error(error.message || "Failed to fetch user wallet");
+    }
+
+    return data as GetUserWalletDetailsResponse;
   } catch (error) {
     throw error;
   }
@@ -1099,3 +1135,18 @@ export async function fetchVendorAvailability(): Promise<VendorAvailability[]> {
 //   console.log("Available slots:", data);
 //   return (data ?? []) as AvailableSlot[];
 // }
+
+export const createPayoutAccount = async (payoutAccount: PayoutAccount) => {
+  try {
+    const response = await apiClient.post(BENEFICIARIES_URL, payoutAccount, {
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    return response.data;
+  } catch (err) {
+    console.error("Create payout account failed:", err);
+    throw err;
+  }
+};

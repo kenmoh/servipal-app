@@ -1,4 +1,9 @@
-import { deleteUserAccount, fetchBanks, resolveBank, updateCurrentUserProfile } from "@/api/user";
+import {
+  deleteUserAccount,
+  fetchBanks,
+  resolveBank,
+  updateCurrentUserProfile,
+} from "@/api/user";
 import AppModal from "@/components/AppModal";
 import AppPicker from "@/components/AppPicker";
 import BankSelectionSheet from "@/components/BankSelectionSheet";
@@ -282,7 +287,7 @@ const UpdateProfile = () => {
         />
         <ScrollView
           className="flex-1"
-          contentContainerStyle={{ paddingBottom: 300 }}
+          contentContainerStyle={{ paddingBottom: 200 }}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
@@ -537,7 +542,7 @@ const UpdateProfile = () => {
             )}
 
             {/* BANKING INFO */}
-            <View>
+            {/* <View>
               <Text className="text-secondary font-poppins-semibold text-base mt-4 mb-2">
                 Payout Account Information
               </Text>
@@ -607,8 +612,8 @@ const UpdateProfile = () => {
                   />
                 )}
               />
-            </View>
-
+            </View> */}
+            {/* 
             {user?.user_metadata?.user_type !== "RIDER" && (
               <Controller
                 control={control}
@@ -629,7 +634,7 @@ const UpdateProfile = () => {
                   />
                 )}
               />
-            )}
+            )} */}
 
             <View className="mt-5 mb-10">
               <AppButton

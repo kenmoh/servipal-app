@@ -523,13 +523,27 @@ const ProfileScreen = () => {
                 </>
               )}
               {user?.user_metadata?.user_type !== "RIDER" && (
-                <AppLink
-                  onPress={() => router.push("/wallet")}
-                  name="Wallet"
-                  icon={
-                    <Ionicons name="wallet-outline" size={18} color="gray" />
-                  }
-                />
+                <>
+                  <AppLink
+                    onPress={() => router.push("/wallet/all-transactions")}
+                    name="Transactions"
+                    icon={
+                      <Ionicons
+                        name="swap-horizontal-outline"
+                        size={18}
+                        color="gray"
+                      />
+                    }
+                  />
+                  <HDivider />
+                  <AppLink
+                    onPress={() => router.push("/wallet/add-payout-account")}
+                    name="Payout Account"
+                    icon={
+                      <Ionicons name="card-outline" size={18} color="gray" />
+                    }
+                  />
+                </>
               )}
 
               <HDivider />
@@ -841,12 +855,7 @@ const AppLink = ({
         </View>
         <Text className="text-muted">{name}</Text>
       </View>
-      <Ionicons
-        name="chevron-forward"
-        size={18}
-        color="gray"
-        onPress={() => router.push("/change-password")}
-      />
+      <Ionicons name="chevron-forward" size={18} color="gray" />
     </Pressable>
   );
 };

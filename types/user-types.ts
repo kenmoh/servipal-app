@@ -101,6 +101,7 @@ export interface UserProfileUpdate {
   business_registration_number?: string; // FOR RESTAURANT_VENDOR, DISPATCH AND LAUNDRY_VENDOR
   pickup_and_delivery_charge?: number | string; // FOR RESTAURANT_VENDOR AND LAUNDRY_VENDOR
   store_name?: string; // CUSTOMER
+  enable_reservation?: boolean;
 }
 
 export interface ImageUrl {
@@ -397,4 +398,53 @@ export interface VendorAvailability {
   express_fee: number; // express fee amount (0 if not express)
   created_at: string; // ISO timestamp
   updated_at: string; // ISO timestamp
+}
+
+export interface PayoutAccount {
+  account_bank: string;
+  account_number: string;
+  beneficiary_name: string;
+  bank_name: string;
+}
+
+export interface WalletDetails {
+  id: string;
+  balance: number;
+  escrow_balance: number;
+}
+
+export interface UserSummary {
+  full_name: string | null;
+  business_name: string | null;
+  store_name: string | null;
+}
+
+export interface TransactionDetails {
+  id: string;
+
+  tx_ref: string | null;
+  wallet_id: string;
+
+  amount: number;
+  transaction_type: string;
+  payment_status: string;
+  payment_method: string | null;
+
+  from_user_id: string | null;
+  to_user_id: string | null;
+
+  order_id: string | null;
+  order_type: string | null;
+
+  details: any;
+
+  created_at: string;
+
+  from_user: UserSummary | null;
+  to_user: UserSummary | null;
+}
+
+export interface GetUserWalletDetailsResponse {
+  wallet: WalletDetails;
+  transactions: TransactionDetails[];
 }
