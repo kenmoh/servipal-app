@@ -79,8 +79,7 @@ export interface OrderCreate {
   delivery_time?: string;
   is_express?: boolean;
   express_fee?: number;
-  // express_delivery_date?: string; // YYYY-MM-DD
-  // express_delivery_time?: string; // ISO slot start time
+  idempotencyKey?: string;
 }
 
 export interface RestaurantOrderCreate extends OrderCreate {

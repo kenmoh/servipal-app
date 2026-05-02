@@ -36,7 +36,7 @@ export interface RegisterResponse {
   email: string;
   phoneNumber: string;
   userType?: string;
-}
+}  
 export interface ErrorResponse {
   detail: string;
 }

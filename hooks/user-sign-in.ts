@@ -8,10 +8,12 @@ import * as Sentry from "@sentry/react-native";
 import { AuthError } from "@supabase/supabase-js";
 import { useMutation } from "@tanstack/react-query";
 import { router } from "expo-router";
+import { usePostHog } from "posthog-react-native";
 
 export const useSignIn = () => {
   const { showError } = useToast();
   const { setUser } = useUserStore();
+  const posthog = usePostHog();
 
   const signInMutation = useMutation({
     mutationFn: async ({ identifier, password }: SignInFormValues) => {
@@ -47,6 +49,9 @@ export const useSignIn = () => {
 
     onError: (error: AuthError | Error) => {
       Sentry.captureException(error, { tags: { action: "sign_in" } });
+      posthog.capture("sign_in_failed", {
+        error_message: error.message,
+      });
 
       let errorMessage = "Login failed. Please try again.";
 
@@ -75,6 +80,15 @@ export const useSignIn = () => {
         category: "auth",
         message: "User signed in successfully",
         level: "info",
+      });
+
+      posthog.identify(data.user.id, {
+        email: data.user.email,
+        user_type: data.user.user_metadata?.user_type,
+        $set_once: { first_sign_in_date: new Date().toISOString() },
+      });
+      posthog.capture("sign_in", {
+        user_type: data.user.user_metadata?.user_type,
       });
 
       try {

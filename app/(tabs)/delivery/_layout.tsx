@@ -4,6 +4,7 @@ import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useUserStore } from "@/store/userStore";
 import EvilIcons from "@expo/vector-icons/EvilIcons";
 import Fontisto from "@expo/vector-icons/Fontisto";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { useQuery } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import { router, Stack } from "expo-router";
@@ -25,6 +26,13 @@ const DeliveryLayout = () => {
             <TouchableOpacity onPress={() => router.push("/riders")}>
               <Fontisto
                 name="motorcycle"
+                size={24}
+                color={theme === "dark" ? HEADER_BG_LIGHT : HEADER_BG_DARK}
+              />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => router.push("/restaurant-reservation")}>
+              <Ionicons
+                name="calendar-outline"
                 size={24}
                 color={theme === "dark" ? HEADER_BG_LIGHT : HEADER_BG_DARK}
               />

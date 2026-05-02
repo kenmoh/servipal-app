@@ -27,6 +27,8 @@ import { AppButton } from "@/components/ui/app-button";
 import { AppTextInput } from "@/components/ui/app-text-input";
 import { useUserStore } from "@/store/userStore";
 import { getDirections } from "@/utils/map";
+import { generateIdempotencyKey } from "@/utils/utils";
+import { usePostHog } from "posthog-react-native";
 import { z } from "zod";
 
 const coordinatesSchema = z.tuple([
@@ -61,8 +63,10 @@ const ItemInfo = () => {
 
   const { showError, showInfo } = useToast();
   const { user } = useUserStore();
+  const posthog = usePostHog();
   const [duration, setDuration] = useState("");
   const [distance, setDistance] = useState(0);
+  const [idempotencyKey] = useState(generateIdempotencyKey());
 
   // Initialize form with empty values
   const {
@@ -112,6 +116,12 @@ const ItemInfo = () => {
         queryKey: ["delivery-orders"],
       });
 
+      posthog.capture("delivery_order_submitted", {
+        distance_km: data.distance,
+        amount: data.amount,
+        package_name: data.package_name,
+      });
+
       reset();
 
       router.push({
@@ -139,12 +149,15 @@ const ItemInfo = () => {
     onError: (error) => {
       const errorMessage =
         error instanceof Error ? error.message : "An unexpected error occurred";
+      posthog.capture("delivery_order_failed", {
+        error_message: errorMessage,
+      });
       showError("Error", errorMessage);
     },
   });
 
   const onSubmit = (data: FormData) => {
-    mutate(data);
+    mutate({ ...data, idempotencyKey });
   };
 
   // Update form from Zustand state

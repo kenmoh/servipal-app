@@ -190,7 +190,14 @@ export const initiateLaundryOrderPayment = async (
 ): Promise<InitiatePaymentResponse> => {
   console.log(item);
   try {
-    const response = await apiClient.post(`${BASE_URL}/initiate-payment`, item);
+    const response = await apiClient.post(`${BASE_URL}/initiate-payment`, item, {
+      headers: {
+        "Content-Type": "application/json",
+        ...(item.idempotencyKey && {
+          "X-Idempotency-Key": item.idempotencyKey,
+        }),
+      },
+    });
 
     if (!response.ok) {
       const errorData = response.data as any;

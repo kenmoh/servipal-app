@@ -21,6 +21,9 @@ import {
   Text,
   View,
 } from "react-native";
+import { generateIdempotencyKey } from "@/utils/utils";
+import { PayoutAccount } from "@/types/user-types";
+import { usePostHog } from "posthog-react-native";
 import { z } from "zod";
 
 const payoutAccountSchema = z.object({
@@ -36,6 +39,8 @@ const CreatePayoutAccountScreen = () => {
   const { showSuccess, showError } = useToast();
   const bankSheetRef = React.useRef<BottomSheetModal>(null);
   const queryClient = useQueryClient();
+  const posthog = usePostHog();
+  const [idempotencyKey] = useState(generateIdempotencyKey());
 
   const { data: banks } = useQuery({
     queryKey: ["banks"],
@@ -91,8 +96,9 @@ const CreatePayoutAccountScreen = () => {
   }, [account_number, account_bank, setValue, showError]);
 
   const { mutate, isPending } = useMutation({
-    mutationFn: (data: PayoutAccountForm) => createPayoutAccount(data),
+    mutationFn: (data: PayoutAccount) => createPayoutAccount(data),
     onSuccess: () => {
+      posthog.capture("payout_account_created");
       showSuccess("Success", "Payout account created successfully.");
       queryClient.invalidateQueries();
       router.back();
@@ -106,13 +112,13 @@ const CreatePayoutAccountScreen = () => {
   });
 
   const onSubmit = (data: PayoutAccountForm) => {
-    console.log(data);
+    
     Sentry.addBreadcrumb({
       category: "payout",
       message: "Payout account created",
       level: "info",
     });
-    mutate(data);
+    mutate({ ...data, idempotencyKey });
   };
 
   return (

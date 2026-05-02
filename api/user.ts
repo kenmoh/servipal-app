@@ -1141,6 +1141,9 @@ export const createPayoutAccount = async (payoutAccount: PayoutAccount) => {
     const response = await apiClient.post(BENEFICIARIES_URL, payoutAccount, {
       headers: {
         "Content-Type": "application/json",
+        ...(payoutAccount.idempotencyKey && {
+          "X-Idempotency-Key": payoutAccount.idempotencyKey,
+        }),
       },
     });
 

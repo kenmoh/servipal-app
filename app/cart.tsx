@@ -22,6 +22,7 @@ import { useLocationStore } from "@/store/locationStore";
 import { useUserStore } from "@/store/userStore";
 import { OrderCreate, RestaurantOrderCreate } from "@/types/item-types";
 import { RequireDelivery } from "@/types/order-types";
+import { generateIdempotencyKey } from "@/utils/utils";
 import { supabase } from "@/utils/supabase";
 import Feather from "@expo/vector-icons/Feather";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
@@ -110,6 +111,7 @@ const chunk = <T,>(arr: T[], size: number): T[][] => {
 // ─── Component ──────────────────────────────────────────────────────────────
 const Cart = () => {
   const [instructions, setInstructions] = useState("");
+  const [idempotencyKey] = useState(generateIdempotencyKey());
   const [modalVisible, setModalVisible] = useState(false);
   const [modalFullyOpen, setModalFullyOpen] = useState(false);
   const theme = useColorScheme();
@@ -508,6 +510,7 @@ const Cart = () => {
           delivery_time: cart.express_delivery_slot_start,
         }),
       }),
+      idempotencyKey,
     };
 
     if (isLaundryOrder) {

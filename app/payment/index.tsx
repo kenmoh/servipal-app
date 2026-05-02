@@ -1,15 +1,13 @@
-import { payWithWallet, PayWithWalletData } from "@/api/payment";
 import HDivider from "@/components/HDivider";
-import LoadingIndicator from "@/components/LoadingIndicator";
 import { useToast } from "@/components/ToastProvider";
-import { AppButton } from "@/components/ui/app-button";
 import { useCartStore } from "@/store/cartStore";
 import { useUserStore } from "@/store/userStore";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
 import { PayWithFlutterwave } from "flutterwave-react-native";
 import { RedirectParams } from "flutterwave-react-native/dist/PayWithFlutterwave";
+import { usePostHog } from "posthog-react-native";
 import React from "react";
 import { ActivityIndicator, Text, TouchableOpacity, View } from "react-native";
 
@@ -21,6 +19,7 @@ interface WalletPaymentResponse {
 const payment = () => {
   const { showSuccess, showError } = useToast();
   const user = useUserStore((state) => state.user);
+  const posthog = usePostHog();
   const queryClient = useQueryClient();
   const {
     logo,
@@ -101,6 +100,13 @@ const payment = () => {
   };
 
   const handleOnRedirect = (data: RedirectParams) => {
+    posthog.capture("payment_completed", {
+      tx_ref: data.tx_ref,
+      status: data.status,
+      amount: Number(amount),
+      service_type: serviceType ?? null,
+      currency: "NGN",
+    });
     clearCart();
     redirect(data);
   };

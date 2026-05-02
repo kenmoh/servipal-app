@@ -13,11 +13,12 @@ import {
   CreateReservationIntent,
   GetServingPeriod,
 } from "@/types/reservation-types";
-import { formatReservationDate } from "@/utils/utils";
+import { formatReservationDate, generateIdempotencyKey } from "@/utils/utils";
 import { Ionicons } from "@expo/vector-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { router, useLocalSearchParams, useRouter } from "expo-router";
+import { usePostHog } from "posthog-react-native";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
@@ -74,6 +75,8 @@ export default function CreateReservation() {
   const { profile: currentUserProfile } = useUserStore();
   const { showSuccess, showError } = useToast();
   const queryClient = useQueryClient();
+  const posthog = usePostHog();
+  const [idempotencyKey] = useState(generateIdempotencyKey());
 
   const isOwnStore = storeId === currentUserProfile?.id;
 
@@ -194,6 +197,13 @@ export default function CreateReservation() {
     mutationFn: (data: CreateReservationIntent) =>
       createReservationIntent(data),
     onSuccess: (data) => {
+      posthog.capture("reservation_created", {
+        vendor_id: storeId,
+        party_size: partySize,
+        serving_period: servingPeriod,
+        reservation_date: selectedDate,
+        deposit_amount: (policy?.min_deposit_adult || 0) * numberOfAdults,
+      });
       showSuccess("Success", "Your reservation has been requested!");
       queryClient.invalidateQueries({ queryKey: ["customer-reservations"] });
       router.push({
@@ -213,6 +223,10 @@ export default function CreateReservation() {
       });
     },
     onError: (error: Error) => {
+      posthog.capture("reservation_failed", {
+        vendor_id: storeId,
+        error_message: error.message,
+      });
       showError("Error", error.message || "Failed to create reservation");
     },
   });
@@ -246,6 +260,7 @@ export default function CreateReservation() {
       min_deposit_adult: policy?.min_deposit_adult || 0,
       day_of_week: dayOfWeek.toString(),
       business_name: vendorProfile?.business_name || "Restaurant",
+      idempotencyKey,
     });
   };
 

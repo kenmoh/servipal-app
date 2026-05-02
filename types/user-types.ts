@@ -405,6 +405,7 @@ export interface PayoutAccount {
   account_number: string;
   beneficiary_name: string;
   bank_name: string;
+  idempotencyKey?: string;
 }
 
 export interface WalletDetails {

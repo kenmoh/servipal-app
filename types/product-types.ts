@@ -69,6 +69,7 @@ export interface ProductOrderCreateRequest {
   delivery_option: "PICKUP" | "VENDOR_DELIVERY";
   delivery_address?: string;
   additional_info?: string;
+  idempotencyKey?: string;
 }
 
 export type OrderRole = "CUSTOMER" | "VENDOR";

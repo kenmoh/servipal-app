@@ -1,6 +1,6 @@
 import ToastProvider from "@/components/ToastProvider";
 import { ThemeTransitionOverlay } from "@/components/ThemeTransitionOverlay";
-import { PostHogProvider } from "posthog-react-native";
+import { PostHogProvider, usePostHog } from "posthog-react-native";
 import { HEADER_BG_DARK, HEADER_BG_LIGHT } from "@/constants/theme";
 import "@/global.css";
 import { useTheme } from "@/hooks/theme-toggle";
@@ -13,12 +13,31 @@ import * as Sentry from "@sentry/react-native";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useFonts } from "expo-font";
 import * as Linking from "expo-linking";
-import { router, SplashScreen, Stack } from "expo-router";
+import { router, SplashScreen, Stack, usePathname, useGlobalSearchParams } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
+
+function ScreenTracker() {
+  const posthog = usePostHog();
+  const pathname = usePathname();
+  const params = useGlobalSearchParams();
+  const previousPathname = useRef<string | undefined>(undefined);
+
+  useEffect(() => {
+    if (previousPathname.current !== pathname) {
+      posthog.screen(pathname, {
+        previous_screen: previousPathname.current ?? null,
+        ...params,
+      });
+      previousPathname.current = pathname;
+    }
+  }, [pathname, params]);
+
+  return null;
+}
 
 Sentry.init({
   dsn: "https://945bccd1ed4b5bcb5eab8cf7e3c776fa@o4505603287023616.ingest.us.sentry.io/4510143988629504",
@@ -143,11 +162,12 @@ export default Sentry.wrap(function RootLayout() {
         <KeyboardProvider>
           <QueryClientProvider client={queryClient}>
             <PostHogProvider
-              apiKey={"phc_zSPBeTZ8XvkcaR9JsDvvMrK8Lxcm2ebnwzXDeoRvGVhm"}
+              apiKey={process.env.EXPO_PUBLIC_POSTHOG_KEY!}
               options={{
                 host: process.env.EXPO_PUBLIC_POSTHOG_HOST!,
               }}
             >
+              <ScreenTracker />
               <BottomSheetModalProvider>
                 <ToastProvider>
                   {/* <ThemeTransitionOverlay /> */}

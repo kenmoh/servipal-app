@@ -464,6 +464,7 @@ export const sendItem = async (
       {
         headers: {
           "Content-Type": "multipart/form-data",
+          ...(item.idempotencyKey && { "X-Idempotency-Key": item.idempotencyKey }),
         },
       },
     );

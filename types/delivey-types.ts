@@ -69,6 +69,7 @@ export interface SendItem {
   pickupLng: number | null;
   dropoffLat: number | null;
   dropoffLng: number | null;
+  idempotencyKey?: string;
 }
 export interface DeliveryOrdersResponse {
   orders: DeliveryOrder[];

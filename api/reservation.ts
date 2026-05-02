@@ -14,10 +14,11 @@ import {
   UpdateServingPeriod,
   ReservationPolicy,
   GetUserReservationsResponse,
+  UpdateReservationStatus,
 } from "@/types/reservation-types";
 import { apiClient } from "@/utils/client";
 import { supabase } from "@/utils/supabase";
-import { SupabaseClient } from "@supabase/supabase-js";
+
 
 const INTENT_URL = "/reservations";
 
@@ -231,18 +232,51 @@ export async function getUserReservations(params?: {
 /**
  * Update reservation status
  */
-export async function updateReservationStatus(
-  reservationId: string,
-  status: BookingStatus,
-): Promise<void> {
-  const vendorId = await getVendorId();
-  const { error } = await supabase
-    .from("reservations")
-    .update({ status, updated_at: new Date().toISOString() })
-    .eq("id", reservationId)
-    .eq("vendor_id", vendorId);
+// export async function updateReservationStatus(
+//   reservationId: string,
+//   status: BookingStatus,
+// ): Promise<void> {
+//   const vendorId = await getVendorId();
+//   const { error } = await supabase
+//     .from("restaurant_reservations")
+//     .update({ reservation_status: status, updated_at: new Date().toISOString() })
+//     .eq("id", reservationId)
+//     .eq("vendor_id", vendorId);
 
-  if (error) throw new Error(`Update status failed: ${error.message}`);
+//   if (error) throw new Error(`Update status failed: ${error.message}`);
+// }
+
+export async function updateReservationStatus(
+  data: UpdateReservationStatus,
+): Promise<UpdateReservationStatus> {
+  try {
+    const { data: session, error } = await supabase.auth.getSession();
+    if (error) throw new Error(error.message);
+  
+    const response = await apiClient.put(
+      `${BASE_URL}/update-status`,
+      {new_status: data.new_status, reservation_id:data.reservation_id},
+      {
+        headers: {
+          "Content-Type": "application/json",
+          
+        },
+      },
+    );
+
+    if (!response.ok) {
+      const errorData = response.data as any;
+      throw new Error(
+        errorData?.detail ||
+          errorData?.message ||
+          "Failed to initiate delivery request",
+      );
+    }
+
+    return response.data as UpdateReservationStatus
+  } catch (error) {
+    throw error;
+  }
 }
 
 /**
@@ -317,6 +351,9 @@ export async function createReservationIntent(
       {
         headers: {
           "Content-Type": "application/json",
+          ...(data.idempotencyKey && {
+            "X-Idempotency-Key": data.idempotencyKey,
+          }),
         },
       },
     );

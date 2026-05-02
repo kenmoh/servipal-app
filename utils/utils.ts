@@ -15,3 +15,11 @@ export function formatReservationDate(isoString: string): string {
   const month = date.toLocaleDateString("en-US", { month: "long" });
   return `${day} ${dateNum} ${month}`;
 }
+
+export const generateIdempotencyKey = (): string => {
+  return (
+    Math.random().toString(36).substring(2, 15) +
+    Math.random().toString(36).substring(2, 15) +
+    Date.now().toString(36)
+  );
+};

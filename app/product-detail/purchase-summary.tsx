@@ -8,6 +8,7 @@ import { usePurchaseActions, usePurchaseSelectors } from "@/store/productStore";
 import { useUserStore } from "@/store/userStore";
 import { ProductOrderCreateRequest } from "@/types/product-types";
 import { navigateToPayment } from "@/utils/payment-utils";
+import { generateIdempotencyKey } from "@/utils/utils";
 import { Ionicons } from "@expo/vector-icons";
 import Feather from "@expo/vector-icons/Feather";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -27,6 +28,7 @@ import {
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 
 const PurchaseSummary = () => {
+  const [idempotencyKey] = React.useState(generateIdempotencyKey());
   const theme = useColorScheme();
   const router = useRouter();
   const { user } = useUserStore();
@@ -121,6 +123,7 @@ const PurchaseSummary = () => {
       delivery_option: deliveryOption,
       delivery_address: additionalInfo,
       additional_info: "",
+      idempotencyKey,
     };
 
     Alert.alert(

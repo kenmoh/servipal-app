@@ -30,6 +30,9 @@ export const initiateProductPayment = async (
       await apiClient.post(`${BASE_URL}/initiate-payment`, data, {
         headers: {
           "Content-Type": "application/json",
+          ...(data.idempotencyKey && {
+            "X-Idempotency-Key": data.idempotencyKey,
+          }),
         },
       });
 

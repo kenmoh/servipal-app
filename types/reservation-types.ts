@@ -67,6 +67,46 @@ export interface Reservation1 {
   };
 }
 
+export interface UpdateReservationStatus {
+  reservation_id: string
+  new_status: BookingStatus
+}
+
+export type UserRole = "customer" | "vendor";
+
+type RoleTransitions = Record<UserRole, BookingStatus[]>;
+
+const ALLOWED_TRANSITIONS: Record<BookingStatus, RoleTransitions> = {
+  PENDING: {
+    customer: ["COMPLETED", "CANCELLED"],
+    vendor: ["CONFIRMED", "CANCELLED", "NO_SHOW"],
+  },
+  CONFIRMED: {
+    customer: ["COMPLETED", "CANCELLED"],
+    vendor: ["CONFIRMED", "CANCELLED", "NO_SHOW"],
+  },
+  COMPLETED: { customer: [], vendor: [] },
+  CANCELLED: { customer: [], vendor: [] },
+  NO_SHOW:   { customer: [], vendor: [] },
+};
+
+export const ReservationStatusMachine = {
+  canTransition(
+    currentStatus: BookingStatus,
+    newStatus: BookingStatus,
+    role: UserRole,
+  ): boolean {
+    return ALLOWED_TRANSITIONS[currentStatus]?.[role]?.includes(newStatus) ?? false;
+  },
+
+  getAllowedTransitions(
+    currentStatus: BookingStatus,
+    role: UserRole,
+  ): BookingStatus[] {
+    return ALLOWED_TRANSITIONS[currentStatus]?.[role] ?? [];
+  },
+};
+
 // types/reservation.ts
 export type ProfileSummary = {
   full_name: string;
@@ -160,6 +200,7 @@ export interface CreateReservationIntent {
   day_of_week: string;
   notes?: string;
   business_name: string;
+  idempotencyKey?: string;
 }
 
 export type ServingPeriod = "BREAKFAST" | "LUNCH" | "DINNER";
