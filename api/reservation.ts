@@ -19,7 +19,6 @@ import {
 import { apiClient } from "@/utils/client";
 import { supabase } from "@/utils/supabase";
 
-
 const INTENT_URL = "/reservations";
 
 async function getVendorId() {
@@ -246,34 +245,37 @@ export async function getUserReservations(params?: {
 //   if (error) throw new Error(`Update status failed: ${error.message}`);
 // }
 
+const BASE_URL = "/reservations";
+
 export async function updateReservationStatus(
   data: UpdateReservationStatus,
 ): Promise<UpdateReservationStatus> {
   try {
     const { data: session, error } = await supabase.auth.getSession();
     if (error) throw new Error(error.message);
-  
+
     const response = await apiClient.put(
       `${BASE_URL}/update-status`,
-      {new_status: data.new_status, reservation_id:data.reservation_id},
+      { new_status: data.new_status, reservation_id: data.reservation_id },
       {
         headers: {
           "Content-Type": "application/json",
-          
         },
       },
     );
 
     if (!response.ok) {
       const errorData = response.data as any;
-      throw new Error(
-        errorData?.detail ||
-          errorData?.message ||
-          "Failed to initiate delivery request",
-      );
+      const errorMessage =
+        typeof errorData?.detail === "object"
+          ? errorData.detail.message
+          : errorData?.detail ||
+            errorData?.message ||
+            "Failed to update reservation status";
+      throw new Error(errorMessage);
     }
 
-    return response.data as UpdateReservationStatus
+    return response.data as UpdateReservationStatus;
   } catch (error) {
     throw error;
   }
@@ -336,7 +338,6 @@ export async function getVendorReservationRules(
 /**
  * Customer: Create a new reservation intent
  */
-const BASE_URL = "/reservations";
 
 export async function createReservationIntent(
   data: CreateReservationIntent,
@@ -360,11 +361,13 @@ export async function createReservationIntent(
 
     if (!response.ok) {
       const errorData = response.data as any;
-      throw new Error(
-        errorData?.detail ||
-          errorData?.message ||
-          "Failed to initiate delivery request",
-      );
+      const errorMessage =
+        typeof errorData?.detail === "object"
+          ? errorData.detail.message
+          : errorData?.detail ||
+            errorData?.message ||
+            "Failed to initiate reservation";
+      throw new Error(errorMessage);
     }
 
     return response.data as InitiatePaymentResponse;
@@ -457,7 +460,7 @@ export async function updateServingPeriod(
 export async function deleteServingPeriod(id: string): Promise<void> {
   const vendorId = await getVendorId();
   const { error } = await supabase
-    .from("serving_periods")
+    .from("restaurant_serving_periods")
     .delete()
     .eq("id", id)
     .eq("vendor_id", vendorId);

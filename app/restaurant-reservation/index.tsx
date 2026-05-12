@@ -23,7 +23,9 @@ import { format, parseISO } from "date-fns";
 import { Stack, useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
+  Modal,
   Pressable,
   RefreshControl,
   Text,
@@ -31,12 +33,7 @@ import {
   useColorScheme,
   View,
 } from "react-native";
-import Animated, {
-  FadeIn,
-  FadeOut,
-  ZoomIn,
-  ZoomOut,
-} from "react-native-reanimated";
+import Animated, { ZoomIn, ZoomOut } from "react-native-reanimated";
 import ServingPeriodFormSheet from "./serving-period-form-sheet";
 
 // ---------------------------------------------------------------------------
@@ -51,24 +48,57 @@ type ActionConfig = {
 };
 
 const VENDOR_ACTIONS: ActionConfig[] = [
-  { status: "CONFIRMED", label: "Confirm",  icon: "checkmark-circle-outline", color: "#22c55e" },
-  { status: "CANCELLED", label: "Cancel",   icon: "close-circle-outline",     color: "#ef4444" },
-  { status: "NO_SHOW",   label: "No Show",  icon: "person-remove-outline",    color: "#9ba1a6" },
+  {
+    status: "CONFIRMED",
+    label: "Confirm",
+    icon: "checkmark-circle-outline",
+    color: "#22c55e",
+  },
+  {
+    status: "CANCELLED",
+    label: "Cancel",
+    icon: "close-circle-outline",
+    color: "#ef4444",
+  },
+  {
+    status: "NO_SHOW",
+    label: "No Show",
+    icon: "person-remove-outline",
+    color: "#9ba1a6",
+  },
 ];
 
 const CUSTOMER_ACTIONS: ActionConfig[] = [
-  { status: "COMPLETED", label: "Mark Completed", icon: "checkmark-done-outline", color: "#3b82f6" },
-  { status: "CANCELLED", label: "Cancel",          icon: "close-circle-outline",   color: "#ef4444" },
+  {
+    status: "COMPLETED",
+    label: "Mark Completed",
+    icon: "checkmark-done-outline",
+    color: "#3b82f6",
+  },
+  {
+    status: "CANCELLED",
+    label: "Cancel",
+    icon: "close-circle-outline",
+    color: "#ef4444",
+  },
 ];
 
 const TABS: { label: string; value: string }[] = [
   { label: "Upcoming", value: "upcoming" },
-  { label: "Pending",  value: "PENDING"  },
-  { label: "History",  value: "history"  },
-  { label: "Periods",  value: "periods"  },
+  { label: "Pending", value: "PENDING" },
+  { label: "History", value: "history" },
+  { label: "Periods", value: "periods" },
 ];
 
-const DAYS = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+const DAYS = [
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+];
 
 // ---------------------------------------------------------------------------
 // Context menu component
@@ -92,30 +122,26 @@ function ReservationContextMenu({
   colorScheme,
 }: ContextMenuProps) {
   const isDark = colorScheme === "dark";
-  const menuBg    = isDark ? "#1c1c1e" : "#ffffff";
+  const menuBg = isDark ? "#1c1c1e" : "#ffffff";
   const borderCol = isDark ? "#2c2c2e" : "#e5e7eb";
   const dividerCol = isDark ? "#2c2c2e" : "#f3f4f6";
 
   return (
     <>
-      {/* Invisible full-screen dismiss layer — no dimming */}
-      <Animated.View
-        entering={FadeIn.duration(120)}
-        exiting={FadeOut.duration(120)}
+      {/* Transparent backdrop to catch outside taps — use absolute positioning to cover screen */}
+      <Pressable
         style={{
           position: "absolute",
-          top: -9999,
-          left: -9999,
-          right: -9999,
-          bottom: -9999,
-          zIndex: 10,
+          top: -1000,
+          left: -1000,
+          right: -1000,
+          bottom: -1000,
+          zIndex: 998,
         }}
-        pointerEvents="box-only"
-      >
-        <Pressable style={{ flex: 1 }} onPress={onDismiss} />
-      </Animated.View>
+        onPress={onDismiss}
+      />
 
-      {/* The menu card itself */}
+      {/* Menu card — rendered inline, floats above via zIndex */}
       <Animated.View
         entering={ZoomIn.duration(160).springify().damping(18).stiffness(260)}
         exiting={ZoomOut.duration(120)}
@@ -123,7 +149,7 @@ function ReservationContextMenu({
           position: "absolute",
           top: 36,
           right: 0,
-          zIndex: 20,
+          zIndex: 999,
           width: 190,
           borderRadius: 14,
           backgroundColor: menuBg,
@@ -138,7 +164,7 @@ function ReservationContextMenu({
         }}
       >
         {actions.map((action, index) => {
-          const isActive  = currentStatus === action.status;
+          const isActive = currentStatus === action.status;
           const isAllowed = ReservationStatusMachine.canTransition(
             currentStatus,
             action.status,
@@ -154,7 +180,9 @@ function ReservationContextMenu({
               <TouchableOpacity
                 disabled={isDisabled}
                 activeOpacity={0.6}
-                onPress={() => onSelect(action.status)}
+                onPress={() => {
+                  onSelect(action.status);
+                }}
                 style={{
                   flexDirection: "row",
                   alignItems: "center",
@@ -175,7 +203,9 @@ function ReservationContextMenu({
                       fontSize: 13,
                       fontFamily: "Poppins-Medium",
                       color: isDisabled
-                        ? isDark ? "#6b7280" : "#9ca3af"
+                        ? isDark
+                          ? "#6b7280"
+                          : "#9ca3af"
                         : action.color,
                     }}
                   >
@@ -190,7 +220,7 @@ function ReservationContextMenu({
                         marginTop: 1,
                       }}
                     >
-                      Current status
+                      {"Current status"}
                     </Text>
                   )}
                 </View>
@@ -216,6 +246,7 @@ type ReservationCardProps = {
   actionList: ActionConfig[];
   onStatusSelect: (reservationId: string, status: BookingStatus) => void;
   colorScheme: string | null | undefined;
+  isUpdating?: boolean;
 };
 
 function ReservationCard({
@@ -224,6 +255,7 @@ function ReservationCard({
   actionList,
   onStatusSelect,
   colorScheme,
+  isUpdating,
 }: ReservationCardProps) {
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -232,30 +264,36 @@ function ReservationCard({
     : `${item.reservation_date}T${item.reservation_time}`;
   const reservationDateTime = parseISO(dateStr);
   const currentStatus = item.reservation_status as BookingStatus;
-  const isTerminal = ["COMPLETED", "CANCELLED", "NO_SHOW"].includes(currentStatus);
+  const isTerminal = ["COMPLETED", "CANCELLED", "NO_SHOW"].includes(
+    currentStatus,
+  );
 
   return (
-    <View
-      className="bg-input m-2 p-4 rounded-2xl shadow-sm border border-border-subtle"
-      style={{ zIndex: menuOpen ? 100 : 1 }}
-    >
+    <View className="bg-input m-2 p-4 " style={{ zIndex: menuOpen ? 100 : 1 }}>
       <View className="flex-row justify-between items-start mb-3">
         <View className="flex-1">
           <Text className="text-primary font-poppins-semibold text-lg">
             {item.counterparty?.full_name || "Guest"}
           </Text>
           <Text className="text-secondary text-sm">
-            {format(reservationDateTime, "EEEE, MMM d")} at{" "}
-            {format(reservationDateTime, "h:mm a")}
+            {`${format(reservationDateTime, "EEEE, MMM d")} at ${format(reservationDateTime, "h:mm a")}`}
           </Text>
         </View>
 
         <View className="flex-row items-center gap-2">
-          <View className={`px-3 py-1 rounded-full ${getStatusColor(currentStatus)}`}>
-            <Text className="text-white text-xs font-poppins-medium uppercase">
-              {item.reservation_status}
-            </Text>
-          </View>
+          {isUpdating ? (
+            <View className="px-3 py-1">
+              <ActivityIndicator size="small" color="#FF8C00" />
+            </View>
+          ) : (
+            <View
+              className={`px-3 py-1 rounded-full ${getStatusColor(currentStatus)}`}
+            >
+              <Text className="text-white text-xs font-poppins-medium uppercase">
+                {item.reservation_status?.replace("_", " ")}
+              </Text>
+            </View>
+          )}
 
           {!isTerminal && (
             <View style={{ position: "relative" }}>
@@ -288,14 +326,23 @@ function ReservationCard({
       <View className="flex-row items-center gap-4">
         <View className="flex-row items-center gap-1">
           <Ionicons name="people-outline" size={16} color="gray" />
-          <Text className="text-muted text-sm">{item.party_size} People</Text>
+          <Text className="text-muted text-sm">{`${item.party_size} People`}</Text>
         </View>
         {item.deposit_paid && (
           <View className="flex-row items-center gap-1">
             <Ionicons name="card-outline" size={16} color="gray" />
-            <Text className="text-muted text-sm">Deposit Paid</Text>
+            <Text className="text-muted text-sm">{`Deposit: ₦${item.deposit_paid}`}</Text>
           </View>
         )}
+      </View>
+
+      <View className="flex-row items-center gap-4 mt-1">
+        <View className="flex-row items-center gap-1">
+          <Ionicons name="time-outline" size={14} color="gray" />
+          <Text className="text-muted text-[11px]">
+            {`Booked on: ${format(parseISO(item.created_at), "MMM d, yyyy 'at' h:mm a")}`}
+          </Text>
+        </View>
       </View>
 
       {item.notes && (
@@ -312,10 +359,12 @@ function ReservationCard({
 // ---------------------------------------------------------------------------
 
 export default function ReservationDashboard() {
-  const router = useRouter()
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState("upcoming");
   const [isSheetVisible, setIsSheetVisible] = useState(false);
-  const [selectedPeriod, setSelectedPeriod] = useState<GetServingPeriod | null>(null);
+  const [selectedPeriod, setSelectedPeriod] = useState<GetServingPeriod | null>(
+    null,
+  );
 
   const { profile, user } = useUserStore();
   const userType = user?.user_metadata?.user_type || profile?.user_type;
@@ -336,7 +385,11 @@ export default function ReservationDashboard() {
   useEffect(() => {
     const activeIndex = visibleTabs.findIndex((t) => t.value === activeTab);
     if (activeIndex !== -1 && tabsRef.current) {
-      tabsRef.current.scrollToIndex({ index: activeIndex, animated: true, viewPosition: 0.5 });
+      tabsRef.current.scrollToIndex({
+        index: activeIndex,
+        animated: true,
+        viewPosition: 0.5,
+      });
     }
   }, [activeTab, visibleTabs]);
 
@@ -372,8 +425,13 @@ export default function ReservationDashboard() {
     },
   });
 
-  const { mutate: updateStatus } = useMutation({
-    mutationFn: (data: UpdateReservationStatus) => updateReservationStatus(data),
+  const {
+    mutate: updateStatus,
+    isPending: isUpdatingStatus,
+    variables: updateVariables,
+  } = useMutation({
+    mutationFn: (data: UpdateReservationStatus) =>
+      updateReservationStatus(data),
     onSuccess: () => {
       showSuccess("Success", "Status updated");
       queryClient.invalidateQueries({ queryKey: ["vendor-reservations"] });
@@ -399,7 +457,11 @@ export default function ReservationDashboard() {
       "Are you sure you want to remove this serving period?",
       [
         { text: "Cancel", style: "cancel" },
-        { text: "Delete", style: "destructive", onPress: () => performDeletePeriod(id) },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => performDeletePeriod(id),
+        },
       ],
     );
   };
@@ -413,19 +475,23 @@ export default function ReservationDashboard() {
         : `${r.reservation_date}T${r.reservation_time}`;
       return r.reservation_status === "CONFIRMED" && new Date(ds) >= new Date();
     });
-    const pending = reservations.filter((r) => r.reservation_status === "PENDING");
+    const pending = reservations.filter(
+      (r) => r.reservation_status === "PENDING",
+    );
     const history = reservations.filter((r) => {
       const ds = r.reservation_date?.includes("T")
         ? r.reservation_date
         : `${r.reservation_date}T${r.reservation_time}`;
       return (
-        ["COMPLETED", "CANCELLED", "NO_SHOW"].includes(r.reservation_status || "") ||
+        ["COMPLETED", "CANCELLED", "NO_SHOW"].includes(
+          r.reservation_status || "",
+        ) ||
         (r.reservation_status === "CONFIRMED" && new Date(ds) < new Date())
       );
     });
 
     let current: GetUserReservationsItem[] = [];
-    if (activeTab === "upcoming")    current = upcoming;
+    if (activeTab === "upcoming") current = upcoming;
     else if (activeTab === "PENDING") current = pending;
     else if (activeTab === "history") current = history;
 
@@ -433,9 +499,9 @@ export default function ReservationDashboard() {
       filteredData: current,
       counts: {
         upcoming: upcoming.length,
-        PENDING:  pending.length,
-        history:  history.length,
-        periods:  servingPeriods?.length || 0,
+        PENDING: pending.length,
+        history: history.length,
+        periods: servingPeriods?.length || 0,
       },
     };
   }, [reservationsResponse, activeTab, servingPeriods]);
@@ -451,7 +517,9 @@ export default function ReservationDashboard() {
       .sort(([a], [b]) => Number(a) - Number(b))
       .map(([day, periods]) => ({
         day: Number(day),
-        periods: periods.sort((a, b) => a.start_time.localeCompare(b.start_time)),
+        periods: periods.sort((a, b) =>
+          a.start_time.localeCompare(b.start_time),
+        ),
       }));
   }, [servingPeriods]);
 
@@ -470,15 +538,14 @@ export default function ReservationDashboard() {
             {item.period}
             {!item.is_active && (
               <Text className="text-red-500 text-[9px] font-poppins ml-2 uppercase">
-                {"  "}(Inactive)
+                {`  (Inactive)`}
               </Text>
             )}
           </Text>
           <View className="flex-row items-center gap-1">
             <Ionicons name="time-outline" size={12} color="#666" />
             <Text className="text-muted text-xs">
-              {item.start_time.slice(0, 5)} - {item.end_time.slice(0, 5)}
-              {"  "}(Cap: {item.capacity})
+              {`${item.start_time.slice(0, 5)} - ${item.end_time.slice(0, 5)}  (Cap: ${item.capacity})`}
             </Text>
           </View>
         </View>
@@ -491,7 +558,11 @@ export default function ReservationDashboard() {
             "Are you sure you want to delete this serving period?",
             [
               { text: "Cancel", style: "cancel" },
-              { text: "Delete", onPress: () => handleDeletePeriod(item.id), style: "destructive" },
+              {
+                text: "Delete",
+                onPress: () => handleDeletePeriod(item.id),
+                style: "destructive",
+              },
             ],
           )
         }
@@ -515,10 +586,16 @@ export default function ReservationDashboard() {
           headerRight: () =>
             isVendor ? (
               <View className="flex-row items-center gap-4 mr-2">
-                <TouchableOpacity onPress={() => router.push("/restaurant-reservation/rules")}>
+                <TouchableOpacity
+                  onPress={() => router.push("/restaurant-reservation/rules")}
+                >
                   <Ionicons name="list-outline" size={24} color="#ccc" />
                 </TouchableOpacity>
-                <TouchableOpacity onPress={() => router.push("/restaurant-reservation/settings")}>
+                <TouchableOpacity
+                  onPress={() =>
+                    router.push("/restaurant-reservation/settings")
+                  }
+                >
                   <Ionicons name="settings-outline" size={24} color="#ccc" />
                 </TouchableOpacity>
               </View>
@@ -546,7 +623,7 @@ export default function ReservationDashboard() {
                   activeTab === tab.value ? "text-white" : "text-secondary"
                 }`}
               >
-                {tab.label} ({counts[tab.value as keyof typeof counts] || 0})
+                {`${tab.label} (${counts[tab.value as keyof typeof counts] || 0})`}
               </Text>
             </TouchableOpacity>
           )}
@@ -578,8 +655,13 @@ export default function ReservationDashboard() {
           ListEmptyComponent={
             <View className="flex-1 items-center justify-center pt-20">
               <Ionicons name="time-outline" size={64} color="#ddd" />
-              <Text className="text-muted font-poppins-medium mt-4">No serving periods set</Text>
-              <TouchableOpacity onPress={() => setIsSheetVisible(true)} className="mt-4">
+              <Text className="text-muted font-poppins-medium mt-4">
+                No serving periods set
+              </Text>
+              <TouchableOpacity
+                onPress={() => setIsSheetVisible(true)}
+                className="mt-4"
+              >
                 <Text className="text-button-primary font-poppins-semibold">
                   + Add your first period
                 </Text>
@@ -587,7 +669,10 @@ export default function ReservationDashboard() {
             </View>
           }
           refreshControl={
-            <RefreshControl refreshing={isRefetchingPeriods} onRefresh={refetchPeriods} />
+            <RefreshControl
+              refreshing={isRefetchingPeriods}
+              onRefresh={refetchPeriods}
+            />
           }
           contentContainerStyle={{ paddingBottom: 100, paddingTop: 20 }}
         />
@@ -600,16 +685,24 @@ export default function ReservationDashboard() {
               userRole={userRole}
               actionList={actionList}
               colorScheme={colorScheme}
-              onStatusSelect={(reservationId, status) =>
-                updateStatus({ reservation_id: reservationId, new_status: status })
+              isUpdating={
+                isUpdatingStatus && updateVariables?.reservation_id === item.id
               }
+              onStatusSelect={(reservationId, status) => {
+                updateStatus({
+                  reservation_id: reservationId,
+                  new_status: status,
+                });
+              }}
             />
           )}
           keyExtractor={(item) => item.id}
           ListEmptyComponent={
             <View className="flex-1 items-center justify-center pt-20">
               <Ionicons name="calendar-outline" size={64} color="#ddd" />
-              <Text className="text-muted font-poppins-medium mt-4">No reservations found</Text>
+              <Text className="text-muted font-poppins-medium mt-4">
+                No reservations found
+              </Text>
             </View>
           }
           refreshControl={
@@ -662,11 +755,17 @@ export default function ReservationDashboard() {
 
 const getStatusColor = (status: BookingStatus) => {
   switch (status) {
-    case "PENDING":   return "bg-amber-500/15";
-    case "CONFIRMED": return "bg-green-500/15";
-    case "COMPLETED": return "bg-blue-500/15";
-    case "CANCELLED": return "bg-red-500/15";
-    case "NO_SHOW":   return "bg-gray-500/15";
-    default:          return "bg-gray-400/15";
+    case "PENDING":
+      return "bg-amber-500/15";
+    case "CONFIRMED":
+      return "bg-green-500/15";
+    case "COMPLETED":
+      return "bg-blue-500/15";
+    case "CANCELLED":
+      return "bg-red-500/15";
+    case "NO_SHOW":
+      return "bg-gray-500/15";
+    default:
+      return "bg-gray-400/15";
   }
 };

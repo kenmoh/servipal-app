@@ -82,7 +82,10 @@ const ItemDetails = () => {
   });
   // Coordinate normalization: ensure [lat, lng]
   const normalizeCoords = (coords: any): [number, number] | null => {
-    if (!coords || !Array.isArray(coords) || coords.length < 2) return null;
+    if (!coords || !Array.isArray(coords) || coords.length < 2) {
+      console.warn("⚠️ normalizeCoords: invalid input", { coords, type: typeof coords, isArray: Array.isArray(coords) });
+      return null;
+    }
     const [c1, c2] = coords;
 
     if (c1 < c2 && c2 > 5.5 && c1 < 5) {
@@ -93,18 +96,31 @@ const ItemDetails = () => {
 
   useEffect(() => {
     if (data) {
+      console.log("📦 Delivery data coords:", {
+        pickup_coordinates: data.pickup_coordinates,
+        dropoff_coordinates: data.dropoff_coordinates,
+        pickup_location: data.pickup_location,
+        destination: data.destination,
+      });
+
       if (data.pickup_location && data.pickup_coordinates) {
         const normalized = normalizeCoords(data.pickup_coordinates);
+        console.log("📍 Origin normalized:", normalized);
         if (normalized) {
           setOrigin(data.pickup_location, normalized);
         }
+      } else {
+        console.warn("⚠️ Missing pickup data:", { pickup_location: data.pickup_location, pickup_coordinates: data.pickup_coordinates });
       }
 
       if (data.destination && data.dropoff_coordinates) {
         const normalized = normalizeCoords(data.dropoff_coordinates);
+        console.log("📍 Destination normalized:", normalized);
         if (normalized) {
           setDestination(data.destination, normalized);
         }
+      } else {
+        console.warn("⚠️ Missing dropoff data:", { destination: data.destination, dropoff_coordinates: data.dropoff_coordinates });
       }
     }
   }, [data, setOrigin, setDestination]);

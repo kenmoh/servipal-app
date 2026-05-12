@@ -78,16 +78,16 @@ type RoleTransitions = Record<UserRole, BookingStatus[]>;
 
 const ALLOWED_TRANSITIONS: Record<BookingStatus, RoleTransitions> = {
   PENDING: {
-    customer: ["COMPLETED", "CANCELLED"],
-    vendor: ["CONFIRMED", "CANCELLED", "NO_SHOW"],
+    customer: ["CONFIRMED", "CANCELLED"],
+    vendor: ["CONFIRMED", "CANCELLED"],
   },
   CONFIRMED: {
-    customer: ["COMPLETED", "CANCELLED"],
-    vendor: ["CONFIRMED", "CANCELLED", "NO_SHOW"],
+    customer: ["CANCELLED", "COMPLETED"],
+    vendor: ["NO_SHOW", "CANCELLED"],
   },
   COMPLETED: { customer: [], vendor: [] },
   CANCELLED: { customer: [], vendor: [] },
-  NO_SHOW:   { customer: [], vendor: [] },
+  NO_SHOW: { customer: [], vendor: [] },
 };
 
 export const ReservationStatusMachine = {

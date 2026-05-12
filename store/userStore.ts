@@ -28,10 +28,9 @@ import { create } from "zustand";
 // Configure how notifications should be handled when the app is in the foreground
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
-    shouldShowAlert: true,
+    shouldShowBanner: true,
     shouldPlaySound: true,
     shouldSetBadge: false,
-    shouldShowBanner: true,
     shouldShowList: true,
   }),
 });
@@ -618,29 +617,29 @@ export const useUserStore = create<UserStore>((set, get) => ({
               Sentry.logger.info(
                 `[Location] 🎯 FIRST position detected — sending immediately to server (userType=${userType})`,
               );
-              
+
               Sentry.addBreadcrumb({
                 category: "location",
                 message: `🎯 FIRST position — calling updatecurrentUserLocation`,
                 level: "info",
                 data: { latitude, longitude, userType, userId, isFirst: true },
               });
-              
+
               updatecurrentUserLocation({ latitude, longitude })
                 .then(() => {
                   set({ lastSentLocation: newLocation });
-                  
+
                   Sentry.logger.info(
                     `[Location] ✅ FIRST position sent successfully to server`,
                   );
-                  
+
                   Sentry.addBreadcrumb({
                     category: "location",
                     message: `✅ FIRST position update SUCCESS`,
                     level: "info",
                     data: { latitude, longitude, userType },
                   });
-                  
+
                   // If vendor, mark as captured
                   const vendorTypes = [
                     "RESTAURANT_VENDOR",
@@ -663,20 +662,20 @@ export const useUserStore = create<UserStore>((set, get) => ({
                   Sentry.logger.error(
                     `[Location] ❌ FIRST position update FAILED: ${error?.message || error}`,
                   );
-                  
+
                   Sentry.addBreadcrumb({
                     category: "location",
                     message: `❌ FIRST position update FAILED`,
                     level: "error",
-                    data: { 
+                    data: {
                       error: error?.message || String(error),
-                      latitude, 
-                      longitude, 
-                      userType, 
-                      userId 
+                      latitude,
+                      longitude,
+                      userType,
+                      userId,
                     },
                   });
-                  
+
                   Sentry.captureException(error, {
                     tags: { action: "update_first_location", isFirst: "true" },
                     extra: { latitude, longitude, userType, userId },
