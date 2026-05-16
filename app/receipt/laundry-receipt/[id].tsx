@@ -1,10 +1,11 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   ActivityIndicator,
   Dimensions,
   Pressable,
   ScrollView,
   Text,
+  TouchableOpacity,
   View,
 } from "react-native";
 
@@ -15,16 +16,231 @@ import { AppButton } from "@/components/ui/app-button";
 import { HEADER_BG_DARK, HEADER_BG_LIGHT } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useUserStore } from "@/store/userStore";
-import { DetailResponse, OrderItem } from "@/types/order-types";
+import { DetailResponse, OrderItem, OrderStatus } from "@/types/order-types";
 import { getButtonConfig } from "@/utils/button-config";
 import { AntDesign, MaterialCommunityIcons } from "@expo/vector-icons";
 import Feather from "@expo/vector-icons/Feather";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Directory, File, Paths } from "expo-file-system";
 import * as Print from "expo-print";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import * as Sharing from "expo-sharing";
+import Animated, { ZoomIn, ZoomOut } from "react-native-reanimated";
+
+type StatusAction = {
+  status: OrderStatus;
+  label: string;
+  icon: string;
+  color: string;
+};
+
+const getStatusActions = (orderType: "FOOD" | "LAUNDRY"): StatusAction[] => [
+  {
+    status: "PENDING",
+    label: "Pending",
+    icon: "time-outline",
+    color: "#9CA3AF",
+  },
+  {
+    status: "PREPARING",
+    label: orderType === "LAUNDRY" ? "Washing" : "Preparing",
+    icon: orderType === "LAUNDRY" ? "color-wand-outline" : "flame-outline",
+    color: "#2196F3",
+  },
+  {
+    status: "READY",
+    label: "Ready",
+    icon: "checkmark-circle-outline",
+    color: "#FF9800",
+  },
+  {
+    status: "IN_TRANSIT",
+    label: "In Transit",
+    icon: "car-outline",
+    color: "#9C27B0",
+  },
+  {
+    status: "DELIVERED",
+    label: "Delivered",
+    icon: "bag-check-outline",
+    color: "#4CAF50",
+  },
+  {
+    status: "COMPLETED",
+    label: "Completed",
+    icon: "checkmark-done-circle-outline",
+    color: "#4CAF50",
+  },
+  {
+    status: "CANCELLED",
+    label: "Cancelled",
+    icon: "close-circle-outline",
+    color: "#F44336",
+  },
+];
+
+const VALID_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
+  PENDING: ["PREPARING", "CANCELLED"],
+  PREPARING: ["READY", "CANCELLED"],
+  READY: ["DELIVERED", "IN_TRANSIT", "CANCELLED"],
+  IN_TRANSIT: ["DELIVERED", "CANCELLED"],
+  DELIVERED: ["COMPLETED"],
+  COMPLETED: [],
+  CANCELLED: [],
+};
+
+function OrderContextMenu({
+  actions,
+  currentStatus,
+  onSelect,
+  onDismiss,
+  isDark,
+  isVendor,
+  isCustomer,
+  loading,
+  loadingStatus,
+}: {
+  actions: StatusAction[];
+  currentStatus: OrderStatus;
+  onSelect: (status: OrderStatus) => void;
+  onDismiss: () => void;
+  isDark: boolean;
+  isVendor: boolean;
+  isCustomer: boolean;
+  loading: boolean;
+  loadingStatus: OrderStatus | null;
+}) {
+  const menuBg = isDark ? "#1c1c1e" : "#ffffff";
+  const borderCol = isDark ? "#2c2c2e" : "#e5e7eb";
+  const dividerCol = isDark ? "#2c2c2e" : "#f3f4f6";
+
+  const vendorStatuses = ["PENDING", "PREPARING", "READY", "IN_TRANSIT"];
+  const customerStatuses = ["DELIVERED"];
+
+  return (
+    <>
+      <Pressable
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          zIndex: 998,
+        }}
+        onPress={onDismiss}
+      />
+      <Animated.View
+        entering={ZoomIn.duration(160).springify().damping(18).stiffness(260)}
+        exiting={ZoomOut.duration(120)}
+        style={{
+          position: "absolute",
+          top: 36,
+          right: 0,
+          zIndex: 999,
+          width: 190,
+          borderRadius: 14,
+          backgroundColor: menuBg,
+          borderWidth: 1,
+          borderColor: borderCol,
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: isDark ? 0.5 : 0.12,
+          shadowRadius: 12,
+          elevation: 8,
+          overflow: "hidden",
+        }}
+      >
+        {actions.map((action, index) => {
+          const isActive = currentStatus === action.status;
+          const allowed = VALID_TRANSITIONS[currentStatus] || [];
+          const isAllowed = allowed.includes(action.status);
+
+          const canVendorAction =
+            isVendor && vendorStatuses.includes(currentStatus) && isAllowed;
+          const canCustomerAction =
+            isCustomer && customerStatuses.includes(currentStatus) && isAllowed;
+          const canAction = canVendorAction || canCustomerAction;
+
+          const isDisabled = isActive || !canAction;
+
+          return (
+            <React.Fragment key={action.status}>
+              {index > 0 && (
+                <View style={{ height: 1, backgroundColor: dividerCol }} />
+              )}
+              <TouchableOpacity
+                disabled={isDisabled || loading}
+                activeOpacity={0.6}
+                onPress={() => onSelect(action.status)}
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  paddingHorizontal: 14,
+                  paddingVertical: 11,
+                  opacity: isDisabled ? 0.35 : 1,
+                }}
+              >
+                <Ionicons
+                  name={action.icon as any}
+                  size={17}
+                  color={action.color}
+                  style={{ marginRight: 10 }}
+                />
+                <View style={{ flex: 1 }}>
+                  <Text
+                    style={{
+                      fontSize: 13,
+                      fontFamily: "Poppins-Medium",
+                      color: isDisabled
+                        ? isDark
+                          ? "#6b7280"
+                          : "#9ca3af"
+                        : action.color,
+                    }}
+                  >
+                    {action.label}
+                  </Text>
+                  {isActive && !loading && (
+                    <Text
+                      style={{
+                        fontSize: 10,
+                        fontFamily: "Poppins-Regular",
+                        color: isDark ? "#6b7280" : "#9ca3af",
+                        marginTop: 1,
+                      }}
+                    >
+                      Current status
+                    </Text>
+                  )}
+                  {loading && loadingStatus === action.status && (
+                    <Text
+                      style={{
+                        fontSize: 10,
+                        fontFamily: "Poppins-Regular",
+                        color: action.color,
+                        marginTop: 1,
+                      }}
+                    >
+                      Updating...
+                    </Text>
+                  )}
+                </View>
+                {loading && loadingStatus === action.status ? (
+                  <ActivityIndicator size="small" color={action.color} />
+                ) : isActive ? (
+                  <Ionicons name="checkmark" size={14} color={action.color} />
+                ) : null}
+              </TouchableOpacity>
+            </React.Fragment>
+          );
+        })}
+      </Animated.View>
+    </>
+  );
+}
 
 const LaundryReceiptPage = () => {
   const screenWidth = Dimensions.get("window").width;
@@ -55,6 +271,72 @@ const LaundryReceiptPage = () => {
     data?.order?.delivery_option as "PICKUP" | "DELIVERY",
     orderType,
   );
+
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  const isVendor = user?.id === data?.order.vendor_id;
+  const isCustomer = user?.id === data?.order.customer_id;
+
+  const vendorStatuses = ["PENDING", "PREPARING", "READY", "IN_TRANSIT"];
+  const showVendorButton =
+    isVendor && vendorStatuses.includes(data?.order?.order_status!);
+
+  const showCustomerButton =
+    isCustomer && data?.order.order_status === "DELIVERED";
+
+  const contextMenuMutation = useMutation({
+    mutationFn: ({ newStatus }: { newStatus: OrderStatus }) => {
+      console.log("[LaundryStatusUpdate] Calling API:", {
+        newStatus,
+        orderId: data?.order.id,
+        orderType,
+      });
+      if (!data?.order.id) throw new Error("Order ID not available");
+      return updateLaundryOrderStatus(data.order.id, { new_status: newStatus });
+    },
+    onSuccess: (result) => {
+      console.log("[LaundryStatusUpdate] Success:", result);
+      queryClient.invalidateQueries({ queryKey: ["user-orders", user?.id] });
+      queryClient.invalidateQueries({
+        queryKey: ["laundry-order-details", id, orderType],
+      });
+      refetch();
+      setTimeout(() => setMenuOpen(false), 600);
+      showSuccess("Success", `Order status updated to ${result.status}`);
+    },
+    onError: (error) => {
+      console.log("[LaundryStatusUpdate] Error:", error);
+      showError("Error", error.message || "Failed to update status");
+    },
+  });
+
+  const handleStatusSelect = (newStatus: OrderStatus) => {
+    if (newStatus === data?.order?.order_status) return;
+    console.log("[LaundryStatusUpdate] Selected:", newStatus);
+    contextMenuMutation.mutate({ newStatus });
+  };
+
+  const laundryOrderMutation = useMutation({
+    mutationFn: () =>
+      updateLaundryOrderStatus(data?.order.id!, {
+        new_status: buttonConfig.nextStatus!,
+      }),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["user-orders", user?.id] });
+      queryClient.invalidateQueries({
+        queryKey: ["laundry-order-details", id, orderType],
+      });
+      refetch();
+      showSuccess(`${data.status}`, `Order status updated to ${data.status}`);
+    },
+    onError: (error) => {
+      showError("Error", `${error.message}`);
+    },
+  });
+
+  const handleOrderStatusUpdate = () => {
+    laundryOrderMutation.mutate();
+  };
 
   const generateReceiptHTML = () => {
     if (!data) return "";
@@ -296,35 +578,6 @@ const LaundryReceiptPage = () => {
         `;
   };
 
-  const isVendor = user?.id === data?.order.vendor_id;
-  const isCustomer = user?.id === data?.order.customer_id;
-
-  const vendorStatuses = ["PENDING", "PREPARING", "READY", "IN_TRANSIT"];
-  const showVendorButton =
-    isVendor && vendorStatuses.includes(data?.order?.order_status!);
-
-  const showCustomerButton =
-    isCustomer && data?.order.order_status === "DELIVERED";
-
-  const laundryOrderMutation = useMutation({
-    mutationFn: () =>
-      updateLaundryOrderStatus(data?.order.id!, {
-        new_status: buttonConfig.nextStatus!,
-      }),
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["user-orders", user?.id] });
-      refetch();
-      showSuccess(`${data.status}`, `Order status updated to ${data.status}`);
-    },
-    onError: (error) => {
-      showError("Error", `${error.message}`);
-    },
-  });
-
-  const handleOrderStatusUpdate = () => {
-    laundryOrderMutation.mutate();
-  };
-
   const handleDownload = async () => {
     try {
       const html = generateReceiptHTML();
@@ -385,6 +638,53 @@ const LaundryReceiptPage = () => {
 
   const showReviewButton = order.vendor_id !== user?.id;
 
+  const getStatusLabel = (status: OrderStatus) => {
+    if (status === "PREPARING") return "Washing";
+    return status.replace("_", " ");
+  };
+
+  const getStatusBadgeColor = (status: OrderStatus) => {
+    switch (status) {
+      case "PENDING":
+        return "bg-yellow-500/10";
+      case "PREPARING":
+        return "bg-blue-500/10";
+      case "READY":
+        return "bg-orange-500/10";
+      case "IN_TRANSIT":
+        return "bg-purple-500/10";
+      case "DELIVERED":
+        return "bg-green-500/10";
+      case "COMPLETED":
+        return "bg-green-500/10";
+      case "CANCELLED":
+        return "bg-red-500/10";
+      default:
+        return "bg-gray-500/10";
+    }
+  };
+
+  const getStatusTextColor = (status: OrderStatus) => {
+    switch (status) {
+      case "PENDING":
+        return "text-yellow-600";
+      case "PREPARING":
+        return "text-blue-600";
+      case "READY":
+        return "text-orange-600";
+      case "IN_TRANSIT":
+        return "text-purple-600";
+      case "DELIVERED":
+        return "text-green-600";
+      case "COMPLETED":
+        return "text-green-600";
+      case "CANCELLED":
+        return "text-red-600";
+      default:
+        return "text-gray-600";
+    }
+  };
+
   return (
     <ScrollView
       showsVerticalScrollIndicator={false}
@@ -412,6 +712,53 @@ const LaundryReceiptPage = () => {
           ),
         }}
       />
+
+      {/* Update Status Context Menu Header */}
+      <View
+        className="flex-row items-center justify-between mb-2 px-2"
+        style={{ zIndex: menuOpen ? 100 : 1 }}
+      >
+        <Text className={`text-sm font-poppins-medium ${TEXT_SECONDARY}`}>
+          Update Status
+        </Text>
+        <View style={{ position: "relative" }}>
+          <TouchableOpacity
+            onPress={() => setMenuOpen((v) => !v)}
+            className="bg-input border border-border-subtle p-1.5 rounded-xl"
+            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+          >
+            <Ionicons name="ellipsis-vertical" size={16} color="gray" />
+          </TouchableOpacity>
+
+          {menuOpen && (
+            <OrderContextMenu
+              actions={getStatusActions(orderType)}
+              currentStatus={order.order_status}
+              isDark={isDark}
+              isVendor={isVendor}
+              isCustomer={isCustomer}
+              loading={contextMenuMutation.isPending}
+              loadingStatus={contextMenuMutation.variables?.newStatus ?? null}
+              onDismiss={() => setMenuOpen(false)}
+              onSelect={handleStatusSelect}
+            />
+          )}
+        </View>
+      </View>
+
+      {/* Status Badge */}
+      <View className={`flex-row items-center mb-4 px-2`}>
+        <View
+          className={`${getStatusBadgeColor(order.order_status)} px-4 py-1.5 rounded-full`}
+        >
+          <Text
+            className={`${getStatusTextColor(order.order_status)} text-xs font-poppins-semibold uppercase`}
+          >
+            {getStatusLabel(order.order_status)}
+          </Text>
+        </View>
+      </View>
+
       <View
         className={`${CARD_BG} rounded-xl p-4 ${BORDER_COLOR} border shadow-sm`}
       >
@@ -572,7 +919,7 @@ const LaundryReceiptPage = () => {
         </View>
       </View>
 
-      {/* Action Buttons */}
+      {/* Action Buttons - Keep for testing */}
       <View className="items-center mt-5 gap-2">
         {showVendorButton && (
           <AppButton
@@ -592,45 +939,7 @@ const LaundryReceiptPage = () => {
             disabled={buttonConfig.disabled || laundryOrderMutation.isPending}
           />
         )}
-        <View className="w-full gap-3 items-center">
-          {showCustomerButton && (
-            <AppButton
-              text={buttonConfig.text}
-              onPress={handleOrderStatusUpdate}
-              icon={
-                laundryOrderMutation.isPending ? (
-                  <ActivityIndicator color="white" />
-                ) : (
-                  buttonConfig.icon
-                )
-              }
-              variant="fill"
-              borderRadius={50}
-              width={"90%"}
-              color={buttonConfig.color}
-              disabled={buttonConfig.disabled || laundryOrderMutation.isPending}
-            />
-          )}
 
-          {order.order_status !== "COMPLETED" &&
-            order.order_status !== "DELIVERED" &&
-            order.order_status !== "CANCELLED" && (
-              <AppButton
-                text={"Cancel Order"}
-                onPress={() =>
-                  router.push({
-                    pathname: "/receipt/cancel-sheet",
-                    params: { id: order.id, orderType: orderType },
-                  })
-                }
-                icon={<AntDesign name="close" size={24} color="red" />}
-                variant="outline"
-                borderRadius={50}
-                width={"90%"}
-                color={"red"}
-              />
-            )}
-        </View>
         <View className="flex-row gap-6  mt-2">
           {showReviewButton && !data?.order?.has_review && (
             <AppButton

@@ -19,10 +19,10 @@ const RadioButton: React.FC<RadioButtonProps> = ({
   >
     <View
       className={`h-5 w-5 rounded-full items-center justify-center mr-3 ${
-        selected ? "bg-button-primary/10" : "border border-gray-400"
+        selected ? "border-2 border-button-primary" : "border border-gray-400"
       }`}
     >
-      {selected && <View className="h-4 w-4 rounded-full bg-button-primary" />}
+      {selected && <View className="h-2.5 w-2.5 rounded-full bg-button-primary" />}
     </View>
     <Text
       className={`font-poppins-medium text-base ${

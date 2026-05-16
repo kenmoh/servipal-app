@@ -51,6 +51,9 @@ type CartType = {
   express_delivery_date: string;
   express_delivery_slot_start: string;
   express_delivery_slot_end: string;
+
+  // Food scheduling
+  scheduled_at: string;
 };
 
 export type LaundryBookingData = {
@@ -103,6 +106,10 @@ type CartState = {
   // Laundry booking
   setLaundryBooking: (booking: LaundryBookingData) => void;
   resetLaundryBooking: () => void;
+
+  // Food scheduling
+  setScheduledAt: (scheduledAt: string) => void;
+  resetScheduledAt: () => void;
 };
 
 export const useCartStore = create<CartState>((set, get) => ({
@@ -122,6 +129,7 @@ export const useCartStore = create<CartState>((set, get) => ({
     express_delivery_date: "",
     express_delivery_slot_start: "",
     express_delivery_slot_end: "",
+    scheduled_at: "",
   },
   totalCost: 0,
 
@@ -284,6 +292,7 @@ export const useCartStore = create<CartState>((set, get) => ({
         express_delivery_date: "",
         express_delivery_slot_start: "",
         express_delivery_slot_end: "",
+        scheduled_at: "",
       },
       totalCost: 0,
     }));
@@ -362,6 +371,17 @@ export const useCartStore = create<CartState>((set, get) => ({
         express_delivery_slot_start: "",
         express_delivery_slot_end: "",
       },
+    })),
+
+  // Food scheduling
+  setScheduledAt: (scheduledAt) =>
+    set((state) => ({
+      cart: { ...state.cart, scheduled_at: scheduledAt },
+    })),
+
+  resetScheduledAt: () =>
+    set((state) => ({
+      cart: { ...state.cart, scheduled_at: "" },
     })),
 }));
 

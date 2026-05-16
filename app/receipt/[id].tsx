@@ -5,6 +5,7 @@ import {
   Pressable,
   ScrollView,
   Text,
+  TouchableOpacity,
   View,
 } from "react-native";
 
@@ -19,16 +20,231 @@ import { AppButton } from "@/components/ui/app-button";
 import { HEADER_BG_DARK, HEADER_BG_LIGHT } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useUserStore } from "@/store/userStore";
-import { DetailResponse, OrderItem } from "@/types/order-types";
+import { DetailResponse, OrderItem, OrderStatus } from "@/types/order-types";
 import { getButtonConfig } from "@/utils/button-config";
 import { AntDesign } from "@expo/vector-icons";
 import Feather from "@expo/vector-icons/Feather";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Directory, File, Paths } from "expo-file-system";
 import * as Print from "expo-print";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import * as Sharing from "expo-sharing";
+import Animated, { ZoomIn, ZoomOut } from "react-native-reanimated";
+
+type StatusAction = {
+  status: OrderStatus;
+  label: string;
+  icon: string;
+  color: string;
+};
+
+const getStatusActions = (orderType: "FOOD" | "LAUNDRY"): StatusAction[] => [
+  {
+    status: "PENDING",
+    label: "Pending",
+    icon: "time-outline",
+    color: "#9CA3AF",
+  },
+  {
+    status: "PREPARING",
+    label: orderType === "LAUNDRY" ? "Washing" : "Preparing",
+    icon: orderType === "LAUNDRY" ? "color-wand-outline" : "flame-outline",
+    color: "#2196F3",
+  },
+  {
+    status: "READY",
+    label: "Ready",
+    icon: "checkmark-circle-outline",
+    color: "#FF9800",
+  },
+  {
+    status: "IN_TRANSIT",
+    label: "In Transit",
+    icon: "car-outline",
+    color: "#9C27B0",
+  },
+  {
+    status: "DELIVERED",
+    label: "Delivered",
+    icon: "bag-check-outline",
+    color: "#4CAF50",
+  },
+  {
+    status: "COMPLETED",
+    label: "Completed",
+    icon: "checkmark-done-circle-outline",
+    color: "#4CAF50",
+  },
+  {
+    status: "CANCELLED",
+    label: "Cancelled",
+    icon: "close-circle-outline",
+    color: "#F44336",
+  },
+];
+
+const VALID_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
+  PENDING: ["PREPARING", "CANCELLED"],
+  PREPARING: ["READY", "CANCELLED"],
+  READY: ["DELIVERED", "IN_TRANSIT", "CANCELLED"],
+  IN_TRANSIT: ["DELIVERED", "CANCELLED"],
+  DELIVERED: ["COMPLETED"],
+  COMPLETED: [],
+  CANCELLED: [],
+};
+
+function OrderContextMenu({
+  actions,
+  currentStatus,
+  onSelect,
+  onDismiss,
+  isDark,
+  isVendor,
+  isCustomer,
+  loading,
+  loadingStatus,
+}: {
+  actions: StatusAction[];
+  currentStatus: OrderStatus;
+  onSelect: (status: OrderStatus) => void;
+  onDismiss: () => void;
+  isDark: boolean;
+  isVendor: boolean;
+  isCustomer: boolean;
+  loading: boolean;
+  loadingStatus: OrderStatus | null;
+}) {
+  const menuBg = isDark ? "#1c1c1e" : "#ffffff";
+  const borderCol = isDark ? "#2c2c2e" : "#e5e7eb";
+  const dividerCol = isDark ? "#2c2c2e" : "#f3f4f6";
+
+  const vendorStatuses = ["PENDING", "PREPARING", "READY", "IN_TRANSIT"];
+  const customerStatuses = ["DELIVERED"];
+
+  return (
+    <>
+      <Pressable
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          zIndex: 998,
+        }}
+        onPress={onDismiss}
+      />
+      <Animated.View
+        entering={ZoomIn.duration(160).springify().damping(18).stiffness(260)}
+        exiting={ZoomOut.duration(120)}
+        style={{
+          position: "absolute",
+          top: 36,
+          right: 0,
+          zIndex: 999,
+          width: 190,
+          borderRadius: 14,
+          backgroundColor: menuBg,
+          borderWidth: 1,
+          borderColor: borderCol,
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: isDark ? 0.5 : 0.12,
+          shadowRadius: 12,
+          elevation: 8,
+          overflow: "hidden",
+        }}
+      >
+        {actions.map((action, index) => {
+          const isActive = currentStatus === action.status;
+          const allowed = VALID_TRANSITIONS[currentStatus] || [];
+          const isAllowed = allowed.includes(action.status);
+
+          const canVendorAction =
+            isVendor && vendorStatuses.includes(currentStatus) && isAllowed;
+          const canCustomerAction =
+            isCustomer && customerStatuses.includes(currentStatus) && isAllowed;
+          const canAction = canVendorAction || canCustomerAction;
+
+          const isDisabled = isActive || !canAction;
+
+          return (
+            <React.Fragment key={action.status}>
+              {index > 0 && (
+                <View style={{ height: 1, backgroundColor: dividerCol }} />
+              )}
+              <TouchableOpacity
+                disabled={isDisabled || loading}
+                activeOpacity={0.6}
+                onPress={() => onSelect(action.status)}
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  paddingHorizontal: 14,
+                  paddingVertical: 11,
+                  opacity: isDisabled ? 0.35 : 1,
+                }}
+              >
+                <Ionicons
+                  name={action.icon as any}
+                  size={17}
+                  color={action.color}
+                  style={{ marginRight: 10 }}
+                />
+                <View style={{ flex: 1 }}>
+                  <Text
+                    style={{
+                      fontSize: 13,
+                      fontFamily: "Poppins-Medium",
+                      color: isDisabled
+                        ? isDark
+                          ? "#6b7280"
+                          : "#9ca3af"
+                        : action.color,
+                    }}
+                  >
+                    {action.label}
+                  </Text>
+                  {isActive && !loading && (
+                    <Text
+                      style={{
+                        fontSize: 10,
+                        fontFamily: "Poppins-Regular",
+                        color: isDark ? "#6b7280" : "#9ca3af",
+                        marginTop: 1,
+                      }}
+                    >
+                      Current status
+                    </Text>
+                  )}
+                  {loading && loadingStatus === action.status && (
+                    <Text
+                      style={{
+                        fontSize: 10,
+                        fontFamily: "Poppins-Regular",
+                        color: action.color,
+                        marginTop: 1,
+                      }}
+                    >
+                      Updating...
+                    </Text>
+                  )}
+                </View>
+                {loading && loadingStatus === action.status ? (
+                  <ActivityIndicator size="small" color={action.color} />
+                ) : isActive ? (
+                  <Ionicons name="checkmark" size={14} color={action.color} />
+                ) : null}
+              </TouchableOpacity>
+            </React.Fragment>
+          );
+        })}
+      </Animated.View>
+    </>
+  );
+}
 
 const ReceiptPage = () => {
   const screenWidth = Dimensions.get("window").width;
@@ -44,7 +260,6 @@ const ReceiptPage = () => {
   const TEXT_SECONDARY = isDark ? "text-gray-400" : "text-gray-600";
   const BORDER_COLOR = isDark ? "border-gray-700" : "border-gray-200";
 
-
   const { id, orderType } = useLocalSearchParams<{
     id: string;
     orderType: "FOOD" | "LAUNDRY";
@@ -57,12 +272,95 @@ const ReceiptPage = () => {
     refetchOnWindowFocus: true,
   });
 
-
   const buttonConfig = getButtonConfig(
     data?.order?.order_status!,
     data?.order?.delivery_option as "PICKUP" | "DELIVERY",
     orderType,
   );
+
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  const isVendor = user?.id === data?.order.vendor_id;
+  const isCustomer = user?.id === data?.order.customer_id;
+
+  const vendorStatuses = ["PENDING", "PREPARING", "READY", "IN_TRANSIT"];
+  const showVendorButton =
+    isVendor && vendorStatuses.includes(data?.order?.order_status!);
+
+  const showCustomerButton =
+    isCustomer && data?.order.order_status === "DELIVERED";
+
+  const contextMenuMutation = useMutation({
+    mutationFn: ({ newStatus }: { newStatus: OrderStatus }) => {
+      console.log("[StatusUpdate] Calling API:", {
+        newStatus,
+        orderId: data?.order.id,
+        orderType,
+      });
+      if (!data?.order.id) throw new Error("Order ID not available");
+      return orderType === "FOOD"
+        ? updateFoodOrderStatus(data.order.id, { new_status: newStatus })
+        : updateLaundryOrderStatus(data.order.id, { new_status: newStatus });
+    },
+    onSuccess: (result) => {
+      console.log("[StatusUpdate] Success:", result);
+      queryClient.invalidateQueries({ queryKey: ["user-orders", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["order", id, orderType] });
+      refetch();
+      setTimeout(() => setMenuOpen(false), 600);
+      showSuccess("Success", `Order status updated to ${result.status}`);
+    },
+    onError: (error) => {
+      console.log("[StatusUpdate] Error:", error);
+      showError("Error", error.message || "Failed to update status");
+    },
+  });
+
+  const handleStatusSelect = (newStatus: OrderStatus) => {
+    if (newStatus === data?.order?.order_status) return;
+    console.log("[StatusUpdate] Selected:", newStatus);
+    contextMenuMutation.mutate({ newStatus });
+  };
+
+  const foodOrderMutation = useMutation({
+    mutationFn: () =>
+      updateFoodOrderStatus(data?.order.id!, {
+        new_status: buttonConfig.nextStatus!,
+      }),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["user-orders", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["order", id, orderType] });
+      refetch();
+      showSuccess(`${data.status}`, `Order status updated to ${data.status}`);
+    },
+    onError: (error) => {
+      showError("Error", `${error.message} `);
+    },
+  });
+
+  const laundryOrderMutation = useMutation({
+    mutationFn: () =>
+      updateLaundryOrderStatus(data?.order.id!, {
+        new_status: buttonConfig.nextStatus!,
+      }),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["user-orders", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["order", id, orderType] });
+      refetch();
+      showSuccess(`${data.status}`, `Order status updated to ${data.status}`);
+    },
+    onError: (error) => {
+      showError("Error", `${error.message}`);
+    },
+  });
+
+  const handleOrderStatusUpdate = () => {
+    if (orderType === "FOOD") {
+      foodOrderMutation.mutate();
+    } else if (orderType === "LAUNDRY") {
+      laundryOrderMutation.mutate();
+    }
+  };
 
   const generateReceiptHTML = () => {
     if (!data) return "";
@@ -300,56 +598,6 @@ const ReceiptPage = () => {
         `;
   };
 
-  const isVendor = user?.id === data?.order.vendor_id;
-  const isCustomer = user?.id === data?.order.customer_id;
-
-  // Vendor can update: PENDING → DELIVERED
-  const vendorStatuses = ["PENDING", "PREPARING", "READY", "IN_TRANSIT"];
-  const showVendorButton =
-    isVendor && vendorStatuses.includes(data?.order?.order_status!);
-
-  // Customer can update: DELIVERED → COMPLETED
-  const showCustomerButton =
-    isCustomer && data?.order.order_status === "DELIVERED";
-
-  const foodOrderMutation = useMutation({
-    mutationFn: () =>
-      updateFoodOrderStatus(data?.order.id!, {
-        new_status: buttonConfig.nextStatus!,
-      }),
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["user-orders", user?.id] });
-      refetch();
-      showSuccess(`${data.status}`, `Order status updated to ${data.status}`);
-    },
-    onError: (error) => {
-      showError("Error", `${error.message} `);
-    },
-  });
-
-  const laundryOrderMutation = useMutation({
-    mutationFn: () =>
-      updateLaundryOrderStatus(data?.order.id!, {
-        new_status: buttonConfig.nextStatus!,
-      }),
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["user-orders", user?.id] });
-      refetch();
-      showSuccess(`${data.status}`, `Order status updated to ${data.status}`);
-    },
-    onError: (error) => {
-      showError("Error", `${error.message}`);
-    },
-  });
-
-  const handleOrderStatusUpdate = () => {
-    if (orderType === "FOOD") {
-      foodOrderMutation.mutate();
-    } else if (orderType === "LAUNDRY") {
-      laundryOrderMutation.mutate();
-    }
-  };
-
   const handleDownload = async () => {
     try {
       const html = generateReceiptHTML();
@@ -409,6 +657,52 @@ const ReceiptPage = () => {
 
   const showButtons = order.vendor_id !== user?.id;
 
+  const getStatusLabel = (status: OrderStatus) => {
+    if (status === "PREPARING" && orderType === "LAUNDRY") return "Washing";
+    return status.replace("_", " ");
+  };
+  const getStatusBadgeColor = (status: OrderStatus) => {
+    switch (status) {
+      case "PENDING":
+        return "bg-yellow-500/10";
+      case "PREPARING":
+        return "bg-blue-500/10";
+      case "READY":
+        return "bg-orange-500/10";
+      case "IN_TRANSIT":
+        return "bg-purple-500/10";
+      case "DELIVERED":
+        return "bg-green-500/10";
+      case "COMPLETED":
+        return "bg-green-500/10";
+      case "CANCELLED":
+        return "bg-red-500/10";
+      default:
+        return "bg-gray-500/10";
+    }
+  };
+
+  const getStatusTextColor = (status: OrderStatus) => {
+    switch (status) {
+      case "PENDING":
+        return "text-yellow-600";
+      case "PREPARING":
+        return "text-blue-600";
+      case "READY":
+        return "text-orange-600";
+      case "IN_TRANSIT":
+        return "text-purple-600";
+      case "DELIVERED":
+        return "text-green-600";
+      case "COMPLETED":
+        return "text-green-600";
+      case "CANCELLED":
+        return "text-red-600";
+      default:
+        return "text-gray-600";
+    }
+  };
+
   return (
     <ScrollView
       showsVerticalScrollIndicator={false}
@@ -433,11 +727,57 @@ const ReceiptPage = () => {
                   color={theme === "dark" ? "#eee" : "black"}
                 />
               </Pressable>
-              
             </View>
           ),
         }}
       />
+
+      {/* Update Status Context Menu Header */}
+      <View
+        className="flex-row items-center justify-between mb-3 px-2"
+        style={{ zIndex: menuOpen ? 100 : 1 }}
+      >
+        <Text className={`text-sm font-poppins-medium ${TEXT_SECONDARY}`}>
+          Update Status
+        </Text>
+        <View style={{ position: "relative" }}>
+          <TouchableOpacity
+            onPress={() => setMenuOpen((v) => !v)}
+            className="bg-input border border-border-subtle p-1.5 rounded-xl"
+            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+          >
+            <Ionicons name="ellipsis-vertical" size={16} color="gray" />
+          </TouchableOpacity>
+
+          {menuOpen && (
+            <OrderContextMenu
+              actions={getStatusActions(orderType)}
+              currentStatus={order.order_status}
+              isDark={isDark}
+              isVendor={isVendor}
+              isCustomer={isCustomer}
+              loading={contextMenuMutation.isPending}
+              loadingStatus={contextMenuMutation.variables?.newStatus ?? null}
+              onDismiss={() => setMenuOpen(false)}
+              onSelect={handleStatusSelect}
+            />
+          )}
+        </View>
+      </View>
+
+      {/* Status Badge */}
+      <View className={`flex-row items-center mb-4 px-2`}>
+        <View
+          className={`${getStatusBadgeColor(order.order_status)} px-4 py-1.5 rounded-full`}
+        >
+          <Text
+            className={`${getStatusTextColor(order.order_status)} text-xs font-poppins-semibold uppercase`}
+          >
+            {order.order_status.replace("_", " ")}
+          </Text>
+        </View>
+      </View>
+
       <View
         className={`${CARD_BG} rounded-xl p-4 ${BORDER_COLOR} border shadow-sm`}
       >
@@ -447,7 +787,7 @@ const ReceiptPage = () => {
             <Feather name="file-text" size={32} color="#FF8C00" />
           </View>
           <Text className={`text-2xl font-poppins-bold ${TEXT_PRIMARY}`}>
-            {order?.vendor_name || "Reciept"}
+            {order?.vendor_name || "Receipt"}
           </Text>
           <Text className={`text-sm ${TEXT_SECONDARY} mt-1`}>
             Order #{order?.order_number}
@@ -579,80 +919,6 @@ const ReceiptPage = () => {
             </View>
           </View>
         </View>
-      </View>
-
-      {/* Action Buttons */}
-      <View className="items-center mt-5 gap-2">
-        {showVendorButton && (
-          <AppButton
-            text={buttonConfig.text}
-            onPress={handleOrderStatusUpdate}
-            icon={
-              foodOrderMutation.isPending || laundryOrderMutation.isPending ? (
-                <ActivityIndicator color="white" />
-              ) : (
-                buttonConfig.icon
-              )
-            }
-            variant="fill"
-            borderRadius={50}
-            width={"90%"}
-            color={buttonConfig.color}
-            disabled={
-              buttonConfig.disabled ||
-              foodOrderMutation.isPending ||
-              laundryOrderMutation.isPending
-            }
-          />
-        )}
-
-        {showCustomerButton && (
-          <AppButton
-            text={buttonConfig.text}
-            onPress={handleOrderStatusUpdate}
-            icon={
-              foodOrderMutation.isPending || laundryOrderMutation.isPending ? (
-                <ActivityIndicator color="white" />
-              ) : (
-                buttonConfig.icon
-              )
-            }
-            variant="fill"
-            borderRadius={50}
-            width={"90%"}
-            color={buttonConfig.color}
-            disabled={
-              buttonConfig.disabled ||
-              foodOrderMutation.isPending ||
-              laundryOrderMutation.isPending
-            }
-          />
-        )}
-
-        {order.order_status !== "COMPLETED" &&
-          order.order_status !== "DELIVERED" &&
-          order.order_status !== "CANCELLED" && (
-            <AppButton
-              text={"Cancel Order"}
-              borderColor="red"
-              onPress={() =>
-                router.push({
-                  pathname: "/receipt/cancel-sheet",
-                  params: { id: order.id, orderType: orderType },
-                })
-              }
-              icon={<AntDesign name="close" size={24} color="red" />}
-              variant="outline"
-              borderRadius={50}
-              width={"90%"}
-              color={"red"}
-              disabled={
-                data?.order?.order_status === "CANCELLED" ||
-                data?.order?.order_status === "DELIVERED" ||
-                data?.order?.order_status === "COMPLETED"
-              }
-            />
-          )}
       </View>
       <View className="flex-row gap-1 justify-between my-3 mx-auto">
         {showButtons && !data?.order?.has_review && (

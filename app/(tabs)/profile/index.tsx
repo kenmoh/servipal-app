@@ -7,9 +7,11 @@ import {
 } from "@/api/user";
 import HDivider from "@/components/HDivider";
 import ProfileImagePicker from "@/components/ProfileImagePicker";
+import ToggleSwitch from "@/components/ToggleSwitch";
 import { useToast } from "@/components/ToastProvider";
 import { AppButton } from "@/components/ui/app-button";
 import EvilIcons from "@expo/vector-icons/EvilIcons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import {
   useToggleEnableReservation,
   useToggleOnlineStatus,
@@ -17,7 +19,6 @@ import {
 } from "@/hooks/status-toggle";
 import { useTheme } from "@/hooks/theme-toggle";
 import { useUserStore } from "@/store/userStore";
-import Ionicons from "@expo/vector-icons/Ionicons";
 import * as Sentry from "@sentry/react-native";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Constants from "expo-constants";
@@ -34,7 +35,6 @@ import {
   Platform,
   Pressable,
   ScrollView,
-  Switch,
   Text,
   View,
 } from "react-native";
@@ -672,104 +672,62 @@ const ProfileScreen = () => {
             </View>
           </View> */}
 
-          <View className="flex-row items-center justify-between">
-            <View className="flex-row items-center gap-3">
-              <Ionicons name="radio-outline" size={20} color="gray" />
-              <Text className="text-muted">Online Status</Text>
-            </View>
-            <View className="flex-row gap-1">
-              {toggleOnlineMutation.isPending && (
-                <ActivityIndicator color={"#eee"} size={"small"} />
-              )}
-              <Switch
-                value={isOnline}
-                onValueChange={handleToggle}
-                trackColor={{ false: "#ccc", true: "#FF6600" }}
-                thumbColor="#fff"
-              />
-            </View>
-          </View>
+          <ToggleSwitch
+            label="Online Status"
+            value={isOnline}
+            onValueChange={handleToggle}
+            icon={<Ionicons name="radio-outline" size={20} color="gray" />}
+            loading={toggleOnlineMutation.isPending}
+          />
 
           {profile?.user_type === "RESTAURANT_VENDOR" && (
-            <View className="flex-row items-center justify-between">
-              <View className="flex-row items-center gap-3">
-                <Ionicons name="radio-outline" size={20} color="gray" />
-                <Text className="text-muted">Enable Reservations</Text>
-              </View>
-              <View className="flex-row gap-1">
-                {toggleReservation.isPending && (
-                  <ActivityIndicator color={"#eee"} size={"small"} />
-                )}
-                <Switch
-                  value={reservationEnabled}
-                  onValueChange={() => toggleReservation.mutate()}
-                  trackColor={{ false: "#ccc", true: "#FF6600" }}
-                  thumbColor="#fff"
-                />
-              </View>
-            </View>
+            <ToggleSwitch
+              label="Enable Reservations"
+              value={reservationEnabled!}
+              onValueChange={() => toggleReservation.mutate()}
+              icon={<Ionicons name="radio-outline" size={20} color="gray" />}
+              loading={toggleReservation.isPending}
+            />
           )}
-          <View className="flex-row items-center justify-between">
-            <View className="flex-row items-center gap-3">
-              <Ionicons name="location-outline" size={20} color="gray" />
-              <Text className="text-muted">General Location</Text>
-            </View>
-            <View className="flex-row gap-1">
-              <Switch
-                value={!!locationWhenInUsePermission}
-                onValueChange={handleForegroundToggle}
-                trackColor={{ false: "#ccc", true: "#FF6600" }}
-                thumbColor="#fff"
-              />
-            </View>
-          </View>
+          <ToggleSwitch
+            label="General Location"
+            value={!!locationWhenInUsePermission}
+            onValueChange={handleForegroundToggle}
+            icon={<Ionicons name="location-outline" size={20} color="gray" />}
+          />
 
           {(user?.user_metadata?.user_type === "RIDER" ||
             profile?.user_type === "RIDER") && (
-            <View className="flex-row items-center justify-between">
-              <View className="flex-row items-center gap-3">
-                <Ionicons name="navigate-outline" size={20} color="gray" />
-                <Text className="text-muted">Delivery Tracking</Text>
-              </View>
-              <View className="flex-row gap-1">
-                <Switch
-                  value={
-                    Platform.OS === "ios"
-                      ? !!isIosBackgroundLocationEnabled
-                      : !!isAndroidBackgroundLocationEnabled
-                  }
-                  onValueChange={handleBackgroundToggle}
-                  trackColor={{ false: "#ccc", true: "#FF6600" }}
-                  thumbColor="#fff"
-                />
-              </View>
-            </View>
+            <ToggleSwitch
+              label="Delivery Tracking"
+              value={
+                Platform.OS === "ios"
+                  ? !!isIosBackgroundLocationEnabled
+                  : !!isAndroidBackgroundLocationEnabled
+              }
+              onValueChange={handleBackgroundToggle}
+              icon={<Ionicons name="navigate-outline" size={20} color="gray" />}
+              // trackColorOn="#FF6600"
+              // trackColorOff="#ccc"
+            />
           )}
 
           {["RESTAURANT_VENDOR", "LAUNDRY_VENDOR"].includes(
             user?.user_metadata?.user_type!,
           ) && (
-            <View className="flex-row items-center justify-between">
-              <View className="flex-row items-center gap-3">
-                <Ionicons name="cube-outline" size={20} color="gray" />
-                <Text className="text-muted">
-                  {user?.user_metadata?.user_type === "RESTAURANT_VENDOR"
-                    ? "Delivery"
-                    : "Pickup/Delivery"}
-                </Text>
-              </View>
-              <View className="flex-row gap-1">
-                {togglePickupMutation.isPending && (
-                  <ActivityIndicator color={"#eee"} size={"small"} />
-                )}
-                <Switch
-                  value={canPickup}
-                  onValueChange={handlePickupToggle}
-                  trackColor={{ false: "#ccc", true: "#FF6600" }}
-                  thumbColor="#fff"
-                />
-              </View>
-            </View>
+            <ToggleSwitch
+              label={
+                user?.user_metadata?.user_type === "RESTAURANT_VENDOR"
+                  ? "Delivery"
+                  : "Pickup/Delivery"
+              }
+              value={canPickup}
+              onValueChange={handlePickupToggle}
+              icon={<Ionicons name="cube-outline" size={20} color="gray" />}
+              loading={togglePickupMutation.isPending}
+              // trackColorOn="#FF6600"
+              // trackColorOff="#ccc"
+            />
           )}
           <View className="h-px bg-border-subtle my-2" />
           <View className="gap-3">

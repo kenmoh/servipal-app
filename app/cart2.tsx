@@ -6,7 +6,7 @@ import {
   fetchVendorAvailability,
   getAvailableSlots,
 } from "@/api/user";
-import CartModal from "@/components/CartModal";
+import AppModal from "@/components/AppModal";
 import Item from "@/components/CartItem";
 import CurrentLocationButton from "@/components/CurrentLocationButton";
 import GoogleTextInput from "@/components/GoogleTextInput";
@@ -29,19 +29,12 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import * as Sentry from "@sentry/react-native";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { BottomSheetScrollView, BottomSheetModal } from "@gorhom/bottom-sheet";
+import { BottomSheetScrollView } from "@gorhom/bottom-sheet";
 import { format } from "date-fns";
-import DateTimePicker from "react-native-modal-datetime-picker";
+import DateTimePickerModal from "react-native-modal-datetime-picker";
 import { router, Stack, useLocalSearchParams } from "expo-router";
-import React, { useCallback, useEffect, useMemo, useState, useRef } from "react";
-import {
-  ActivityIndicator,
-  Pressable,
-  Switch,
-  Text,
-  useWindowDimensions,
-  View,
-} from "react-native";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { ActivityIndicator, Pressable, Switch, Text, View } from "react-native";
 import { ScrollView } from "react-native-gesture-handler";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import Animated, {
@@ -121,7 +114,6 @@ const Cart = () => {
   const [idempotencyKey] = useState(generateIdempotencyKey());
   const [modalVisible, setModalVisible] = useState(false);
   const [modalFullyOpen, setModalFullyOpen] = useState(false);
-  const bottomSheetRef = useRef<BottomSheetModal>(null);
   const theme = useColorScheme();
   const { user } = useUserStore();
   const { isLaundry, deliveryFee } = useLocalSearchParams<{
@@ -140,7 +132,6 @@ const Cart = () => {
     setAdditionalInfo,
     totalCost,
     setLaundryBooking,
-    setScheduledAt,
   } = useCartStore();
 
   const { delivery_option } = cart;
@@ -155,32 +146,9 @@ const Cart = () => {
   const [expressDate, setExpressDate] = useState("");
   const [expressSlot, setExpressSlot] = useState<AvailableSlot | null>(null);
 
-  // ── Food scheduling state ───────────────────────────────────────────────
-  const [scheduleEnabled, setScheduleEnabled] = useState(false);
-  const [scheduleDate, setScheduleDate] = useState<Date | null>(null);
-  const [scheduleTime, setScheduleTime] = useState<Date | null>(null);
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [showTimePicker, setShowTimePicker] = useState(false);
-
   const [baseDate, setBaseDate] = useState(new Date());
   const [showMonthPicker, setShowMonthPicker] = useState(false);
   const bookingDates = useMemo(() => buildDates(baseDate), [baseDate]);
-
-  // Combine date + time into scheduled_at ISO string
-  useEffect(() => {
-    if (scheduleEnabled && scheduleDate && scheduleTime) {
-      const combined = new Date(scheduleDate);
-      combined.setHours(
-        scheduleTime.getHours(),
-        scheduleTime.getMinutes(),
-        0,
-        0,
-      );
-      setScheduledAt(combined.toISOString());
-    } else if (!scheduleEnabled) {
-      setScheduledAt("");
-    }
-  }, [scheduleEnabled, scheduleDate, scheduleTime, setScheduledAt]);
 
   // ── Data queries ──────────────────────────────────────────────────────
   const { data: vendorProfile } = useQuery({
@@ -367,16 +335,11 @@ const Cart = () => {
   // ── Delivery option handler (restaurant only) ─────────────────────────
   const handleDeliveryOptionChange = (option: RequireDelivery) => {
     setDeliveryOption(option);
-    const shouldOpenAddressSheet =
-      option === "VENDOR_DELIVERY" ||
-      (option === "PICKUP" && !vendorProfile?.can_pickup_and_dropoff);
-
-    if (shouldOpenAddressSheet) {
-      setModalFullyOpen(false);
+    if (option === "VENDOR_DELIVERY") {
       setModalVisible(true);
-      setTimeout(() => {
-        bottomSheetRef.current?.present();
-      }, 300);
+    }
+    if (option === "PICKUP" && !vendorProfile?.can_pickup_and_dropoff) {
+      setModalVisible(true);
     }
   };
 
@@ -415,9 +378,6 @@ const Cart = () => {
     setModalVisible(true);
     // Reset fully open state; actual opening is handled by AppModal props or effect
     setModalFullyOpen(false);
-    setTimeout(() => {
-      bottomSheetRef.current?.present();
-    }, 100);
   };
 
   const handleLaundryServiceChange = (svc: RequireDelivery) => {
@@ -465,7 +425,6 @@ const Cart = () => {
       express_delivery_slot_end: expressSlot?.slot_end ?? "",
     });
     setModalVisible(false);
-    bottomSheetRef.current?.dismiss();
   };
 
   // ── Submit ────────────────────────────────────────────────────────────
@@ -495,12 +454,7 @@ const Cart = () => {
         reason: "No delivery address selected",
         serviceType: isLaundryOrder ? "LAUNDRY" : "FOOD",
       });
-      if (!isLaundryOrder) {
-        setModalVisible(true);
-        setTimeout(() => {
-          bottomSheetRef.current?.present();
-        }, 100);
-      }
+      if (!isLaundryOrder) setModalVisible(true);
       return;
     }
 
@@ -515,12 +469,7 @@ const Cart = () => {
         reason: "No delivery address selected",
         serviceType: isLaundryOrder ? "LAUNDRY" : "FOOD",
       });
-      if (!isLaundryOrder) {
-        setModalVisible(true);
-        setTimeout(() => {
-          bottomSheetRef.current?.present();
-        }, 100);
-      }
+      if (!isLaundryOrder) setModalVisible(true);
       return;
     }
 
@@ -561,11 +510,6 @@ const Cart = () => {
           delivery_time: cart.express_delivery_slot_start,
         }),
       }),
-      // Food scheduling
-      ...(!isLaundryOrder &&
-        cart.scheduled_at && {
-          scheduled_at: cart.scheduled_at,
-        }),
       idempotencyKey,
     };
 
@@ -656,260 +600,324 @@ const Cart = () => {
 
   // ─── JSX ──────────────────────────────────────────────────────────────
   return (
-    <>
-      <View style={{ flex: 1, backgroundColor: bgColor }}>
-        <Stack.Screen
-          options={{
-            headerRight: () => (
-              <Pressable
-                className="flex-row gap-2 w-12 h-12 bg-red-900/35 items-center rounded-full px-3 py-1 justify-center"
-                onPress={() => clearCart()}
-              >
-                <MaterialCommunityIcons
-                  name="cart-remove"
-                  size={20}
-                  color="red"
-                />
-              </Pressable>
-            ),
-          }}
-        />
-        {showEmpty ? (
-          <Animated.View
-            entering={FadeIn.duration(220)}
-            className="flex-1 items-center justify-center px-10"
-          >
-            <View className="w-24 h-24 rounded-full bg-button-primary/10 items-center justify-center mb-6">
-              <Feather name="shopping-cart" color="#FF8C00" size={40} />
+    <View style={{ flex: 1, backgroundColor: bgColor }}>
+      <Stack.Screen
+        options={{
+          headerRight: () => (
+            <Pressable
+              className="flex-row gap-2 w-12 h-12 bg-red-900/35 items-center rounded-full px-3 py-1 justify-center"
+              onPress={() => clearCart()}
+            >
+              <MaterialCommunityIcons
+                name="cart-remove"
+                size={20}
+                color="red"
+              />
+            </Pressable>
+          ),
+        }}
+      />
+      {showEmpty ? (
+        <Animated.View
+          entering={FadeIn.duration(220)}
+          className="flex-1 items-center justify-center px-10"
+        >
+          <View className="w-24 h-24 rounded-full bg-button-primary/10 items-center justify-center mb-6">
+            <Feather name="shopping-cart" color="#FF8C00" size={40} />
+          </View>
+          <Text className="text-xl font-poppins-bold text-primary text-center mb-2 px-4 w-full">
+            Your cart is empty
+          </Text>
+          <Text className="text-sm font-poppins-regular text-gray-400 text-center mb-8 px-4 w-full">
+            Browse our menu and add some items to your cart!
+          </Text>
+          <AppButton
+            text="Go Back"
+            width="50%"
+            height={45}
+            variant="outline"
+            borderRadius={50}
+            onPress={() => router.back()}
+          />
+        </Animated.View>
+      ) : (
+        <ScrollView
+          className="flex-1 bg-background"
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: 400 }}
+        >
+          <View className="px-5 pt-4">
+            {/* ─── Cart Items ──────────────────────────────────── */}
+            <View className="mb-8">
+              {cart.order_items.map((item) => (
+                <Animated.View
+                  key={`${item.item_id}-${item.selected_size?.size ?? "nosize"}-${item.selected_side ?? "noside"}`}
+                  entering={FadeInDown.duration(140)}
+                  exiting={FadeOutUp.duration(160)}
+                  layout={LinearTransition.duration(140)}
+                >
+                  <Item item={item} />
+                </Animated.View>
+              ))}
             </View>
-            <Text className="text-xl font-poppins-bold text-primary text-center mb-2 px-4 w-full">
-              Your cart is empty
-            </Text>
-            <Text className="text-sm font-poppins-regular text-gray-400 text-center mb-8 px-4 w-full">
-              Browse our menu and add some items to your cart!
-            </Text>
-            <AppButton
-              text="Go Back"
-              width="50%"
-              height={45}
-              variant="outline"
-              borderRadius={50}
-              onPress={() => router.back()}
-            />
-          </Animated.View>
-        ) : (
-          <ScrollView
-            className="flex-1 bg-background"
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingBottom: 400 }}
-          >
-            <View className="px-5 pt-4">
-              {/* ─── Cart Items ──────────────────────────────────── */}
-              <View className="mb-8">
-                {cart.order_items.map((item) => (
-                  <Animated.View
-                    key={`${item.item_id}-${item.selected_size?.size ?? "nosize"}-${item.selected_side ?? "noside"}`}
-                    entering={FadeInDown.duration(140)}
-                    exiting={FadeOutUp.duration(160)}
-                    layout={LinearTransition.duration(140)}
-                  >
-                    <Item item={item} />
-                  </Animated.View>
-                ))}
-              </View>
 
-              {/* ─── Pricing Summary ─────────────────────────────── */}
-              <View className="bg-input rounded-2xl p-5 border border-gray-300 dark:border-gray-600 mb-8">
-                <View className="flex-row justify-between items-center">
-                  <Text className="text-gray-400 font-poppins-medium">
-                    Subtotal
-                  </Text>
-                  <Text className="text-primary font-poppins-semibold">
-                    ₦{Number(totalCost).toFixed(2)}
-                  </Text>
-                </View>
-                {deliveryFee &&
-                  delivery_option === "VENDOR_DELIVERY" &&
-                  vendorProfile?.can_pickup_and_dropoff && (
-                    <View className="flex-row justify-between items-center mt-1">
-                      <Text className="text-gray-400 font-poppins-medium">
-                        Delivery Fee
-                      </Text>
-                      <Text className="text-primary font-poppins-semibold">
-                        ₦{Number(deliveryFee).toFixed(2)}
-                      </Text>
-                    </View>
-                  )}
-                {isLaundryOrder && cart.is_express && cart.express_fee > 0 && (
+            {/* ─── Pricing Summary ─────────────────────────────── */}
+            <View className="bg-input rounded-2xl p-5 border border-gray-300 dark:border-gray-600 mb-8">
+              <View className="flex-row justify-between items-center">
+                <Text className="text-gray-400 font-poppins-medium">
+                  Subtotal
+                </Text>
+                <Text className="text-primary font-poppins-semibold">
+                  ₦{Number(totalCost).toFixed(2)}
+                </Text>
+              </View>
+              {deliveryFee &&
+                delivery_option === "VENDOR_DELIVERY" &&
+                vendorProfile?.can_pickup_and_dropoff && (
                   <View className="flex-row justify-between items-center mt-1">
                     <Text className="text-gray-400 font-poppins-medium">
-                      Express Fee
+                      Delivery Fee
                     </Text>
-                    <Text className="text-button-primary font-poppins-semibold">
-                      ₦{Number(cart.express_fee).toFixed(2)}
+                    <Text className="text-primary font-poppins-semibold">
+                      ₦{Number(deliveryFee).toFixed(2)}
                     </Text>
                   </View>
                 )}
-                <View className="h-[1px] dark:bg-gray-600 bg-gray-200 my-4" />
-                <View className="flex-row justify-between items-center">
-                  <Text className="text-lg font-poppins-bold text-primary">
-                    Total
+              {isLaundryOrder && cart.is_express && cart.express_fee > 0 && (
+                <View className="flex-row justify-between items-center mt-1">
+                  <Text className="text-gray-400 font-poppins-medium">
+                    Express Fee
                   </Text>
-                  <Text className="text-lg font-poppins-bold text-button-primary">
-                    ₦{Number(totalCostWithDeliveryFee).toFixed(2)}
+                  <Text className="text-button-primary font-poppins-semibold">
+                    ₦{Number(cart.express_fee).toFixed(2)}
                   </Text>
                 </View>
+              )}
+              <View className="h-[1px] dark:bg-gray-600 bg-gray-200 my-4" />
+              <View className="flex-row justify-between items-center">
+                <Text className="text-lg font-poppins-bold text-primary">
+                  Total
+                </Text>
+                <Text className="text-lg font-poppins-bold text-button-primary">
+                  ₦{Number(totalCostWithDeliveryFee).toFixed(2)}
+                </Text>
               </View>
+            </View>
 
-              {/* ─── Delivery Options ────────────────────────────── */}
-              {isLaundryOrder ? (
-                /* ── Laundry: single button to open booking modal ── */
-                <View className="mb-8">
-                  <Text className="text-base font-poppins-bold text-primary mb-4">
-                    Laundry Booking
-                  </Text>
-                  <Pressable
-                    onPress={handleOpenLaundryModal}
-                    className="bg-input rounded-2xl p-4 border border-gray-300 dark:border-gray-600 flex-row items-center justify-between active:opacity-70"
-                  >
-                    <View className="flex-row items-center gap-3">
-                      <View className="w-10 h-10 rounded-full bg-button-primary/10 items-center justify-center">
-                        <Ionicons
-                          name="calendar-outline"
-                          size={20}
-                          color="#FF8C00"
-                        />
-                      </View>
-                      <View>
-                        <Text className="text-sm font-poppins-semibold text-primary">
-                          {hasLaundryBooking
-                            ? "Booking Scheduled"
-                            : "Schedule Pickup"}
-                        </Text>
-                        <Text className="text-xs font-poppins text-gray-400">
-                          {hasLaundryBooking
-                            ? "Tap to change"
-                            : "Select date, time & options"}
-                        </Text>
-                      </View>
+            {/* ─── Delivery Options ────────────────────────────── */}
+            {isLaundryOrder ? (
+              /* ── Laundry: single button to open booking modal ── */
+              <View className="mb-8">
+                <Text className="text-base font-poppins-bold text-primary mb-4">
+                  Laundry Booking
+                </Text>
+                <Pressable
+                  onPress={handleOpenLaundryModal}
+                  className="bg-input rounded-2xl p-4 border border-gray-300 dark:border-gray-600 flex-row items-center justify-between active:opacity-70"
+                >
+                  <View className="flex-row items-center gap-3">
+                    <View className="w-10 h-10 rounded-full bg-button-primary/10 items-center justify-center">
+                      <Ionicons
+                        name="calendar-outline"
+                        size={20}
+                        color="#FF8C00"
+                      />
                     </View>
-                    <Feather name="chevron-right" size={20} color="#FF8C00" />
-                  </Pressable>
-                </View>
-              ) : (
-                /* ── Restaurant: existing radio buttons ── */
-                <View className="mb-8">
-                  <Text className="text-base font-poppins-bold text-primary mb-4">
-                    Delivery Method
-                  </Text>
-                  <View className="bg-input rounded-2xl p-4 border border-gray-300 dark:border-gray-600">
-                    {vendorProfile?.can_pickup_and_dropoff ? (
-                      <>
-                        <RadioButton
-                          label="Pickup from Store"
-                          selected={delivery_option === "PICKUP"}
-                          onPress={() => handleDeliveryOptionChange("PICKUP")}
-                        />
-                        <RadioButton
-                          label="Vendor Delivery"
-                          selected={delivery_option === "VENDOR_DELIVERY"}
-                          onPress={() =>
-                            handleDeliveryOptionChange("VENDOR_DELIVERY")
-                          }
-                        />
-                      </>
-                    ) : (
+                    <View>
+                      <Text className="text-sm font-poppins-semibold text-primary">
+                        {hasLaundryBooking
+                          ? "Booking Scheduled"
+                          : "Schedule Pickup"}
+                      </Text>
+                      <Text className="text-xs font-poppins text-gray-400">
+                        {hasLaundryBooking
+                          ? "Tap to change"
+                          : "Select date, time & options"}
+                      </Text>
+                    </View>
+                  </View>
+                  <Feather name="chevron-right" size={20} color="#FF8C00" />
+                </Pressable>
+              </View>
+            ) : (
+              /* ── Restaurant: existing radio buttons ── */
+              <View className="mb-8">
+                <Text className="text-base font-poppins-bold text-primary mb-4">
+                  Delivery Method
+                </Text>
+                <View className="bg-input rounded-2xl p-4 border border-gray-300 dark:border-gray-600">
+                  {vendorProfile?.can_pickup_and_dropoff ? (
+                    <>
                       <RadioButton
-                        label="Select delivery address"
+                        label="Pickup from Store"
                         selected={delivery_option === "PICKUP"}
                         onPress={() => handleDeliveryOptionChange("PICKUP")}
                       />
-                    )}
+                      <RadioButton
+                        label="Vendor Delivery"
+                        selected={delivery_option === "VENDOR_DELIVERY"}
+                        onPress={() =>
+                          handleDeliveryOptionChange("VENDOR_DELIVERY")
+                        }
+                      />
+                    </>
+                  ) : (
+                    <RadioButton
+                      label="Select delivery address"
+                      selected={delivery_option === "PICKUP"}
+                      onPress={() => handleDeliveryOptionChange("PICKUP")}
+                    />
+                  )}
+                </View>
+              </View>
+            )}
+
+            {/* ─── Laundry Booking Summary (after modal confirm) ── */}
+            {isLaundryOrder && hasLaundryBooking && !modalVisible && (
+              <Animated.View
+                entering={FadeInDown.duration(200)}
+                className="mb-8"
+              >
+                <View className="flex-row justify-between items-center mb-3">
+                  <Text className="text-base font-poppins-bold text-primary">
+                    Booking Details
+                  </Text>
+                  <Pressable
+                    onPress={handleOpenLaundryModal}
+                    hitSlop={8}
+                    className="py-1 px-3 bg-orange-500/20 rounded-full active:opacity-50"
+                  >
+                    <Text className="text-sm font-poppins-medium text-button-primary">
+                      Change
+                    </Text>
+                  </Pressable>
+                </View>
+                <View className="bg-input rounded-2xl p-4 border border-gray-300 dark:border-gray-600">
+                  {/* Service type */}
+                  <View className="flex-row items-center mb-3">
+                    <Ionicons
+                      name="briefcase-outline"
+                      size={15}
+                      color="#FF8C00"
+                      style={{ marginRight: 10 }}
+                    />
+                    <Text className="text-sm text-primary font-poppins-medium">
+                      Delivery Option:{" "}
+                      {delivery_option === "PICKUP"
+                        ? "Self Drop-off / Pickup"
+                        : "Vendor Pickup/Delivery"}
+                    </Text>
                   </View>
 
-                  <View className="mt-4 bg-input rounded-2xl p-4 border border-gray-300 dark:border-gray-600">
-                    <Text className="text-xs text-gray-400 font-poppins-medium mb-2 uppercase ml-1">
-                      Schedule Order
-                    </Text>
-                    <View className="flex-row items-center gap-3 mb-3">
-                      <Pressable
-                        onPress={() => setScheduleEnabled(!scheduleEnabled)}
-                        className={`w-14 h-8 rounded-full p-1 flex-row items-center ${scheduleEnabled ? "bg-button-primary" : "bg-gray-300 dark:bg-gray-600"}`}
-                      >
-                        <View
-                          className={`w-6 h-6 rounded-full bg-white shadow-sm ${scheduleEnabled ? "ml-auto" : "mr-auto"}`}
-                        />
-                      </Pressable>
-                      <Text className="text-sm text-gray-500 font-poppins-medium">
-                        {scheduleEnabled ? "Scheduled" : "ASAP"}
+                  {/* Date */}
+                  {cart.pickup_date && cart.pickup_date !== "NOT_SPECIFIED" ? (
+                    <View className="flex-row items-center mb-3">
+                      <Ionicons
+                        name="calendar-outline"
+                        size={15}
+                        color="#FF8C00"
+                        style={{ marginRight: 10 }}
+                      />
+                      <Text className="text-sm text-primary font-poppins-medium">
+                        {formatDisplayDate(cart.pickup_date)}
                       </Text>
                     </View>
+                  ) : null}
 
-                    {scheduleEnabled && (
-                      <View className="flex-row gap-3">
-                        <Pressable
-                          onPress={() => setShowDatePicker(true)}
-                          className="flex-1 bg-background border border-gray-300 dark:border-gray-600 rounded-xl px-4 py-3 flex-row items-center justify-between"
-                        >
-                          <View className="flex-row items-center gap-2">
-                            <Ionicons
-                              name="calendar-outline"
-                              size={16}
-                              color="#FF8C00"
-                            />
-                            <Text className="text-sm font-poppins-medium text-primary">
-                              {scheduleDate
-                                ? format(scheduleDate, "EEE, MMM d")
-                                : "Select date"}
-                            </Text>
-                          </View>
-                          <Ionicons
-                            name="chevron-down"
-                            size={14}
-                            color="#999"
-                          />
-                        </Pressable>
+                  {/* Time slot */}
+                  {cart.pickup_slot_start ? (
+                    <View className="flex-row items-center mb-3">
+                      <Ionicons
+                        name="time-outline"
+                        size={15}
+                        color="#FF8C00"
+                        style={{ marginRight: 10 }}
+                      />
+                      <Text className="text-sm text-primary font-poppins-medium">
+                        {formatSlotTime(cart.pickup_slot_start)} –{" "}
+                        {formatSlotTime(cart.pickup_slot_end)}
+                      </Text>
+                    </View>
+                  ) : null}
 
-                        <Pressable
-                          onPress={() => setShowTimePicker(true)}
-                          className="flex-1 bg-background border border-gray-300 dark:border-gray-600 rounded-xl px-4 py-3 flex-row items-center justify-between"
-                        >
-                          <View className="flex-row items-center gap-2">
-                            <Ionicons
-                              name="time-outline"
-                              size={16}
-                              color="#FF8C00"
-                            />
-                            <Text className="text-sm font-poppins-medium text-primary">
-                              {scheduleTime
-                                ? format(scheduleTime, "h:mm a")
-                                : "Select time"}
-                            </Text>
-                          </View>
-                          <Ionicons
-                            name="chevron-down"
-                            size={14}
-                            color="#999"
-                          />
-                        </Pressable>
+                  {/* Express badge */}
+                  {cart.is_express && (
+                    <>
+                      <View className="h-[1px] bg-gray-200 dark:bg-gray-600 my-2" />
+                      <View className="flex-row items-center mb-3">
+                        <Ionicons
+                          name="flash"
+                          size={15}
+                          color="#FF8C00"
+                          style={{ marginRight: 10 }}
+                        />
+                        <Text className="text-sm text-button-primary font-poppins-semibold">
+                          Express (+₦{cart.express_fee})
+                        </Text>
                       </View>
-                    )}
-                  </View>
-                </View>
-              )}
+                      <View className="flex-row items-center mb-3">
+                        <Ionicons
+                          name="calendar-outline"
+                          size={15}
+                          color="#FF8C00"
+                          style={{ marginRight: 10 }}
+                        />
+                        <Text className="text-sm text-primary font-poppins-medium">
+                          Delivery Date:{" "}
+                          {formatDisplayDate(cart.express_delivery_date)}
+                        </Text>
+                      </View>
+                      <View className="flex-row items-center">
+                        <Ionicons
+                          name="time-outline"
+                          size={15}
+                          color="#FF8C00"
+                          style={{ marginRight: 10 }}
+                        />
+                        <Text className="text-sm text-primary font-poppins-medium">
+                          Delivery Time:{" "}
+                          {formatSlotTime(cart.express_delivery_slot_start)} –{" "}
+                          {formatSlotTime(cart.express_delivery_slot_end)}
+                        </Text>
+                      </View>
+                    </>
+                  )}
 
-              {/* ─── Laundry Booking Summary (after modal confirm) ── */}
-              {isLaundryOrder && hasLaundryBooking && !modalVisible && (
-                <Animated.View
-                  entering={FadeInDown.duration(200)}
-                  className="mb-8"
-                >
+                  {/* Delivery address (vendor delivery) */}
+                  {delivery_option === "VENDOR_DELIVERY" && destination && (
+                    <>
+                      <View className="h-[1px] bg-gray-200 dark:bg-gray-600 my-2" />
+                      <View className="flex-row items-start mt-1">
+                        <Feather
+                          name="map-pin"
+                          size={15}
+                          color="#FF8C00"
+                          style={{ marginRight: 10, marginTop: 2 }}
+                        />
+                        <Text className="text-sm text-primary font-poppins-regular flex-1">
+                          {destination}
+                        </Text>
+                      </View>
+                    </>
+                  )}
+                </View>
+              </Animated.View>
+            )}
+
+            {/* ─── Restaurant delivery address summary ─────────── */}
+            {!isLaundryOrder &&
+              (delivery_option === "VENDOR_DELIVERY" ||
+                (delivery_option === "PICKUP" &&
+                  !vendorProfile?.can_pickup_and_dropoff)) &&
+              destination &&
+              !modalVisible && (
+                <View className="mb-8">
                   <View className="flex-row justify-between items-center mb-3">
                     <Text className="text-base font-poppins-bold text-primary">
-                      Booking Details
+                      Delivery Address
                     </Text>
                     <Pressable
-                      onPress={handleOpenLaundryModal}
+                      onPress={() => setModalVisible(true)}
                       hitSlop={8}
                       className="py-1 px-3 bg-orange-500/20 rounded-full active:opacity-50"
                     >
@@ -918,223 +926,90 @@ const Cart = () => {
                       </Text>
                     </Pressable>
                   </View>
-                  <View className="bg-input rounded-2xl p-4 border border-gray-300 dark:border-gray-600">
-                    {/* Service type */}
-                    <View className="flex-row items-center mb-3">
-                      <Ionicons
-                        name="briefcase-outline"
-                        size={15}
-                        color="#FF8C00"
-                        style={{ marginRight: 10 }}
-                      />
-                      <Text className="text-sm text-primary font-poppins-medium">
-                        Delivery Option:{" "}
-                        {delivery_option === "PICKUP"
-                          ? "Self Drop-off / Pickup"
-                          : "Vendor Pickup/Delivery"}
-                      </Text>
-                    </View>
-
-                    {/* Date */}
-                    {cart.pickup_date &&
-                    cart.pickup_date !== "NOT_SPECIFIED" ? (
-                      <View className="flex-row items-center mb-3">
-                        <Ionicons
-                          name="calendar-outline"
-                          size={15}
-                          color="#FF8C00"
-                          style={{ marginRight: 10 }}
-                        />
-                        <Text className="text-sm text-primary font-poppins-medium">
-                          {formatDisplayDate(cart.pickup_date)}
-                        </Text>
-                      </View>
-                    ) : null}
-
-                    {/* Time slot */}
-                    {cart.pickup_slot_start ? (
-                      <View className="flex-row items-center mb-3">
-                        <Ionicons
-                          name="time-outline"
-                          size={15}
-                          color="#FF8C00"
-                          style={{ marginRight: 10 }}
-                        />
-                        <Text className="text-sm text-primary font-poppins-medium">
-                          {formatSlotTime(cart.pickup_slot_start)} –{" "}
-                          {formatSlotTime(cart.pickup_slot_end)}
-                        </Text>
-                      </View>
-                    ) : null}
-
-                    {/* Express badge */}
-                    {cart.is_express && (
-                      <>
-                        <View className="h-[1px] bg-gray-200 dark:bg-gray-600 my-2" />
-                        <View className="flex-row items-center mb-3">
-                          <Ionicons
-                            name="flash"
-                            size={15}
-                            color="#FF8C00"
-                            style={{ marginRight: 10 }}
-                          />
-                          <Text className="text-sm text-button-primary font-poppins-semibold">
-                            Express (+₦{cart.express_fee})
-                          </Text>
-                        </View>
-                        <View className="flex-row items-center mb-3">
-                          <Ionicons
-                            name="calendar-outline"
-                            size={15}
-                            color="#FF8C00"
-                            style={{ marginRight: 10 }}
-                          />
-                          <Text className="text-sm text-primary font-poppins-medium">
-                            Delivery Date:{" "}
-                            {formatDisplayDate(cart.express_delivery_date)}
-                          </Text>
-                        </View>
-                        <View className="flex-row items-center">
-                          <Ionicons
-                            name="time-outline"
-                            size={15}
-                            color="#FF8C00"
-                            style={{ marginRight: 10 }}
-                          />
-                          <Text className="text-sm text-primary font-poppins-medium">
-                            Delivery Time:{" "}
-                            {formatSlotTime(cart.express_delivery_slot_start)} –{" "}
-                            {formatSlotTime(cart.express_delivery_slot_end)}
-                          </Text>
-                        </View>
-                      </>
-                    )}
-
-                    {/* Delivery address (vendor delivery) */}
-                    {delivery_option === "VENDOR_DELIVERY" && destination && (
-                      <>
-                        <View className="h-[1px] bg-gray-200 dark:bg-gray-600 my-2" />
-                        <View className="flex-row items-start mt-1">
-                          <Feather
-                            name="map-pin"
-                            size={15}
-                            color="#FF8C00"
-                            style={{ marginRight: 10, marginTop: 2 }}
-                          />
-                          <Text className="text-sm text-primary font-poppins-regular flex-1">
-                            {destination}
-                          </Text>
-                        </View>
-                      </>
-                    )}
+                  <View className="bg-input rounded-2xl p-4 border border-gray-600 flex-row">
+                    <Feather
+                      name="map-pin"
+                      size={16}
+                      color="#FF8C00"
+                      style={{ marginTop: 2, marginRight: 10 }}
+                    />
+                    <Text className="text-sm text-primary font-poppins-regular flex-1">
+                      {destination}
+                    </Text>
                   </View>
-                </Animated.View>
+                </View>
               )}
 
-              {/* ─── Restaurant delivery address summary ─────────── */}
-              {!isLaundryOrder &&
-                (delivery_option === "VENDOR_DELIVERY" ||
-                  (delivery_option === "PICKUP" &&
-                    !vendorProfile?.can_pickup_and_dropoff)) &&
-                destination &&
-                !modalVisible && (
-                  <View className="mb-8">
-                    <View className="flex-row justify-between items-center mb-3">
-                      <Text className="text-base font-poppins-bold text-primary">
-                        Delivery Address
-                      </Text>
-                      <Pressable
-                        onPress={() => setModalVisible(true)}
-                        hitSlop={8}
-                        className="py-1 px-3 bg-orange-500/20 rounded-full active:opacity-50"
-                      >
-                        <Text className="text-sm font-poppins-medium text-button-primary">
-                          Change
-                        </Text>
-                      </Pressable>
-                    </View>
-                    <View className="bg-input rounded-2xl p-4 border border-gray-600 flex-row">
-                      <Feather
-                        name="map-pin"
-                        size={16}
-                        color="#FF8C00"
-                        style={{ marginTop: 2, marginRight: 10 }}
-                      />
-                      <Text className="text-sm text-primary font-poppins-regular flex-1">
-                        {destination}
-                      </Text>
-                    </View>
-                  </View>
-                )}
-
-              {/* ─── Instructions ─────────────────────────────────── */}
-              <View className="mb-8">
-                <Text className="text-base font-poppins-bold text-primary mb-4">
-                  Instructions
+            {/* ─── Instructions ─────────────────────────────────── */}
+            <View className="mb-8">
+              <Text className="text-base font-poppins-bold text-primary mb-4">
+                Instructions
+              </Text>
+              <View>
+                <AppTextInput
+                  placeholder={
+                    isLaundryOrder
+                      ? "e.g. Use cold water, no bleach, handle delicates with care"
+                      : "e.g. Less spice, no onions, leave at the front desk"
+                  }
+                  multiline
+                  disabled={isPending}
+                  textAlignVertical="center"
+                  value={instructions}
+                  maxLength={400}
+                  onChangeText={(text) => {
+                    setInstructions(text);
+                    setAdditionalInfo(text);
+                  }}
+                />
+                <Text className="text-[10px] text-gray-400 self-end mt-1 font-poppins px-1">
+                  {instructions.length}/400
                 </Text>
-                <View>
-                  <AppTextInput
-                    placeholder={
-                      isLaundryOrder
-                        ? "e.g. Use cold water, no bleach, handle delicates with care"
-                        : "e.g. Less spice, no onions, leave at the front desk"
-                    }
-                    multiline
-                    disabled={isPending}
-                    textAlignVertical="center"
-                    value={instructions}
-                    maxLength={400}
-                    onChangeText={(text) => {
-                      setInstructions(text);
-                      setAdditionalInfo(text);
-                    }}
-                  />
-                  <Text className="text-[10px] text-gray-400 self-end mt-1 font-poppins px-1">
-                    {instructions.length}/400
-                  </Text>
-                </View>
               </View>
             </View>
+          </View>
 
-            {/* ─── Footer ──────────────────────────────────────────── */}
-            {!modalVisible && (
-              <View className="w-full px-5 pb-5 bg-background">
-                <AppButton
-                  disabled={isPending}
-                  text={isPending ? "" : "Place Order"}
-                  onPress={handleOrderCreate}
-                  icon={
-                    isPending ? (
-                      <ActivityIndicator color="white" />
-                    ) : (
-                      <Feather name="check-circle" size={18} color="white" />
-                    )
-                  }
-                />
-              </View>
-            )}
-          </ScrollView>
-        )}
+          {/* ─── Footer ──────────────────────────────────────────── */}
+          {!modalVisible && (
+            <View className="w-full px-5 pb-5 bg-background">
+              <AppButton
+                disabled={isPending}
+                text={isPending ? "" : "Place Order"}
+                onPress={handleOrderCreate}
+                icon={
+                  isPending ? (
+                    <ActivityIndicator color="white" />
+                  ) : (
+                    <Feather name="check-circle" size={18} color="white" />
+                  )
+                }
+              />
+            </View>
+          )}
+        </ScrollView>
+      )}
 
-        {/* ─── Shared Modal ────────────────────────────────────────────── */}
-        <CartModal
-          ref={bottomSheetRef}
-          onClose={() => {
-            setModalVisible(false);
-            setModalFullyOpen(false);
-          }}
-          height={isLaundryOrder ? "85%" : "90%"}
-        >
-          {/* We use a slight delay for modal content queries to keep opening smooth */}
-          {modalVisible && (
-            <Animated.View
-              entering={FadeIn.delay(300)}
-              style={{ flex: 1 }}
-              onLayout={() => {
-                setTimeout(() => setModalFullyOpen(true), 150);
-              }}
-            >
-              {isLaundryOrder ? (
+      {/* ─── Shared Modal ────────────────────────────────────────────── */}
+      <AppModal
+        visible={modalVisible}
+        onClose={() => {
+          setModalVisible(false);
+          setModalFullyOpen(false);
+        }}
+        contentPadding={false}
+        height={isLaundryOrder ? "85%" : "90%"}
+      >
+        {/* We use a slight delay for modal content queries to keep opening smooth */}
+        {modalVisible && (
+          <Animated.View
+            entering={FadeIn.delay(300)}
+            style={{ flex: 1 }}
+            onLayout={() => {
+              // Approximate time modal takes to open
+              setTimeout(() => setModalFullyOpen(true), 150);
+            }}
+          >
+            {isLaundryOrder ? (
               /* ════════════════════════════════════════════════════
                    LAUNDRY BOOKING MODAL
                    ════════════════════════════════════════════════════ */
@@ -1220,11 +1095,25 @@ const Cart = () => {
                         </View>
                       </View>
                     )}
-                    {/* ── Select date ─────────────── */}
-                    <View className="px-5 mb-4 flex-row justify-between items-center">
-                      <Text className="text-xs text-gray-400 font-poppins-medium uppercase ml-1">
+
+                    {/* ── Select date ──────────────────── */}
+                    <View className="flex-row items-center justify-between mb-2 ml-1">
+                      <Text className="text-xs text-gray-400 font-poppins-medium uppercase">
                         Select Date
                       </Text>
+                      <Pressable
+                        onPress={() => setShowMonthPicker(true)}
+                        className="flex-row items-center bg-input px-2 py-1 rounded-full border border-gray-300 dark:border-gray-600"
+                      >
+                        <Ionicons
+                          name="calendar-outline"
+                          size={12}
+                          color="#FF8C00"
+                        />
+                        <Text className="text-[10px] text-gray-500 font-poppins-medium ml-1">
+                          {format(baseDate, "MMM yyyy")}
+                        </Text>
+                      </Pressable>
                     </View>
                   </View>
                   <ScrollView
@@ -1428,12 +1317,19 @@ const Cart = () => {
               /* ════════════════════════════════════════════════════
                    RESTAURANT DELIVERY ADDRESS MODAL
                    ════════════════════════════════════════════════════ */
-              <View className="flex-1 pt-2 px-5">
+              <BottomSheetScrollView
+                className="flex-1 pt-2 px-5"
+                keyboardShouldPersistTaps="handled"
+                contentContainerStyle={{ paddingBottom: 40 }}
+              >
                 <Text className="text-xl font-poppins-bold text-primary mb-6">
                   Delivery Address
                 </Text>
 
                 <View className="mb-4">
+                  <Text className="text-xs text-gray-400 font-poppins-medium mb-2 uppercase ml-1">
+                    Delivery Address
+                  </Text>
                   <View className="flex-row items-center gap-2">
                     <View className="w-[81%]">
                       <GoogleTextInput
@@ -1461,41 +1357,47 @@ const Cart = () => {
                 <View className="mt-auto">
                   <AppButton
                     text="Confirm Address"
-                    onPress={() => {
-                      setModalVisible(false);
-                      bottomSheetRef.current?.dismiss();
-                    }}
+                    onPress={() => setModalVisible(false)}
                     disabled={!destination}
                   />
                 </View>
-              </View>
-              )}
-            </Animated.View>
-          )}
-        </CartModal>
-        <DateTimePicker
-          isVisible={showDatePicker}
-          mode="date"
-          date={scheduleDate || new Date()}
-          minimumDate={new Date()}
-          onConfirm={(date) => {
-            setScheduleDate(date);
-            setShowDatePicker(false);
-          }}
-          onCancel={() => setShowDatePicker(false)}
-        />
-        <DateTimePicker
-          isVisible={showTimePicker}
-          mode="time"
-          date={scheduleTime || new Date()}
-          onConfirm={(date) => {
-            setScheduleTime(date);
-            setShowTimePicker(false);
-          }}
-          onCancel={() => setShowTimePicker(false)}
-        />
-      </View>
-    </>
+              </BottomSheetScrollView>
+            )}
+            <DateTimePickerModal
+              isVisible={showMonthPicker}
+              mode="date"
+              onConfirm={(date) => {
+                setBaseDate(date);
+                setShowMonthPicker(false);
+                // If the current selected date is not in the new month, reset it
+                if (
+                  date.getMonth() !==
+                  new Date(selectedDate || Date.now()).getMonth()
+                ) {
+                  // If selected month is current month, set to today, else first day of month
+                  const isCurrentMonth =
+                    date.getMonth() === new Date().getMonth() &&
+                    date.getFullYear() === new Date().getFullYear();
+                  if (isCurrentMonth) {
+                    setSelectedDate(toYMD(new Date()));
+                  } else {
+                    const firstDay = new Date(
+                      date.getFullYear(),
+                      date.getMonth(),
+                      1,
+                    );
+                    setSelectedDate(toYMD(firstDay));
+                  }
+                  setSelectedSlot(null);
+                }
+              }}
+              onCancel={() => setShowMonthPicker(false)}
+              minimumDate={new Date()}
+            />
+          </Animated.View>
+        )}
+      </AppModal>
+    </View>
   );
 };
 
