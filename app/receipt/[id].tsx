@@ -142,7 +142,7 @@ function OrderContextMenu({
         style={{
           position: "absolute",
           top: 36,
-          right: 0,
+          left: 0,
           zIndex: 999,
           width: 190,
           borderRadius: 14,
@@ -292,18 +292,12 @@ const ReceiptPage = () => {
 
   const contextMenuMutation = useMutation({
     mutationFn: ({ newStatus }: { newStatus: OrderStatus }) => {
-      console.log("[StatusUpdate] Calling API:", {
-        newStatus,
-        orderId: data?.order.id,
-        orderType,
-      });
       if (!data?.order.id) throw new Error("Order ID not available");
       return orderType === "FOOD"
         ? updateFoodOrderStatus(data.order.id, { new_status: newStatus })
         : updateLaundryOrderStatus(data.order.id, { new_status: newStatus });
     },
     onSuccess: (result) => {
-      console.log("[StatusUpdate] Success:", result);
       queryClient.invalidateQueries({ queryKey: ["user-orders", user?.id] });
       queryClient.invalidateQueries({ queryKey: ["order", id, orderType] });
       refetch();
@@ -311,14 +305,13 @@ const ReceiptPage = () => {
       showSuccess("Success", `Order status updated to ${result.status}`);
     },
     onError: (error) => {
-      console.log("[StatusUpdate] Error:", error);
       showError("Error", error.message || "Failed to update status");
     },
   });
 
   const handleStatusSelect = (newStatus: OrderStatus) => {
     if (newStatus === data?.order?.order_status) return;
-    console.log("[StatusUpdate] Selected:", newStatus);
+
     contextMenuMutation.mutate({ newStatus });
   };
 
@@ -732,48 +725,46 @@ const ReceiptPage = () => {
         }}
       />
 
-      {/* Update Status Context Menu Header */}
+      {/* Update Status Section */}
       <View
         className="flex-row items-center justify-between mb-3 px-2"
         style={{ zIndex: menuOpen ? 100 : 1 }}
       >
-        <Text className={`text-sm font-poppins-medium ${TEXT_SECONDARY}`}>
-          Update Status
-        </Text>
-        <View style={{ position: "relative" }}>
-          <TouchableOpacity
-            onPress={() => setMenuOpen((v) => !v)}
-            className="bg-input border border-border-subtle p-1.5 rounded-xl"
-            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-          >
-            <Ionicons name="ellipsis-vertical" size={16} color="gray" />
-          </TouchableOpacity>
+        <View className="flex-row items-center gap-3">
+          <Text className={`text-sm font-poppins-medium ${TEXT_SECONDARY}`}>
+            Update Status
+          </Text>
+          <View style={{ position: "relative" }}>
+            <TouchableOpacity
+              onPress={() => setMenuOpen((v) => !v)}
+              className="bg-input border border-border-subtle p-1.5 rounded-xl"
+              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+            >
+              <Ionicons name="ellipsis-vertical" size={16} color="gray" />
+            </TouchableOpacity>
 
-          {menuOpen && (
-            <OrderContextMenu
-              actions={getStatusActions(orderType)}
-              currentStatus={order.order_status}
-              isDark={isDark}
-              isVendor={isVendor}
-              isCustomer={isCustomer}
-              loading={contextMenuMutation.isPending}
-              loadingStatus={contextMenuMutation.variables?.newStatus ?? null}
-              onDismiss={() => setMenuOpen(false)}
-              onSelect={handleStatusSelect}
-            />
-          )}
+            {menuOpen && (
+              <OrderContextMenu
+                actions={getStatusActions(orderType)}
+                currentStatus={order.order_status}
+                isDark={isDark}
+                isVendor={isVendor}
+                isCustomer={isCustomer}
+                loading={contextMenuMutation.isPending}
+                loadingStatus={contextMenuMutation.variables?.newStatus ?? null}
+                onDismiss={() => setMenuOpen(false)}
+                onSelect={handleStatusSelect}
+              />
+            )}
+          </View>
         </View>
-      </View>
-
-      {/* Status Badge */}
-      <View className={`flex-row items-center mb-4 px-2`}>
         <View
           className={`${getStatusBadgeColor(order.order_status)} px-4 py-1.5 rounded-full`}
         >
           <Text
             className={`${getStatusTextColor(order.order_status)} text-xs font-poppins-semibold uppercase`}
           >
-            {order.order_status.replace("_", " ")}
+            {getStatusLabel(order.order_status)}
           </Text>
         </View>
       </View>
