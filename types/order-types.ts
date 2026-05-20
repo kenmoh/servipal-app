@@ -58,6 +58,7 @@ export interface UnifiedOrderResponse {
   additional_info?: string;
   customer_name?: string;
   vendor_name?: string;
+  scheduled_at?: string
   order_items: OrderItem[];
   vendor_pickup_dropoff_charge?: number;
   dispute_id?: string;

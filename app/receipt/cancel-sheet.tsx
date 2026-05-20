@@ -47,6 +47,7 @@ const CancelSheet = () => {
       }),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["user-orders", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["food-orders", user?.id] });
       showSuccess(`${data.status}`, `Order status updated to ${data.status}`);
       router.back();
     },

@@ -297,6 +297,7 @@ const LaundryReceiptPage = () => {
     onSuccess: (result) => {
       console.log("[LaundryStatusUpdate] Success:", result);
       queryClient.invalidateQueries({ queryKey: ["user-orders", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["laundry-orders", user?.id] });
       queryClient.invalidateQueries({
         queryKey: ["laundry-order-details", id, orderType],
       });
@@ -323,6 +324,7 @@ const LaundryReceiptPage = () => {
       }),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["user-orders", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["laundry-orders", user?.id] });
       queryClient.invalidateQueries({
         queryKey: ["laundry-order-details", id, orderType],
       });
@@ -560,11 +562,11 @@ const LaundryReceiptPage = () => {
                             <h2>Address Details</h2>
                             <div class="address-box">
                                 <strong style="display:block; margin-bottom:4px; font-size:11px; color:#999;">PICKUP LOCATION</strong>
-                                ${truncateText(data.delivery?.origin || "")}
+                                ${truncateText(data.order?.pickup_location || "")}
                             </div>
                             <div class="address-box">
                                 <strong style="display:block; margin-bottom:4px; font-size:11px; color:#999;">DROP-OFF LOCATION</strong>
-                                ${truncateText(data.delivery?.destination || "")}
+                                ${truncateText(data.order?.destination || "")}
                             </div>
                         </div>
                         
@@ -576,35 +578,6 @@ const LaundryReceiptPage = () => {
                 </body>
             </html>
         `;
-  };
-
-  const handleDownload = async () => {
-    try {
-      const html = generateReceiptHTML();
-
-      const { uri } = await Print.printToFileAsync({
-        html,
-        width: screenWidth,
-        height: screenWidth * 1.4,
-        base64: false,
-      });
-
-      const receiptsDir = new Directory(Paths.document, "servipal-receipts");
-      if (receiptsDir.exists) {
-        receiptsDir.create({ intermediates: true });
-      }
-
-      const fileName = `SERVIPAL-LAUNDRY-${data?.order?.order_number}-${Date.now()}.pdf`;
-
-      const sourceFile = new File(uri);
-      const destinationFile = new File(receiptsDir, fileName);
-
-      sourceFile.copy(destinationFile);
-
-      showSuccess("Success", "Receipt downloaded");
-    } catch (error) {
-      showError("Error", "Failed to download receipt");
-    }
   };
 
   const handleShare = async () => {
@@ -716,9 +689,11 @@ const LaundryReceiptPage = () => {
       {/* Update Status Section */}
       <View className="flex-row items-center justify-between mb-3 px-2" style={{ zIndex: menuOpen ? 100 : 1 }}>
         <View className="flex-row items-center gap-3">
-          <Text className={`text-sm font-poppins-medium ${TEXT_SECONDARY}`}>
-            Update Status
-          </Text>
+          <Pressable onPress={() => setMenuOpen((v) => !v)} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
+            <Text className={`text-sm font-poppins-medium ${TEXT_SECONDARY}`}>
+              Update Status
+            </Text>
+          </Pressable>
           <View style={{ position: "relative" }}>
             <TouchableOpacity
               onPress={() => setMenuOpen((v) => !v)}

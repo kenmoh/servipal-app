@@ -56,7 +56,7 @@ const Transactioncard = ({ data }: { data: Transaction }) => {
       className="active:opacity-80"
     >
       <View className="w-full self-center  rounded-none py-3 flex-row items-center justify-between">
-        <View className="flex-row items-center gap-2">
+        <View className="flex-row items-center gap-2" style={{ flex: 1 }}>
           <View
             style={{ backgroundColor: circleBg }}
             className="w-8 h-8 rounded-full items-center justify-center"
@@ -70,8 +70,12 @@ const Transactioncard = ({ data }: { data: Transaction }) => {
               <AntDesign name="lock" color={iconColor} size={12} />
             )}
           </View>
-          <View>
-            <Text className="capitalize text-xs font-normal text-primary">
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text
+              className="capitalize text-xs font-normal text-primary"
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
               {data?.transaction_type === "REFUNDED"
                 ? "SYSTEM REFUND | Order Cancelled"
                 : displayName}
@@ -79,7 +83,7 @@ const Transactioncard = ({ data }: { data: Transaction }) => {
             <Text className="text-muted text-[10px]">{data?.created_at}</Text>
           </View>
         </View>
-        <Text className="text-xs font-bold text-primary">
+        <Text className="text-xs font-bold text-primary" style={{ flexShrink: 0 }}>
           ₦ {Number(data?.amount).toFixed(2)}
         </Text>
       </View>

@@ -283,13 +283,6 @@ const ReceiptPage = () => {
   const isVendor = user?.id === data?.order.vendor_id;
   const isCustomer = user?.id === data?.order.customer_id;
 
-  const vendorStatuses = ["PENDING", "PREPARING", "READY", "IN_TRANSIT"];
-  const showVendorButton =
-    isVendor && vendorStatuses.includes(data?.order?.order_status!);
-
-  const showCustomerButton =
-    isCustomer && data?.order.order_status === "DELIVERED";
-
   const contextMenuMutation = useMutation({
     mutationFn: ({ newStatus }: { newStatus: OrderStatus }) => {
       if (!data?.order.id) throw new Error("Order ID not available");
@@ -297,8 +290,10 @@ const ReceiptPage = () => {
         ? updateFoodOrderStatus(data.order.id, { new_status: newStatus })
         : updateLaundryOrderStatus(data.order.id, { new_status: newStatus });
     },
+    
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["user-orders", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["food-orders", user?.id], });
       queryClient.invalidateQueries({ queryKey: ["order", id, orderType] });
       refetch();
       setTimeout(() => setMenuOpen(false), 600);
@@ -322,6 +317,7 @@ const ReceiptPage = () => {
       }),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["user-orders", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["food-orders", user?.id] });
       queryClient.invalidateQueries({ queryKey: ["order", id, orderType] });
       refetch();
       showSuccess(`${data.status}`, `Order status updated to ${data.status}`);
@@ -367,6 +363,7 @@ const ReceiptPage = () => {
     const itemsTotal = Number(data.order?.total_price || 0);
     const deliveryFee = Number(data.order?.delivery_fee || 0);
     const total = Number(data.order?.grand_total || itemsTotal + deliveryFee);
+
 
     return `
             <html>
@@ -529,6 +526,16 @@ const ReceiptPage = () => {
                                 <span class="label">Date</span>
                                 <span class="value">${format(new Date(data.order?.created_at || ""), "PPP")}</span>
                             </div>
+                            ${
+                              data.order?.scheduled_at
+                                ? `
+                            <div class="line-item">
+                                <span class="label">Schedule</span>
+                                <span class="value">${format(new Date(data.order.scheduled_at), "MMM dd, yyyy h:mm a")}</span>
+                            </div>
+                            `
+                                : ""
+                            }
                         </div>
 
                         ${
@@ -591,34 +598,6 @@ const ReceiptPage = () => {
         `;
   };
 
-  const handleDownload = async () => {
-    try {
-      const html = generateReceiptHTML();
-
-      const { uri } = await Print.printToFileAsync({
-        html,
-        width: screenWidth,
-        height: screenWidth * 1.4,
-        base64: false,
-      });
-
-      const receiptsDir = new Directory(Paths.document, "servipal-receipts");
-      if (receiptsDir.exists) {
-        receiptsDir.create({ intermediates: true });
-      }
-
-      const fileName = `SERVIPAL-${order?.order_number}-${Date.now()}.pdf`;
-
-      const sourceFile = new File(uri);
-      const destinationFile = new File(receiptsDir, fileName);
-
-      sourceFile.copy(destinationFile);
-
-      showSuccess("Success", "Receipt downloaded");
-    } catch (error) {
-      showError("Error", "Failed to download receipt");
-    }
-  };
   const handleShare = async () => {
     try {
       const html = generateReceiptHTML();
@@ -731,9 +710,11 @@ const ReceiptPage = () => {
         style={{ zIndex: menuOpen ? 100 : 1 }}
       >
         <View className="flex-row items-center gap-3">
-          <Text className={`text-sm font-poppins-medium ${TEXT_SECONDARY}`}>
-            Update Status
-          </Text>
+          <Pressable onPress={() => setMenuOpen((v) => !v)} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
+            <Text className={`text-sm font-poppins-medium ${TEXT_SECONDARY}`}>
+              Update Status
+            </Text>
+          </Pressable>
           <View style={{ position: "relative" }}>
             <TouchableOpacity
               onPress={() => setMenuOpen((v) => !v)}
@@ -813,6 +794,14 @@ const ReceiptPage = () => {
               {format(new Date(order?.created_at || ""), "MMM dd, yyyy")}
             </Text>
           </View>
+          {order?.scheduled_at && (
+            <View className="flex-row justify-between items-center">
+              <Text className={`${TEXT_SECONDARY} font-poppins`}>Schedule</Text>
+              <Text className={`${TEXT_PRIMARY} font-poppins-medium`}>
+                {format(new Date(order.scheduled_at), "MMM dd, yyyy h:mm a")}
+              </Text>
+            </View>
+          )}
         </View>
 
         {/* Order Items */}
@@ -918,9 +907,7 @@ const ReceiptPage = () => {
             width={"45%"}
             borderRadius={50}
             disabled={
-              data?.order?.order_status === "CANCELLED" ||
-              data?.order?.order_status === "DELIVERED" ||
-              data?.order?.order_status === "COMPLETED"
+              data?.order?.has_review || order.vendor_id === user?.id
             }
             onPress={() =>
               router.push({

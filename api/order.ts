@@ -79,7 +79,6 @@ export const fetchOrderDetails = async (
     });
 
     if (error) {
-      console.log(error);
       Sentry.captureException(error, {
         tags: { action: "fetch_order_details" },
       });

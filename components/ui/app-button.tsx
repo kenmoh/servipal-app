@@ -193,9 +193,8 @@ export function AppButton({
             style={[
               computedTextColor ? { color: computedTextColor } : {},
               textStyle,
+              { flexShrink: 1, flexWrap: "wrap" },
             ]}
-            numberOfLines={1}
-            ellipsizeMode="tail"
           >
             {text}
           </Text>

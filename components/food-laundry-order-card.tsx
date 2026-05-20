@@ -95,7 +95,7 @@ const FoodLaundryOrderCard = ({ order, orderType }: OrderProps) => {
               className="flex-1 text-secondary font-poppins-light text-xs"
               numberOfLines={2}
             >
-              {order?.delivery_option}
+              {order?.delivery_option?.replace("_", " ")}
             </Text>
           </View>
           <View className="flex-row items-center gap-2">
@@ -131,7 +131,7 @@ const FoodLaundryOrderCard = ({ order, orderType }: OrderProps) => {
                   ? "Ready"
                   : undefined
           }
-          status={order?.order_status}
+          status={order?.order_status.replace("_", " ").toLowerCase() as any}
         />
         <Feather name="chevron-right" size={16} color="gray" />
       </View>

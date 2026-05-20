@@ -40,6 +40,8 @@ const TopTab = () => {
           fontSize: showAllTabs ? 16 : 12,
           textTransform: "none",
           margin: 0,
+          flexWrap: "wrap",
+          lineHeight: showAllTabs ? 18 : 14,
         },
         tabBarActiveTintColor: theme === "dark" ? "#fff" : "#000",
         tabBarInactiveTintColor: theme === "dark" ? "#aaa" : "#555",
@@ -48,6 +50,10 @@ const TopTab = () => {
         tabBarScrollEnabled: false,
         tabBarItemStyle: {
           paddingHorizontal: 0,
+          flex: 1,
+          alignItems: "center",
+          justifyContent: "center",
+          minWidth: 0,
         },
         tabBarIndicatorStyle: {
           backgroundColor: "orange",
