@@ -49,6 +49,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       "android.permission.FOREGROUND_SERVICE",
       "android.permission.FOREGROUND_SERVICE_LOCATION",
       "android.permission.RECORD_AUDIO",
+      "com.google.android.gms.permission.AD_ID"
     ],
     blockedPermissions: [
       "android.permission.READ_MEDIA_IMAGES",

@@ -55,7 +55,7 @@ const TransactionDetailScreen = () => {
 
         <TransactionValue
           label="Payment Status"
-          value={params?.paymentStatus || ""}
+          value={params?.paymentStatus=== "ESCROW_RELEASE" ? "PAYOUT COMPLETED" : params?.paymentStatus=== "ESCROW_HOLD" ? "PAYOUT PENDING" : params?.paymentStatus || ""}
         />
       </View>
     </View>

@@ -877,7 +877,7 @@ const LaundryReceiptPage = () => {
                   className={`${TEXT_PRIMARY} text-xs leading-5 font-poppins`}
                   numberOfLines={2}
                 >
-                  {delivery?.destination || "Vendor Location"}
+                  {data?.order?.destination || "Vendor Location"}
                 </Text>
               </View>
             </View>

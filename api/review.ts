@@ -23,7 +23,7 @@ export const ReviewsService = {
     });
 
     if (error) {
-      console.log(error.message);
+     
       Sentry.captureException(error, {
         tags: { action: "fetch_user_reviews" },
       });
@@ -43,7 +43,6 @@ export const ReviewsService = {
     });
 
     if (error) {
-      console.log(error.message);
       Sentry.captureException(error, {
         tags: { action: "get_user_reviews_by_id" },
       });
@@ -97,8 +96,6 @@ export const ReviewsService = {
       throw new Error(error.message);
     }
 
-    // Map the response to ensure nested profile data is correctly typed if needed
-    // Supabase returns the joined data in the structure requested
     return data as any as UserReview;
   },
 
@@ -139,10 +136,6 @@ export const ReviewsService = {
       .insert({ ...review, reviewer_id: session.user.id })
       .select()
       .single();
-
-    if (error) {
-      console.log(error);
-    }
 
     if (error) {
       throw new Error(error.message);
