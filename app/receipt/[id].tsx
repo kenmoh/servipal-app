@@ -884,7 +884,7 @@ const ReceiptPage = () => {
           <View className="gap-6">
             <View>
               <Text className="text-[10px] text-gray-400 font-poppins-bold uppercase mb-2">
-                Delivery Address
+               Delivery Address
               </Text>
               <View
                 className={`p-4 rounded-xl ${isDark ? "bg-gray-700/30" : "bg-gray-50"} border ${BORDER_COLOR}`}

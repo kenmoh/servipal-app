@@ -1,7 +1,6 @@
 // types/reservation.ts
 export interface ReservationSettingsInput {
   min_deposit_adult?: number;
-  deposit_type?: "FIXED" | "PERCENTAGE";
   min_party_size?: number;
   max_party_size?: number;
   cancellation_fee?: number;

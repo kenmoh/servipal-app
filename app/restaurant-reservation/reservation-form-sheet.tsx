@@ -35,7 +35,6 @@ const ReservationFormSheet = forwardRef<BottomSheetModal, Props>(
 
     const [formData, setFormData] = useState<ReservationSettingsInput>({
       min_deposit_adult: 0,
-      deposit_type: "FIXED",
       min_party_size: 1,
       max_party_size: 10,
       cancellation_fee: 0,
@@ -47,7 +46,6 @@ const ReservationFormSheet = forwardRef<BottomSheetModal, Props>(
       if (initialData) {
         setFormData({
           min_deposit_adult: initialData.min_deposit_adult,
-          deposit_type: initialData.deposit_type,
           min_party_size: initialData.min_party_size,
           max_party_size: initialData.max_party_size,
           cancellation_fee: initialData.cancellation_fee,
@@ -117,7 +115,7 @@ const ReservationFormSheet = forwardRef<BottomSheetModal, Props>(
                 onChangeText={(val) =>
                   setFormData((prev) => ({
                     ...prev,
-                    min_deposit: parseFloat(val) || 0,
+                    min_deposit_adult: parseFloat(val) || 0,
                   }))
                 }
               />

@@ -5,6 +5,7 @@ import {
 import { updateCurrentUserProfile } from "@/api/user";
 import HDivider from "@/components/HDivider";
 import LoadingIndicator from "@/components/LoadingIndicator";
+import ToggleSwitch from "@/components/ToggleSwitch";
 import { useToast } from "@/components/ToastProvider";
 import { AppButton } from "@/components/ui/app-button";
 import { useUserStore } from "@/store/userStore";
@@ -16,7 +17,7 @@ import {
 } from "@gorhom/bottom-sheet";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import React, { useRef } from "react";
-import { ScrollView, Switch, Text, View } from "react-native";
+import { ScrollView, Text, View } from "react-native";
 import ReservationFormSheet from "./reservation-form-sheet";
 
 export default function ReservationSettingsPage() {
@@ -72,30 +73,6 @@ export default function ReservationSettingsPage() {
         contentContainerStyle={{ padding: 16 }}
       >
         <View className="bg-surface-elevated rounded-2xl p-5 border border-border-subtle shadow-sm">
-          <View className="flex-row items-center justify-between mb-6">
-            <View className="flex-row items-center gap-3">
-              <View className="w-12 h-12 rounded-full bg-orange-500/10 items-center justify-center">
-                <Ionicons name="calendar-outline" size={24} color="#FF6600" />
-              </View>
-              <View>
-                <Text className="text-primary font-poppins-semibold text-lg">
-                  Enable Reservations
-                </Text>
-                <Text className="text-muted text-xs">
-                  Make your store bookable by customers
-                </Text>
-              </View>
-            </View>
-            <Switch
-              value={profile?.enable_reservation}
-              onValueChange={toggleEnableReservation}
-              trackColor={{ false: "#ccc", true: "#FF6600" }}
-              thumbColor="#fff"
-            />
-          </View>
-
-          <HDivider />
-
           <View className="flex-row items-center gap-3 my-6">
             <View className="w-12 h-12 rounded-full bg-orange-500/10 items-center justify-center">
               <Ionicons name="options-outline" size={24} color="#FF6600" />
@@ -135,24 +112,14 @@ export default function ReservationSettingsPage() {
               value={`${settings?.cancellation_window_minutes ?? 60} Minutes`}
             />
             <HDivider />
-            <View className="flex-row items-center justify-between">
-              <View className="flex-row items-center gap-3">
-                <Ionicons
-                  name="shield-checkmark-outline"
-                  size={20}
-                  color="gray"
-                />
-                <Text className="text-secondary font-poppins-medium text-sm">
-                  Auto-Confirm
-                </Text>
-              </View>
-              <Switch
-                value={settings?.auto_confirm}
-                onValueChange={toggleAutoConfirm}
-                trackColor={{ false: "#ccc", true: "#FF6600" }}
-                thumbColor="#fff"
-              />
-            </View>
+            <ToggleSwitch
+              label="Auto-Confirm"
+              value={settings?.auto_confirm ?? false}
+              onValueChange={toggleAutoConfirm}
+              icon={
+                <Ionicons name="shield-checkmark-outline" size={20} color="gray" />
+              }
+            />
           </View>
 
           <View className="mt-12 mb-3">
