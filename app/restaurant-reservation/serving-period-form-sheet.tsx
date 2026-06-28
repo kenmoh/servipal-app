@@ -1,5 +1,4 @@
 import { createServingPeriod, updateServingPeriod } from "@/api/reservation";
-import AppModal from "@/components/AppModal";
 import { useToast } from "@/components/ToastProvider";
 import { AppButton } from "@/components/ui/app-button";
 import { AppTextInput } from "@/components/ui/app-text-input";
@@ -11,7 +10,12 @@ import {
 } from "@/types/reservation-types";
 import { Ionicons } from "@expo/vector-icons";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import React, { useEffect, useState } from "react";
+import {
+  BottomSheetBackdrop,
+  BottomSheetModal,
+  BottomSheetView,
+} from "@gorhom/bottom-sheet";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { ScrollView, Switch, Text, TouchableOpacity, View } from "react-native";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 
@@ -67,8 +71,30 @@ export default function ServingPeriodFormSheet({
   const [isTimePickerVisible, setTimePickerVisible] = useState(false);
   const [pickingType, setPickingType] = useState<"start" | "end">("start");
 
+  const bottomSheetRef = useRef<BottomSheetModal>(null);
+
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
+
+  const renderBackdrop = useCallback(
+    (props: any) => (
+      <BottomSheetBackdrop
+        {...props}
+        appearsOnIndex={0}
+        disappearsOnIndex={-1}
+        onPress={onClose}
+      />
+    ),
+    [onClose],
+  );
+
+  useEffect(() => {
+    if (isVisible) {
+      bottomSheetRef.current?.present();
+    } else {
+      bottomSheetRef.current?.dismiss();
+    }
+  }, [isVisible]);
 
   const { mutate: performSave, isPending } = useMutation({
     mutationFn: async () => {
@@ -126,13 +152,24 @@ export default function ServingPeriodFormSheet({
   };
 
   return (
-    <AppModal
-      visible={isVisible}
-      onClose={onClose}
-      title={initialData ? "Edit Serving Period" : "Add Serving Period"}
+    <BottomSheetModal
+      ref={bottomSheetRef}
+      index={0}
+      snapPoints={["90%"]}
+      backdropComponent={renderBackdrop}
+      onDismiss={onClose}
+      backgroundStyle={{ backgroundColor: "#fff" }}
+      handleIndicatorStyle={{ backgroundColor: "#ccc" }}
     >
-      <ScrollView className="pb-10" showsVerticalScrollIndicator={false}>
-        <View className="gap-6">
+      <BottomSheetView style={{ flex: 1, paddingHorizontal: 20, paddingBottom: 40 }}>
+        <View style={{ paddingVertical: 20 }}>
+          <Text className="text-xl font-poppins-semibold text-primary mb-2">
+            {initialData ? "Edit Serving Period" : "Add Serving Period"}
+          </Text>
+        </View>
+
+        <ScrollView className="pb-10" showsVerticalScrollIndicator={false}>
+          <View className="gap-6">
           {/* Day Selection */}
           <View>
             <Text className="text-secondary font-poppins-medium text-xs mb-3 uppercase ml-1">
@@ -285,6 +322,9 @@ export default function ServingPeriodFormSheet({
         onCancel={() => setTimePickerVisible(false)}
         date={new Date()}
       />
-    </AppModal>
+      </BottomSheetView>
+    </BottomSheetModal>
   );
 }
+
+

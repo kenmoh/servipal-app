@@ -607,7 +607,10 @@ export default function ReservationDashboard() {
       {showFAB && (
         <TouchableOpacity
           activeOpacity={0.8}
-          onPress={handleOpenPeriodSheet}
+          onPress={() => {
+            setSelectedPeriod(null);
+            setIsSheetVisible(true);
+          }}
           style={{
             position: "absolute",
             bottom: 50,
