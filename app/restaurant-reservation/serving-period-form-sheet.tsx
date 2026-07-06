@@ -2,6 +2,7 @@ import { createServingPeriod, updateServingPeriod } from "@/api/reservation";
 import { useToast } from "@/components/ToastProvider";
 import { AppButton } from "@/components/ui/app-button";
 import { AppTextInput } from "@/components/ui/app-text-input";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 import {
   CreateServingPeriod,
   GetServingPeriod,
@@ -13,16 +14,28 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   BottomSheetBackdrop,
   BottomSheetModal,
-  BottomSheetModalProvider,
   BottomSheetView,
 } from "@gorhom/bottom-sheet";
-import React, { useCallback, useEffect, useRef, useState } from "react";
-import { ScrollView, Switch, Text, TouchableOpacity, View } from "react-native";
+import React, {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from "react";
+import {
+  Pressable,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { HEADER_BG_DARK, HEADER_BG_LIGHT, INPUT_BG_DARK, INPUT_BG_LIGHT } from "@/constants/theme";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 
 interface ServingPeriodFormSheetProps {
-  isVisible: boolean;
-  onClose: () => void;
+  onClose?: () => void;
   initialData?: GetServingPeriod | null;
 }
 
@@ -38,11 +51,8 @@ const DAYS = [
 
 const PERIOD_TYPES: ServingPeriod[] = ["BREAKFAST", "LUNCH", "DINNER"];
 
-export default function ServingPeriodFormSheet({
-  isVisible,
-  onClose,
-  initialData,
-}: ServingPeriodFormSheetProps) {
+const ServingPeriodFormSheet = forwardRef<BottomSheetModal, ServingPeriodFormSheetProps>(
+  ({ onClose, initialData }, ref) => {
   const [dayOfWeek, setDayOfWeek] = useState(1);
   const [period, setPeriod] = useState<ServingPeriod>("LUNCH");
   const [startTime, setStartTime] = useState("09:00:00");
@@ -67,15 +77,35 @@ export default function ServingPeriodFormSheet({
       setCapacity("20");
       setIsActive(true);
     }
-  }, [initialData, isVisible]);
+  }, [initialData]);
 
   const [isTimePickerVisible, setTimePickerVisible] = useState(false);
   const [pickingType, setPickingType] = useState<"start" | "end">("start");
 
+  const theme = useColorScheme();
+  const isDark = theme === "dark";
+  const sheetBackground = isDark ? HEADER_BG_DARK : HEADER_BG_LIGHT;
+  const surfaceColor = isDark ? INPUT_BG_DARK : INPUT_BG_LIGHT;
+  const borderColor = isDark ? "#374151" : "#e5e7eb";
+  const textPrimary = isDark ? "#f9fafb" : "#111827";
+  const textSecondary = isDark ? "#d1d5db" : "#6b7280";
+  const mutedText = isDark ? "#9ca3af" : "#6b7280";
+
   const bottomSheetRef = useRef<BottomSheetModal>(null);
+
+  useImperativeHandle(ref, () => bottomSheetRef.current as BottomSheetModal, []);
 
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
+
+  const handleClose = useCallback(() => {
+    bottomSheetRef.current?.dismiss();
+    onClose?.();
+  }, [onClose]);
+
+  const handleSheetDismiss = useCallback(() => {
+    onClose?.();
+  }, [onClose]);
 
   const renderBackdrop = useCallback(
     (props: any) => (
@@ -83,19 +113,11 @@ export default function ServingPeriodFormSheet({
         {...props}
         appearsOnIndex={0}
         disappearsOnIndex={-1}
-        onPress={onClose}
+        onPress={handleClose}
       />
     ),
-    [onClose],
+    [handleClose],
   );
-
-  useEffect(() => {
-    if (isVisible) {
-      bottomSheetRef.current?.present();
-    } else {
-      bottomSheetRef.current?.dismiss();
-    }
-  }, [isVisible]);
 
   const { mutate: performSave, isPending } = useMutation({
     mutationFn: async () => {
@@ -128,7 +150,7 @@ export default function ServingPeriodFormSheet({
           : "Serving period created successfully",
       );
       queryClient.invalidateQueries({ queryKey: ["vendor-serving-periods"] });
-      onClose();
+      handleClose();
     },
     onError: (error: Error) => {
       showError(
@@ -153,19 +175,20 @@ export default function ServingPeriodFormSheet({
   };
 
   return (
-    <BottomSheetModalProvider>
-      <BottomSheetModal
-        ref={bottomSheetRef}
-        index={0}
-        snapPoints={["90%"]}
-        backdropComponent={renderBackdrop}
-        onDismiss={onClose}
-        backgroundStyle={{ backgroundColor: "#fff" }}
-        handleIndicatorStyle={{ backgroundColor: "#ccc" }}
-      >
-        <BottomSheetView style={{ flex: 1, paddingHorizontal: 20, paddingBottom: 40 }}>
+    <BottomSheetModal
+      ref={bottomSheetRef}
+      index={0}
+      snapPoints={["90%"]}
+      backdropComponent={renderBackdrop}
+      onDismiss={handleSheetDismiss}
+      backgroundStyle={{ backgroundColor: sheetBackground }}
+      handleIndicatorStyle={{ backgroundColor: isDark ? "#555" : "#ccc" }}
+    >
+        <BottomSheetView
+          style={{ flex: 1, paddingHorizontal: 20, paddingBottom: 40, backgroundColor: sheetBackground }}
+        >
           <View style={{ paddingVertical: 20 }}>
-            <Text className="text-xl font-poppins-semibold text-primary mb-2">
+            <Text style={{ color: textPrimary }} className="text-xl font-poppins-semibold mb-2">
               {initialData ? "Edit Serving Period" : "Add Serving Period"}
             </Text>
           </View>
@@ -174,64 +197,88 @@ export default function ServingPeriodFormSheet({
             <View className="gap-6">
             {/* Day Selection */}
             <View>
-              <Text className="text-secondary font-poppins-medium text-xs mb-3 uppercase ml-1">
+              <Text style={{ color: textSecondary }} className="font-poppins-medium text-xs mb-3 uppercase ml-1">
                 Select Day
               </Text>
               <View className="flex-row flex-wrap gap-2">
-                {DAYS.map((day, index) => (
-                  <TouchableOpacity
-                    key={day}
-                    onPress={() => setDayOfWeek(index)}
-                    className={`px-3 py-2 rounded-full border ${
-                      dayOfWeek === index
-                        ? "bg-orange-500/20 border-button-primary"
-                        : "bg-input border-border-subtle"
-                    }`}
-                  >
-                    <Text
-                      className={`font-poppins-medium text-xs ${
-                        dayOfWeek === index ? "text-white" : "text-secondary"
-                      }`}
+                {DAYS.map((day, index) => {
+                  const selected = dayOfWeek === index;
+                  return (
+                    <TouchableOpacity
+                      key={day}
+                      onPress={() => setDayOfWeek(index)}
+                      style={{
+                        paddingHorizontal: 12,
+                        paddingVertical: 8,
+                        borderRadius: 999,
+                        borderWidth: 1,
+                        marginRight: 8,
+                        marginBottom: 8,
+                        backgroundColor: selected
+                          ? "rgba(249, 115, 22, 0.18)"
+                          : surfaceColor,
+                        borderColor: selected ? "#f97316" : borderColor,
+                      }}
                     >
-                      {day.slice(0, 3)}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+                      <Text
+                        style={{
+                          fontSize: 12,
+                          fontFamily: "Poppins-Medium",
+                          color: selected ? "#fff" : textSecondary,
+                        }}
+                      >
+                        {day.slice(0, 3)}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
             </View>
 
             {/* Period Type */}
             <View>
-              <Text className="text-secondary font-poppins-medium text-xs mb-3 uppercase ml-1">
+              <Text style={{ color: textSecondary }} className="font-poppins-medium text-xs mb-3 uppercase ml-1">
                 Serving Period
               </Text>
               <View className="flex-row gap-2">
-                {PERIOD_TYPES.map((p) => (
-                  <TouchableOpacity
-                    key={p}
-                    onPress={() => setPeriod(p)}
-                    className={`flex-1 px-3 py-3 rounded-full border items-center ${
-                      period === p
-                        ? "bg-orange-500/20 border-button-primary"
-                        : "bg-input border-border-subtle"
-                    }`}
-                  >
-                    <Text
-                      className={`font-poppins-medium text-xs ${
-                        period === p ? "text-white" : "text-secondary"
-                      }`}
+                {PERIOD_TYPES.map((p) => {
+                  const selected = period === p;
+                  return (
+                    <TouchableOpacity
+                      key={p}
+                      onPress={() => setPeriod(p)}
+                      style={{
+                        flex: 1,
+                        paddingHorizontal: 12,
+                        paddingVertical: 12,
+                        borderRadius: 999,
+                        borderWidth: 1,
+                        alignItems: "center",
+                        backgroundColor: selected
+                          ? "rgba(249, 115, 22, 0.18)"
+                          : surfaceColor,
+                        borderColor: selected ? "#f97316" : borderColor,
+                      }}
                     >
-                      {p}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+                      <Text
+                        style={{
+                          fontSize: 12,
+                          fontFamily: "Poppins-Medium",
+                          color: selected ? "#fff" : textSecondary,
+                        }}
+                      >
+                        {p}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
             </View>
 
             {/* Time Pickers */}
             <View className="flex-row gap-4">
               <View className="flex-1">
-                <Text className="text-secondary font-poppins-medium text-xs mb-2 uppercase ml-1">
+                  <Text style={{ color: textSecondary }} className="font-poppins-medium text-xs mb-2 uppercase ml-1">
                   Start Time
                 </Text>
                 <TouchableOpacity
@@ -239,16 +286,25 @@ export default function ServingPeriodFormSheet({
                     setPickingType("start");
                     setTimePickerVisible(true);
                   }}
-                  className="bg-input p-4 rounded-2xl border border-border-subtle flex-row justify-between items-center"
+                  style={{
+                    backgroundColor: surfaceColor,
+                    borderColor,
+                    borderWidth: 1,
+                    borderRadius: 16,
+                    padding: 16,
+                    flexDirection: "row",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
                 >
-                  <Text className="text-primary font-poppins">
+                  <Text style={{ color: textPrimary, fontFamily: "Poppins-Regular" }}>
                     {startTime.slice(0, 5)}
                   </Text>
-                  <Ionicons name="time-outline" size={20} color="#666" />
+                  <Ionicons name="time-outline" size={20} color={textSecondary} />
                 </TouchableOpacity>
               </View>
               <View className="flex-1">
-                <Text className="text-secondary font-poppins-medium text-xs mb-2 uppercase ml-1">
+                  <Text style={{ color: textSecondary }} className="font-poppins-medium text-xs mb-2 uppercase ml-1">
                   End Time
                 </Text>
                 <TouchableOpacity
@@ -256,19 +312,28 @@ export default function ServingPeriodFormSheet({
                     setPickingType("end");
                     setTimePickerVisible(true);
                   }}
-                  className="bg-input p-4 rounded-2xl border border-border-subtle flex-row justify-between items-center"
+                  style={{
+                    backgroundColor: surfaceColor,
+                    borderColor,
+                    borderWidth: 1,
+                    borderRadius: 16,
+                    padding: 16,
+                    flexDirection: "row",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
                 >
-                  <Text className="text-primary font-poppins">
+                  <Text style={{ color: textPrimary, fontFamily: "Poppins-Regular" }}>
                     {endTime.slice(0, 5)}
                   </Text>
-                  <Ionicons name="time-outline" size={20} color="#666" />
+                  <Ionicons name="time-outline" size={20} color={textSecondary} />
                 </TouchableOpacity>
               </View>
             </View>
 
             {/* Capacity */}
             <View>
-              <Text className="text-secondary font-poppins-medium text-xs mb-2 uppercase ml-1">
+              <Text style={{ color: textSecondary }} className="font-poppins-medium text-xs mb-2 uppercase ml-1">
                 Total Capacity (Seats)
               </Text>
               <AppTextInput
@@ -276,27 +341,48 @@ export default function ServingPeriodFormSheet({
                 value={capacity}
                 onChangeText={setCapacity}
                 keyboardType="numeric"
+                backgroundColor={surfaceColor}
+                // textColor={textPrimary}
+                placeholderColor={mutedText}
+                style={{ borderWidth: 1, borderColor }}
               />
             </View>
 
             {/* Status Toggle */}
-            <View className="flex-row items-center justify-between bg-input p-4 rounded-2xl border border-border-subtle">
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+                backgroundColor: surfaceColor,
+                padding: 16,
+                borderRadius: 16,
+                borderWidth: 1,
+                borderColor,
+              }}
+            >
               <View>
-                <Text className="text-primary font-poppins-semibold text-sm">
+                <Text style={{ color: textPrimary }} className="font-poppins-semibold text-sm">
                   Active Status
                 </Text>
-                <Text className="text-secondary font-poppins text-xs mt-0.5">
+                <Text style={{ color: textSecondary }} className="font-poppins text-xs mt-0.5">
                   {isActive
                     ? "This period is active and accepting bookings"
                     : "This period is currently disabled"}
                 </Text>
               </View>
-              <Switch
-                value={isActive}
-                onValueChange={setIsActive}
-                trackColor={{ false: "#767577", true: "#FF8C00" }}
-                thumbColor={isActive ? "#f4f3f4" : "#f4f3f4"}
-              />
+              <Pressable
+                onPress={() => setIsActive((value) => !value)}
+                className={`w-14 h-8 rounded-full p-1 flex-row items-center ${
+                  isActive ? "bg-button-primary" : "bg-gray-300"
+                }`}
+              >
+                <View
+                  className={`w-6 h-6 rounded-full bg-white shadow-sm ${
+                    isActive ? "ml-auto" : "mr-auto"
+                  }`}
+                />
+              </Pressable>
             </View>
 
             <View className="mt-8">
@@ -326,8 +412,9 @@ export default function ServingPeriodFormSheet({
         />
         </BottomSheetView>
       </BottomSheetModal>
-    </BottomSheetModalProvider>
   );
-}
+});
+
+export default ServingPeriodFormSheet;
 
 

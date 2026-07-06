@@ -32,6 +32,7 @@ import {
   useColorScheme,
   View,
 } from "react-native";
+import { BottomSheetModal } from "@gorhom/bottom-sheet";
 import Animated, {
   ZoomIn,
   ZoomOut,
@@ -296,7 +297,6 @@ function ReservationCard({
 export default function ReservationDashboard() {
   const router = useRouter()
   const [activeTab, setActiveTab] = useState("upcoming");
-  const [isSheetVisible, setIsSheetVisible] = useState(false);
   const [selectedPeriod, setSelectedPeriod] = useState<GetServingPeriod | null>(null);
 
   const { profile, user } = useUserStore();
@@ -309,6 +309,7 @@ export default function ReservationDashboard() {
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
   const tabsRef = useRef<FlashListRef<any>>(null);
+  const servingPeriodSheetRef = useRef<BottomSheetModal>(null);
 
   const visibleTabs = React.useMemo(
     () => TABS.filter((tab) => tab.value !== "periods" || isVendor),
@@ -368,12 +369,12 @@ export default function ReservationDashboard() {
 
   const handleOpenPeriodSheet = () => {
     setSelectedPeriod(null);
-    setIsSheetVisible(true);
+    servingPeriodSheetRef.current?.present();
   };
 
   const handleEditPeriod = (period: GetServingPeriod) => {
     setSelectedPeriod(period);
-    setIsSheetVisible(true);
+    servingPeriodSheetRef.current?.present();
   };
 
   const handleDeletePeriod = (id: string) => {
@@ -561,7 +562,7 @@ export default function ReservationDashboard() {
             <View className="flex-1 items-center justify-center pt-20">
               <Ionicons name="time-outline" size={64} color="#ddd" />
               <Text className="text-muted font-poppins-medium mt-4">No serving periods set</Text>
-              <TouchableOpacity onPress={() => setIsSheetVisible(true)} className="mt-4">
+              <TouchableOpacity onPress={handleOpenPeriodSheet} className="mt-4">
                 <Text className="text-button-primary font-poppins-semibold">
                   + Add your first period
                 </Text>
@@ -607,10 +608,7 @@ export default function ReservationDashboard() {
       {showFAB && (
         <TouchableOpacity
           activeOpacity={0.8}
-          onPress={() => {
-            setSelectedPeriod(null);
-            setIsSheetVisible(true);
-          }}
+          onPress={handleOpenPeriodSheet}
           style={{
             position: "absolute",
             bottom: 50,
@@ -633,8 +631,8 @@ export default function ReservationDashboard() {
       )}
 
       <ServingPeriodFormSheet
-        isVisible={isSheetVisible}
-        onClose={() => setIsSheetVisible(false)}
+        ref={servingPeriodSheetRef}
+        onClose={() => setSelectedPeriod(null)}
         initialData={selectedPeriod}
       />
     </View>
