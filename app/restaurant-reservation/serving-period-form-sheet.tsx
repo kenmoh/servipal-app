@@ -13,6 +13,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   BottomSheetBackdrop,
   BottomSheetModal,
+  BottomSheetModalProvider,
   BottomSheetView,
 } from "@gorhom/bottom-sheet";
 import React, { useCallback, useEffect, useRef, useState } from "react";
@@ -152,178 +153,180 @@ export default function ServingPeriodFormSheet({
   };
 
   return (
-    <BottomSheetModal
-      ref={bottomSheetRef}
-      index={0}
-      snapPoints={["90%"]}
-      backdropComponent={renderBackdrop}
-      onDismiss={onClose}
-      backgroundStyle={{ backgroundColor: "#fff" }}
-      handleIndicatorStyle={{ backgroundColor: "#ccc" }}
-    >
-      <BottomSheetView style={{ flex: 1, paddingHorizontal: 20, paddingBottom: 40 }}>
-        <View style={{ paddingVertical: 20 }}>
-          <Text className="text-xl font-poppins-semibold text-primary mb-2">
-            {initialData ? "Edit Serving Period" : "Add Serving Period"}
-          </Text>
-        </View>
-
-        <ScrollView className="pb-10" showsVerticalScrollIndicator={false}>
-          <View className="gap-6">
-          {/* Day Selection */}
-          <View>
-            <Text className="text-secondary font-poppins-medium text-xs mb-3 uppercase ml-1">
-              Select Day
+    <BottomSheetModalProvider>
+      <BottomSheetModal
+        ref={bottomSheetRef}
+        index={0}
+        snapPoints={["90%"]}
+        backdropComponent={renderBackdrop}
+        onDismiss={onClose}
+        backgroundStyle={{ backgroundColor: "#fff" }}
+        handleIndicatorStyle={{ backgroundColor: "#ccc" }}
+      >
+        <BottomSheetView style={{ flex: 1, paddingHorizontal: 20, paddingBottom: 40 }}>
+          <View style={{ paddingVertical: 20 }}>
+            <Text className="text-xl font-poppins-semibold text-primary mb-2">
+              {initialData ? "Edit Serving Period" : "Add Serving Period"}
             </Text>
-            <View className="flex-row flex-wrap gap-2">
-              {DAYS.map((day, index) => (
-                <TouchableOpacity
-                  key={day}
-                  onPress={() => setDayOfWeek(index)}
-                  className={`px-3 py-2 rounded-full border ${
-                    dayOfWeek === index
-                      ? "bg-orange-500/20 border-button-primary"
-                      : "bg-input border-border-subtle"
-                  }`}
-                >
-                  <Text
-                    className={`font-poppins-medium text-xs ${
-                      dayOfWeek === index ? "text-white" : "text-secondary"
-                    }`}
-                  >
-                    {day.slice(0, 3)}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
           </View>
 
-          {/* Period Type */}
-          <View>
-            <Text className="text-secondary font-poppins-medium text-xs mb-3 uppercase ml-1">
-              Serving Period
-            </Text>
-            <View className="flex-row gap-2">
-              {PERIOD_TYPES.map((p) => (
-                <TouchableOpacity
-                  key={p}
-                  onPress={() => setPeriod(p)}
-                  className={`flex-1 px-3 py-3 rounded-full border items-center ${
-                    period === p
-                      ? "bg-orange-500/20 border-button-primary"
-                      : "bg-input border-border-subtle"
-                  }`}
-                >
-                  <Text
-                    className={`font-poppins-medium text-xs ${
-                      period === p ? "text-white" : "text-secondary"
-                    }`}
-                  >
-                    {p}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-
-          {/* Time Pickers */}
-          <View className="flex-row gap-4">
-            <View className="flex-1">
-              <Text className="text-secondary font-poppins-medium text-xs mb-2 uppercase ml-1">
-                Start Time
-              </Text>
-              <TouchableOpacity
-                onPress={() => {
-                  setPickingType("start");
-                  setTimePickerVisible(true);
-                }}
-                className="bg-input p-4 rounded-2xl border border-border-subtle flex-row justify-between items-center"
-              >
-                <Text className="text-primary font-poppins">
-                  {startTime.slice(0, 5)}
-                </Text>
-                <Ionicons name="time-outline" size={20} color="#666" />
-              </TouchableOpacity>
-            </View>
-            <View className="flex-1">
-              <Text className="text-secondary font-poppins-medium text-xs mb-2 uppercase ml-1">
-                End Time
-              </Text>
-              <TouchableOpacity
-                onPress={() => {
-                  setPickingType("end");
-                  setTimePickerVisible(true);
-                }}
-                className="bg-input p-4 rounded-2xl border border-border-subtle flex-row justify-between items-center"
-              >
-                <Text className="text-primary font-poppins">
-                  {endTime.slice(0, 5)}
-                </Text>
-                <Ionicons name="time-outline" size={20} color="#666" />
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {/* Capacity */}
-          <View>
-            <Text className="text-secondary font-poppins-medium text-xs mb-2 uppercase ml-1">
-              Total Capacity (Seats)
-            </Text>
-            <AppTextInput
-              placeholder="e.g. 20"
-              value={capacity}
-              onChangeText={setCapacity}
-              keyboardType="numeric"
-            />
-          </View>
-
-          {/* Status Toggle */}
-          <View className="flex-row items-center justify-between bg-input p-4 rounded-2xl border border-border-subtle">
+          <ScrollView className="pb-10" showsVerticalScrollIndicator={false}>
+            <View className="gap-6">
+            {/* Day Selection */}
             <View>
-              <Text className="text-primary font-poppins-semibold text-sm">
-                Active Status
+              <Text className="text-secondary font-poppins-medium text-xs mb-3 uppercase ml-1">
+                Select Day
               </Text>
-              <Text className="text-secondary font-poppins text-xs mt-0.5">
-                {isActive
-                  ? "This period is active and accepting bookings"
-                  : "This period is currently disabled"}
-              </Text>
+              <View className="flex-row flex-wrap gap-2">
+                {DAYS.map((day, index) => (
+                  <TouchableOpacity
+                    key={day}
+                    onPress={() => setDayOfWeek(index)}
+                    className={`px-3 py-2 rounded-full border ${
+                      dayOfWeek === index
+                        ? "bg-orange-500/20 border-button-primary"
+                        : "bg-input border-border-subtle"
+                    }`}
+                  >
+                    <Text
+                      className={`font-poppins-medium text-xs ${
+                        dayOfWeek === index ? "text-white" : "text-secondary"
+                      }`}
+                    >
+                      {day.slice(0, 3)}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
             </View>
-            <Switch
-              value={isActive}
-              onValueChange={setIsActive}
-              trackColor={{ false: "#767577", true: "#FF8C00" }}
-              thumbColor={isActive ? "#f4f3f4" : "#f4f3f4"}
-            />
-          </View>
 
-          <View className="mt-8">
-            <AppButton
-              text={
-                isPending
-                  ? "Saving..."
-                  : initialData
-                    ? "Update Serving Period"
-                    : "Save Serving Period"
-              }
-              onPress={() => performSave()}
-              disabled={isPending}
-              height={55}
-              borderRadius={28}
-            />
-          </View>
-        </View>
-      </ScrollView>
+            {/* Period Type */}
+            <View>
+              <Text className="text-secondary font-poppins-medium text-xs mb-3 uppercase ml-1">
+                Serving Period
+              </Text>
+              <View className="flex-row gap-2">
+                {PERIOD_TYPES.map((p) => (
+                  <TouchableOpacity
+                    key={p}
+                    onPress={() => setPeriod(p)}
+                    className={`flex-1 px-3 py-3 rounded-full border items-center ${
+                      period === p
+                        ? "bg-orange-500/20 border-button-primary"
+                        : "bg-input border-border-subtle"
+                    }`}
+                  >
+                    <Text
+                      className={`font-poppins-medium text-xs ${
+                        period === p ? "text-white" : "text-secondary"
+                      }`}
+                    >
+                      {p}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
 
-      <DateTimePickerModal
-        isVisible={isTimePickerVisible}
-        mode="time"
-        onConfirm={handleConfirmTime}
-        onCancel={() => setTimePickerVisible(false)}
-        date={new Date()}
-      />
-      </BottomSheetView>
-    </BottomSheetModal>
+            {/* Time Pickers */}
+            <View className="flex-row gap-4">
+              <View className="flex-1">
+                <Text className="text-secondary font-poppins-medium text-xs mb-2 uppercase ml-1">
+                  Start Time
+                </Text>
+                <TouchableOpacity
+                  onPress={() => {
+                    setPickingType("start");
+                    setTimePickerVisible(true);
+                  }}
+                  className="bg-input p-4 rounded-2xl border border-border-subtle flex-row justify-between items-center"
+                >
+                  <Text className="text-primary font-poppins">
+                    {startTime.slice(0, 5)}
+                  </Text>
+                  <Ionicons name="time-outline" size={20} color="#666" />
+                </TouchableOpacity>
+              </View>
+              <View className="flex-1">
+                <Text className="text-secondary font-poppins-medium text-xs mb-2 uppercase ml-1">
+                  End Time
+                </Text>
+                <TouchableOpacity
+                  onPress={() => {
+                    setPickingType("end");
+                    setTimePickerVisible(true);
+                  }}
+                  className="bg-input p-4 rounded-2xl border border-border-subtle flex-row justify-between items-center"
+                >
+                  <Text className="text-primary font-poppins">
+                    {endTime.slice(0, 5)}
+                  </Text>
+                  <Ionicons name="time-outline" size={20} color="#666" />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Capacity */}
+            <View>
+              <Text className="text-secondary font-poppins-medium text-xs mb-2 uppercase ml-1">
+                Total Capacity (Seats)
+              </Text>
+              <AppTextInput
+                placeholder="e.g. 20"
+                value={capacity}
+                onChangeText={setCapacity}
+                keyboardType="numeric"
+              />
+            </View>
+
+            {/* Status Toggle */}
+            <View className="flex-row items-center justify-between bg-input p-4 rounded-2xl border border-border-subtle">
+              <View>
+                <Text className="text-primary font-poppins-semibold text-sm">
+                  Active Status
+                </Text>
+                <Text className="text-secondary font-poppins text-xs mt-0.5">
+                  {isActive
+                    ? "This period is active and accepting bookings"
+                    : "This period is currently disabled"}
+                </Text>
+              </View>
+              <Switch
+                value={isActive}
+                onValueChange={setIsActive}
+                trackColor={{ false: "#767577", true: "#FF8C00" }}
+                thumbColor={isActive ? "#f4f3f4" : "#f4f3f4"}
+              />
+            </View>
+
+            <View className="mt-8">
+              <AppButton
+                text={
+                  isPending
+                    ? "Saving..."
+                    : initialData
+                      ? "Update Serving Period"
+                      : "Save Serving Period"
+                }
+                onPress={() => performSave()}
+                disabled={isPending}
+                height={55}
+                borderRadius={28}
+              />
+            </View>
+          </View>
+        </ScrollView>
+
+        <DateTimePickerModal
+          isVisible={isTimePickerVisible}
+          mode="time"
+          onConfirm={handleConfirmTime}
+          onCancel={() => setTimePickerVisible(false)}
+          date={new Date()}
+        />
+        </BottomSheetView>
+      </BottomSheetModal>
+    </BottomSheetModalProvider>
   );
 }
 
