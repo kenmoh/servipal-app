@@ -5,10 +5,10 @@ import ProductOrderCard from "@/components/ProductOrderCard";
 import StatCard from "@/components/StatCard";
 
 import { useUserStore } from "@/store/userStore";
-import Feather from "@expo/vector-icons/Feather";
-import FontAwesome from "@expo/vector-icons/FontAwesome";
-import FontAwesome5 from "@expo/vector-icons/FontAwesome5";
-import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+import Feather from "@react-native-vector-icons/feather/static";
+import FontAwesome from "@react-native-vector-icons/fontawesome/static";
+import FontAwesome5 from "@react-native-vector-icons/fontawesome5/static";
+import MaterialCommunityIcons from "@react-native-vector-icons/material-design-icons/static";
 import { FlashList } from "@shopify/flash-list";
 import { useQuery } from "@tanstack/react-query";
 import { useFocusEffect } from "expo-router";

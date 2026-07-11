@@ -1,5 +1,5 @@
 import { CartItem, useCartStore } from "@/store/cartStore";
-import Ionicons from "@expo/vector-icons/Ionicons";
+import Ionicons from "@react-native-vector-icons/ionicons/static";
 import { Image } from "expo-image";
 import { Text, TouchableOpacity, View } from "react-native";
 

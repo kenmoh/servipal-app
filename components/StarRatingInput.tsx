@@ -1,4 +1,4 @@
-import { FontAwesome } from "@expo/vector-icons";
+import FontAwesome from "@react-native-vector-icons/fontawesome/static";
 import React from "react";
 import { Text, TouchableOpacity, View } from "react-native";
 

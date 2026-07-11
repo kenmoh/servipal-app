@@ -3,7 +3,7 @@ import BankSelectionSheet from "@/components/BankSelectionSheet";
 import { useToast } from "@/components/ToastProvider";
 import { AppButton } from "@/components/ui/app-button";
 import { AppTextInput } from "@/components/ui/app-text-input";
-import Feather from "@expo/vector-icons/Feather";
+import Feather from "@react-native-vector-icons/feather/static";
 import {
   BottomSheetModal,
   BottomSheetModalProvider,

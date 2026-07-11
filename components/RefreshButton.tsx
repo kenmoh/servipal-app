@@ -1,6 +1,6 @@
 
 
-import Feather from '@expo/vector-icons/Feather';
+import Feather from "@react-native-vector-icons/feather/static";
 import React from 'react';
 import { Text, View } from 'react-native';
 import { AppButton } from './ui/app-button';

@@ -1,5 +1,5 @@
 import { Review } from "@/types/review-types";
-import { FontAwesome } from "@expo/vector-icons";
+import FontAwesome from "@react-native-vector-icons/fontawesome/static";
 import { formatDistanceToNow } from "date-fns";
 import { Image } from "expo-image";
 import { Text, useColorScheme, View } from "react-native";

@@ -1,6 +1,6 @@
 import { OrderStatus } from "@/types/order-types";
-import AntDesign from "@expo/vector-icons/AntDesign";
-import Feather from "@expo/vector-icons/Feather";
+import AntDesign from "@react-native-vector-icons/ant-design/static";
+import Feather from "@react-native-vector-icons/feather/static";
 
 const getNextStatus = (
   currentStatus: OrderStatus,

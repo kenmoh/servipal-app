@@ -2,7 +2,7 @@ import HDivider from "@/components/HDivider";
 import { useToast } from "@/components/ToastProvider";
 import { useCartStore } from "@/store/cartStore";
 import { useUserStore } from "@/store/userStore";
-import Ionicons from "@expo/vector-icons/Ionicons";
+import Ionicons from "@react-native-vector-icons/ionicons/static";
 import { useQueryClient } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
 import { PayWithFlutterwave } from "flutterwave-react-native";

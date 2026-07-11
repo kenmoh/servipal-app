@@ -3,7 +3,7 @@ import { useCartStore } from "@/store/cartStore";
 import { useUserStore } from "@/store/userStore";
 import { RestaurantMenuItemResponse } from "@/types/item-types";
 
-import Ionicons from "@expo/vector-icons/Ionicons";
+import Ionicons from "@react-native-vector-icons/ionicons/static";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import Checkbox from "expo-checkbox";
 import { router } from "expo-router";

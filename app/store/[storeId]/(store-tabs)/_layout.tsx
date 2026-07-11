@@ -2,8 +2,8 @@ import FAB from "@/components/FAB";
 import { HEADER_BG_DARK, HEADER_BG_LIGHT } from "@/constants/theme";
 
 import { useUserStore } from "@/store/userStore";
-import AntDesign from "@expo/vector-icons/AntDesign";
-import { createMaterialTopTabNavigator } from "@react-navigation/material-top-tabs";
+import AntDesign from "@react-native-vector-icons/ant-design/static";
+import { createMaterialTopTabNavigator } from 'expo-router/js-top-tabs';
 import { useLocalSearchParams, withLayoutContext } from "expo-router";
 // import { Bike, Landmark, MapPin, Menu, Star } from "lucide-react-native";
 import LoadingIndicator from "@/components/LoadingIndicator";

@@ -1,4 +1,4 @@
-import Feather from "@expo/vector-icons/Feather";
+import Feather from "@react-native-vector-icons/feather/static";
 import * as ImagePicker from "expo-image-picker";
 import React from "react";
 import { Image, Text, TouchableOpacity, View } from "react-native";

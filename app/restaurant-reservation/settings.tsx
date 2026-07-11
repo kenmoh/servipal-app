@@ -10,7 +10,7 @@ import { useToast } from "@/components/ToastProvider";
 import { AppButton } from "@/components/ui/app-button";
 import { useUserStore } from "@/store/userStore";
 import { ReservationSettingsInput } from "@/types/reservation-types";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@react-native-vector-icons/ionicons/static";
 import {
   BottomSheetModal,
   BottomSheetModalProvider,

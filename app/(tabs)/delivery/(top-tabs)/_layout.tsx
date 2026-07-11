@@ -4,7 +4,7 @@ import { ActivityIndicator, Dimensions, StyleSheet, View } from "react-native";
 import { HEADER_BG_DARK, HEADER_BG_LIGHT } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useUserStore } from "@/store/userStore";
-import { createMaterialTopTabNavigator } from "@react-navigation/material-top-tabs";
+import { createMaterialTopTabNavigator } from 'expo-router/js-top-tabs';
 import { withLayoutContext } from "expo-router";
 
 const Tab = withLayoutContext(createMaterialTopTabNavigator().Navigator);

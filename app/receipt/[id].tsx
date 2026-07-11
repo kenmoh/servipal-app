@@ -22,9 +22,9 @@ import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useUserStore } from "@/store/userStore";
 import { DetailResponse, OrderItem, OrderStatus } from "@/types/order-types";
 import { getButtonConfig } from "@/utils/button-config";
-import { AntDesign } from "@expo/vector-icons";
-import Feather from "@expo/vector-icons/Feather";
-import Ionicons from "@expo/vector-icons/Ionicons";
+import AntDesign from "@react-native-vector-icons/ant-design/static";
+import Feather from "@react-native-vector-icons/feather/static";
+import Ionicons from "@react-native-vector-icons/ionicons/static";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Directory, File, Paths } from "expo-file-system";
@@ -703,7 +703,6 @@ const ReceiptPage = () => {
           ),
         }}
       />
-
       {/* Update Status Section */}
       <View
         className="flex-row items-center justify-between mb-3 px-2"
@@ -749,7 +748,6 @@ const ReceiptPage = () => {
           </Text>
         </View>
       </View>
-
       <View
         className={`${CARD_BG} rounded-xl p-4 ${BORDER_COLOR} border shadow-sm`}
       >
@@ -939,7 +937,6 @@ const ReceiptPage = () => {
           }
         />
       </View>
-
       <Text className="text-center text-[10px] text-gray-500 mt-10 font-poppins tracking-widest uppercase">
         ServiPal • Restaurant Services
       </Text>

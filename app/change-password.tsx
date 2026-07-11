@@ -6,7 +6,7 @@ import {
   ChangePasswordFormValues,
   changePasswordSchema,
 } from "@/types/auth-types";
-import Ionicons from "@expo/vector-icons/Ionicons";
+import Ionicons from "@react-native-vector-icons/ionicons/static";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
 import { router } from "expo-router";

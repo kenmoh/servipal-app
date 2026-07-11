@@ -8,7 +8,7 @@ import {
 } from "react-native";
 
 import { HEADER_BG_DARK, HEADER_BG_LIGHT } from "@/constants/theme";
-import Feather from "@expo/vector-icons/Feather";
+import Feather from "@react-native-vector-icons/feather/static";
 import BottomSheet, { BottomSheetScrollView } from "@gorhom/bottom-sheet";
 import { router } from "expo-router";
 import Map from "./Map";

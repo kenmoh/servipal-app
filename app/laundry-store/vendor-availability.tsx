@@ -524,8 +524,8 @@ import {
   View,
   useColorScheme as useNativeColorScheme,
 } from "react-native";
-import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import Fontisto from "@expo/vector-icons/Fontisto";
+import MaterialIcons from "@react-native-vector-icons/material-icons/static";
+import Fontisto from "@react-native-vector-icons/fontisto/static";
 import { useQuery } from "@tanstack/react-query";
 import { fetchVendorAvailability } from "@/api/user";
 

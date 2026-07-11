@@ -4,7 +4,7 @@ import RiderCard from "@/components/RiderCard";
 import { useVerifiedNavigation } from "@/hooks/use-verification";
 import { useUserStore } from "@/store/userStore";
 import { RiderResponse } from "@/types/user-types";
-import { AntDesign } from "@expo/vector-icons";
+import AntDesign from "@react-native-vector-icons/ant-design/static";
 import { FlashList } from "@shopify/flash-list";
 import { useQuery } from "@tanstack/react-query";
 import React from "react";

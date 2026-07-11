@@ -1,5 +1,4 @@
-// import { AlertCircle, CheckCircle, Info } from 'lucide-react-native';
-import { Feather } from "@expo/vector-icons";
+import Feather from "@react-native-vector-icons/feather/static";
 import React, { useEffect, useRef } from "react";
 import { Animated, Text, View } from "react-native";
 

@@ -1,9 +1,9 @@
-import AntDesign from "@expo/vector-icons/AntDesign";
-import Feather from "@expo/vector-icons/Feather";
-import FontAwesome6 from "@expo/vector-icons/FontAwesome6";
-import Fontisto from "@expo/vector-icons/Fontisto";
-import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import AntDesign from "@react-native-vector-icons/ant-design/static";
+import Feather from "@react-native-vector-icons/feather/static";
+import FontAwesome6 from "@react-native-vector-icons/fontawesome6/static";
+import Fontisto from "@react-native-vector-icons/fontisto/static";
+import MaterialCommunityIcons from "@react-native-vector-icons/material-design-icons/static";
+import MaterialIcons from "@react-native-vector-icons/material-icons/static";
 import { router } from "expo-router";
 import React from "react";
 import { Pressable, Text, View } from "react-native";

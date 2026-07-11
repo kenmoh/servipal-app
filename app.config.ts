@@ -75,6 +75,20 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     "@react-native-firebase/crashlytics",
     "expo-status-bar",
     "react-native-maps",
+    "@react-native-vector-icons/feather",
+    "@react-native-vector-icons/ionicons",
+    "@react-native-vector-icons/fontawesome",
+    "@react-native-vector-icons/material-design-icons",
+    "@react-native-vector-icons/ant-design",
+    "@react-native-vector-icons/fontawesome6",
+    "@react-native-vector-icons/fontisto",
+    "@react-native-vector-icons/material-icons",
+    "@react-native-vector-icons/entypo",
+    "@react-native-vector-icons/octicons",
+    "@react-native-vector-icons/fontawesome5",
+    "@react-native-vector-icons/evil-icons",
+    "@react-native-vector-icons/simple-line-icons",
+
 
     [
       "expo-build-properties",

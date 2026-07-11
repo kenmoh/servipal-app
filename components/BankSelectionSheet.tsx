@@ -1,5 +1,5 @@
 import { HEADER_BG_DARK, HEADER_BG_LIGHT } from "@/constants/theme";
-import Ionicons from "@expo/vector-icons/Ionicons";
+import Ionicons from "@react-native-vector-icons/ionicons/static";
 import {
   BottomSheetBackdrop,
   BottomSheetFlatList,

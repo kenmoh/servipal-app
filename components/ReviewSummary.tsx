@@ -1,5 +1,5 @@
 import { ReviewSummaryStats } from "@/types/review-types";
-import { FontAwesome } from "@expo/vector-icons";
+import FontAwesome from "@react-native-vector-icons/fontawesome/static";
 import React from "react";
 import { Text, View } from "react-native";
 

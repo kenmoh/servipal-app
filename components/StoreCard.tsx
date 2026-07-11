@@ -1,9 +1,9 @@
 import { UserProfile } from "@/types/user-types";
-import AntDesign from "@expo/vector-icons/AntDesign";
+import AntDesign from "@react-native-vector-icons/ant-design/static";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
-import FontAwesome from "@expo/vector-icons/FontAwesome";
-import Feather from "@expo/vector-icons/Feather";
+import FontAwesome from "@react-native-vector-icons/fontawesome/static";
+import Feather from "@react-native-vector-icons/feather/static";
 import { RelativePathString, router, type Href } from "expo-router";
 import {
   Dimensions,

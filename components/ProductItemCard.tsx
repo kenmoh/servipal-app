@@ -1,6 +1,6 @@
 import { blurhash } from "@/constants/state";
 import { ProductResponse } from "@/types/product-types";
-import { Feather } from "@expo/vector-icons";
+import Feather from "@react-native-vector-icons/feather/static";
 import { Image } from "expo-image";
 import { router } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";

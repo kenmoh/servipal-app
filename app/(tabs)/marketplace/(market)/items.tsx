@@ -4,7 +4,7 @@ import FAB from "@/components/FAB";
 import LoadingIndicator from "@/components/LoadingIndicator";
 import ProductItemCard from "@/components/ProductItemCard";
 import { useUserStore } from "@/store/userStore";
-import Feather from "@expo/vector-icons/Feather";
+import Feather from "@react-native-vector-icons/feather/static";
 import { FlashList } from "@shopify/flash-list";
 import { useQuery } from "@tanstack/react-query";
 import { router } from "expo-router";

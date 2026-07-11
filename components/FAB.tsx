@@ -1,4 +1,4 @@
-import Feather from '@expo/vector-icons/Feather';
+import Feather from "@react-native-vector-icons/feather/static";
 import React from "react";
 import { Pressable } from "react-native";
 

@@ -1,6 +1,6 @@
 import { useUserStore } from "@/store/userStore";
 import { resolveDisplayName, Transaction } from "@/types/user-types";
-import AntDesign from "@expo/vector-icons/AntDesign";
+import AntDesign from "@react-native-vector-icons/ant-design/static";
 import { router } from "expo-router";
 import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";

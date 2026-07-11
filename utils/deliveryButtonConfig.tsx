@@ -1,6 +1,6 @@
-import AntDesign from "@expo/vector-icons/AntDesign";
-import Feather from "@expo/vector-icons/Feather";
-import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+import AntDesign from "@react-native-vector-icons/ant-design/static";
+import Feather from "@react-native-vector-icons/feather/static";
+import MaterialCommunityIcons from "@react-native-vector-icons/material-design-icons/static";
 import { DeliveryOrderStatus } from "../types/delivey-types";
 
 export interface DeliveryActionConfig {

@@ -16,7 +16,7 @@ import {
   UserRole,
 } from "@/types/reservation-types";
 import { useUserStore } from "@/store/userStore";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@react-native-vector-icons/ionicons/static";
 import { FlashList, FlashListRef } from "@shopify/flash-list";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format, parseISO } from "date-fns";

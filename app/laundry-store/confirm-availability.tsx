@@ -22,8 +22,8 @@ import {
   View,
   useColorScheme as useNativeColorScheme,
 } from "react-native";
-import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import FontAwesome5 from "@expo/vector-icons/FontAwesome5";
+import MaterialIcons from "@react-native-vector-icons/material-icons/static";
+import FontAwesome5 from "@react-native-vector-icons/fontawesome5/static";
 
 const ConfirmAvailability = () => {
   const { generatedSlots, formData, resetFormData } = useAvailabilityStore();

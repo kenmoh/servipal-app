@@ -24,9 +24,9 @@ import { OrderCreate, RestaurantOrderCreate } from "@/types/item-types";
 import { RequireDelivery } from "@/types/order-types";
 import { generateIdempotencyKey } from "@/utils/utils";
 import { supabase } from "@/utils/supabase";
-import Feather from "@expo/vector-icons/Feather";
-import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import Ionicons from "@expo/vector-icons/Ionicons";
+import Feather from "@react-native-vector-icons/feather/static";
+import MaterialCommunityIcons from "@react-native-vector-icons/material-design-icons/static";
+import Ionicons from "@react-native-vector-icons/ionicons/static";
 import * as Sentry from "@sentry/react-native";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { BottomSheetScrollView, BottomSheetModal } from "@gorhom/bottom-sheet";
@@ -764,7 +764,7 @@ const Cart = () => {
               {/* ─── Delivery Options ────────────────────────────── */}
               {isLaundryOrder ? (
                 /* ── Laundry: single button to open booking modal ── */
-                <View className="mb-8">
+                (<View className="mb-8">
                   <Text className="text-base font-poppins-bold text-primary mb-4">
                     Laundry Booking
                   </Text>
@@ -795,10 +795,10 @@ const Cart = () => {
                     </View>
                     <Feather name="chevron-right" size={20} color="#FF8C00" />
                   </Pressable>
-                </View>
+                </View>)
               ) : (
                 /* ── Restaurant: existing radio buttons ── */
-                <View className="mb-8">
+                (<View className="mb-8">
                   <Text className="text-base font-poppins-bold text-primary mb-4">
                     Delivery Method
                   </Text>
@@ -826,7 +826,6 @@ const Cart = () => {
                       />
                     )}
                   </View>
-
                   <View className="mt-4 bg-input rounded-2xl p-4 border border-gray-300 dark:border-gray-600">
                     <Text className="text-xs text-gray-400 font-poppins-medium mb-2 uppercase ml-1">
                       Schedule Order
@@ -895,7 +894,7 @@ const Cart = () => {
                       </View>
                     )}
                   </View>
-                </View>
+                </View>)
               )}
 
               {/* ─── Laundry Booking Summary (after modal confirm) ── */}
@@ -1138,7 +1137,7 @@ const Cart = () => {
               /* ════════════════════════════════════════════════════
                    LAUNDRY BOOKING MODAL
                    ════════════════════════════════════════════════════ */
-              <>
+              (<>
                 <BottomSheetScrollView
                   className="flex-1"
                   showsVerticalScrollIndicator={false}
@@ -1423,16 +1422,15 @@ const Cart = () => {
                     }
                   />
                 </View>
-              </>
+              </>)
             ) : (
               /* ════════════════════════════════════════════════════
                    RESTAURANT DELIVERY ADDRESS MODAL
                    ════════════════════════════════════════════════════ */
-              <View className="flex-1 pt-2 px-5">
+              (<View className="flex-1 pt-2 px-5">
                 <Text className="text-xl font-poppins-bold text-primary mb-6">
                   Delivery Address
                 </Text>
-
                 <View className="mb-4">
                   <View className="flex-row items-center gap-2">
                     <View className="w-[81%]">
@@ -1457,7 +1455,6 @@ const Cart = () => {
                     </View>
                   </View>
                 </View>
-
                 <View className="mt-auto">
                   <AppButton
                     text="Confirm Address"
@@ -1468,7 +1465,7 @@ const Cart = () => {
                     disabled={!destination}
                   />
                 </View>
-              </View>
+              </View>)
               )}
             </Animated.View>
           )}

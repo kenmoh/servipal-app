@@ -10,8 +10,8 @@ import ProfileImagePicker from "@/components/ProfileImagePicker";
 import ToggleSwitch from "@/components/ToggleSwitch";
 import { useToast } from "@/components/ToastProvider";
 import { AppButton } from "@/components/ui/app-button";
-import EvilIcons from "@expo/vector-icons/EvilIcons";
-import Ionicons from "@expo/vector-icons/Ionicons";
+import EvilIcons from "@react-native-vector-icons/evil-icons/static";
+import Ionicons from "@react-native-vector-icons/ionicons/static";
 import {
   useToggleEnableReservation,
   useToggleOnlineStatus,
@@ -28,9 +28,7 @@ import { router } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
   Alert,
-  Animated,
   Dimensions,
   Platform,
   Pressable,
@@ -218,8 +216,6 @@ const ProfileScreen = () => {
     try {
       const { status: initialStatus, canAskAgain } =
         await Location.getForegroundPermissionsAsync();
-      console.log("Current foreground status:", { initialStatus, canAskAgain });
-
       if (initialStatus === "granted") {
         Alert.alert(
           "Location Enabled",

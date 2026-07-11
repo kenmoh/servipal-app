@@ -8,7 +8,7 @@ import { HEADER_BG_DARK, HEADER_BG_LIGHT } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useUserStore } from "@/store/userStore";
 import { DeliveryOrder } from "@/types/delivey-types";
-import Feather from "@expo/vector-icons/Feather";
+import Feather from "@react-native-vector-icons/feather/static";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import * as Print from "expo-print";

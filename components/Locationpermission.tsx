@@ -1,6 +1,6 @@
 import * as Linking from 'expo-linking'
 import { Text, View } from 'react-native'
-import Feather from '@expo/vector-icons/Feather';
+import Feather from "@react-native-vector-icons/feather/static";
 import { AppButton } from './ui/app-button';
 
 // import { Linking } from 'react-native'

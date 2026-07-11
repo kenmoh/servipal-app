@@ -1,5 +1,4 @@
 import ToastProvider from "@/components/ToastProvider";
-import { ThemeTransitionOverlay } from "@/components/ThemeTransitionOverlay";
 import { PostHogProvider, usePostHog } from "posthog-react-native";
 import { HEADER_BG_DARK, HEADER_BG_LIGHT } from "@/constants/theme";
 import "@/global.css";
@@ -19,6 +18,7 @@ import { useEffect, useRef } from "react";
 import { View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
+import { ObserveRoot, useObserve } from 'expo-observe';
 
 function ScreenTracker() {
   const posthog = usePostHog();
@@ -72,10 +72,11 @@ const queryClient = new QueryClient({
   },
 });
 
-export default Sentry.wrap(function RootLayout() {
+export default Sentry.wrap(ObserveRoot.wrap(function RootLayout() {
   const colorScheme = useColorScheme();
   const { setColorScheme: setNWColorScheme } = useNativeWind();
   const { theme: currentTheme } = useTheme();
+  const { markInteractive } = useObserve();
 
   const BG_COLOR = colorScheme === "dark" ? HEADER_BG_DARK : HEADER_BG_LIGHT;
   const { user, hydrate, initialize } = useUserStore();
@@ -100,6 +101,7 @@ export default Sentry.wrap(function RootLayout() {
   useEffect(() => {
     if (loaded) {
       SplashScreen.hideAsync();
+      markInteractive()
     }
   }, [loaded]);
 
@@ -387,4 +389,6 @@ export default Sentry.wrap(function RootLayout() {
       </GestureHandlerRootView>
     </View>
   );
-});
+}));
+
+

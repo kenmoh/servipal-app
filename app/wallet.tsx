@@ -3,7 +3,7 @@ import HDivider from "@/components/HDivider";
 import Transactioncard from "@/components/Transactioncard";
 import { AppButton } from "@/components/ui/app-button";
 import { useUserStore } from "@/store/userStore";
-import Ionicons from "@expo/vector-icons/Ionicons";
+import Ionicons from "@react-native-vector-icons/ionicons/static";
 import { useQuery } from "@tanstack/react-query";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";

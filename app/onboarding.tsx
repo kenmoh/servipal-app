@@ -1,4 +1,4 @@
-import { AntDesign } from "@expo/vector-icons";
+import AntDesign from "@react-native-vector-icons/ant-design/static";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { useRef, useState } from "react";

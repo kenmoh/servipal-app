@@ -28,9 +28,9 @@ import {
   stopDeliveryTracking,
 } from "@/utils/location-tracking";
 import { supabase } from "@/utils/supabase";
-import Entypo from "@expo/vector-icons/Entypo";
-import Feather from "@expo/vector-icons/Feather";
-import Octicons from "@expo/vector-icons/Octicons";
+import Entypo from "@react-native-vector-icons/entypo/static";
+import Feather from "@react-native-vector-icons/feather/static";
+import Octicons from "@react-native-vector-icons/octicons/static";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as Sentry from "@sentry/react-native";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";

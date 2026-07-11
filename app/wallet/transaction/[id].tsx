@@ -1,6 +1,6 @@
 import HDivider from "@/components/HDivider";
 import { useToast } from "@/components/ToastProvider";
-import Ionicons from "@expo/vector-icons/Ionicons";
+import Ionicons from "@react-native-vector-icons/ionicons/static";
 import * as Clipboard from "expo-clipboard";
 import { useLocalSearchParams } from "expo-router";
 import React from "react";

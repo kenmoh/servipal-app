@@ -1,7 +1,8 @@
 import { Status } from "@/components/Status";
 import { useUserStore } from "@/store/userStore";
 import { DeliveryOrder } from "@/types/delivey-types";
-import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
+import Feather from "@react-native-vector-icons/feather/static";
+import MaterialCommunityIcons from "@react-native-vector-icons/material-design-icons/static";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
 import React from "react";

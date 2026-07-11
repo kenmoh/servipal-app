@@ -9,7 +9,7 @@ import { useVerifiedNavigation } from "@/hooks/use-verification";
 import { useCartStore } from "@/store/cartStore";
 import { useUserStore } from "@/store/userStore";
 import { LaundryItemResponse } from "@/types/item-types";
-import { AntDesign } from "@expo/vector-icons";
+import AntDesign from "@react-native-vector-icons/ant-design/static";
 import { FlashList } from "@shopify/flash-list";
 import { useQuery } from "@tanstack/react-query";
 import { router, useLocalSearchParams, usePathname } from "expo-router";

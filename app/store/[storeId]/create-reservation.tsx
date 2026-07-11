@@ -14,7 +14,7 @@ import {
   GetServingPeriod,
 } from "@/types/reservation-types";
 import { formatReservationDate, generateIdempotencyKey } from "@/utils/utils";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@react-native-vector-icons/ionicons/static";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { router, useLocalSearchParams, useRouter } from "expo-router";

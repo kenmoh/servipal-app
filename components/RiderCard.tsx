@@ -1,6 +1,6 @@
 import { useUserStore } from "@/store/userStore";
 import { RiderResponse } from "@/types/user-types";
-import { Feather } from "@expo/vector-icons";
+import Feather from "@react-native-vector-icons/feather/static";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
 import React from "react";

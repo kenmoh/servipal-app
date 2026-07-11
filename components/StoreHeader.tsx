@@ -1,8 +1,8 @@
-import AntDesign from "@expo/vector-icons/AntDesign";
-import Feather from "@expo/vector-icons/Feather";
-import FontAwesome6 from "@expo/vector-icons/FontAwesome6";
-import Fontisto from "@expo/vector-icons/Fontisto";
-import Ionicons from "@expo/vector-icons/Ionicons";
+import AntDesign from "@react-native-vector-icons/ant-design/static";
+import Feather from "@react-native-vector-icons/feather/static";
+import FontAwesome6 from "@react-native-vector-icons/fontawesome6/static";
+import Fontisto from "@react-native-vector-icons/fontisto/static";
+import Ionicons from "@react-native-vector-icons/ionicons/static";
 import { router } from "expo-router";
 import React from "react";
 import { Image, Pressable, Text, View } from "react-native";

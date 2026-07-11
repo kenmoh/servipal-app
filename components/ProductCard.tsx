@@ -1,6 +1,6 @@
 import { ProductResponse } from "@/types/product-types";
-import FontAwesome from "@expo/vector-icons/FontAwesome";
-import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+import FontAwesome from "@react-native-vector-icons/fontawesome/static";
+import MaterialCommunityIcons from "@react-native-vector-icons/material-design-icons/static";
 import { router } from "expo-router";
 import React from "react";
 import {

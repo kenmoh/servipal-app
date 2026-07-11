@@ -16,7 +16,7 @@ import { AppTextInput } from "@/components/ui/app-text-input";
 import { states } from "@/constants/state";
 import { useUserStore } from "@/store/userStore";
 import { UserProfileUpdate } from "@/types/user-types";
-import Feather from "@expo/vector-icons/Feather";
+import Feather from "@react-native-vector-icons/feather/static";
 import {
   BottomSheetModal,
   BottomSheetModalProvider,

@@ -1,7 +1,7 @@
 import { blurhash } from "@/constants/state";
 import { useUserStore } from "@/store/userStore";
 import { RiderResponse } from "@/types/user-types";
-import Feather from "@expo/vector-icons/Feather";
+import Feather from "@react-native-vector-icons/feather/static";
 import { Image } from "expo-image";
 import { memo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";

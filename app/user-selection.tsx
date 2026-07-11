@@ -8,11 +8,9 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import {
-  FontAwesome5,
-  MaterialCommunityIcons,
-  Ionicons,
-} from "@expo/vector-icons";
+import FontAwesome5 from "@react-native-vector-icons/fontawesome5/static";
+import MaterialCommunityIcons from "@react-native-vector-icons/material-design-icons/static";
+import Ionicons from "@react-native-vector-icons/ionicons/static";
 import { useUserStore } from "@/store/userStore";
 import { AppButton } from "@/components/ui/app-button";
 

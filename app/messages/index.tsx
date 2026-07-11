@@ -7,7 +7,7 @@ import {
 import EmptyList from "@/components/EmptyList";
 import { useUserStore } from "@/store/userStore";
 import type { Dispute } from "@/types/dispute-types";
-import Ionicons from "@expo/vector-icons/Ionicons";
+import Ionicons from "@react-native-vector-icons/ionicons/static";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
 import React, { useCallback, useEffect } from "react";

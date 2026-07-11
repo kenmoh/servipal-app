@@ -1,5 +1,5 @@
 import { useLocationStore } from "@/store/locationStore";
-import Feather from "@expo/vector-icons/Feather";
+import Feather from "@react-native-vector-icons/feather/static";
 import React, { useState } from "react";
 import {
   ActivityIndicator,

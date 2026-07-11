@@ -1,6 +1,6 @@
 import { HEADER_BG_DARK, HEADER_BG_LIGHT } from "@/constants/theme";
 import { ProductSubcategory } from "@/types/product-types";
-import Feather from "@expo/vector-icons/Feather";
+import Feather from "@react-native-vector-icons/feather/static";
 import React, { useCallback, useMemo, useRef } from "react";
 import {
   ScrollView,

@@ -1,8 +1,8 @@
 import { fetchRider } from "@/api/user";
 import { HEADER_BG_DARK, HEADER_BG_LIGHT } from "@/constants/theme";
 import { RiderResponse } from "@/types/user-types";
-import Feather from "@expo/vector-icons/Feather";
-import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+import Feather from "@react-native-vector-icons/feather/static";
+import MaterialCommunityIcons from "@react-native-vector-icons/material-design-icons/static";
 import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
 import { useQuery } from "@tanstack/react-query";
 import { Image } from "expo-image";
