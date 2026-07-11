@@ -66,17 +66,16 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       },
     ],
   },
-  // web: {
-  //   output: "static",
-  //   favicon: "./assets/images/favicon.png",
-  //   bundler: "metro",
-  // },
+
   plugins: [
     "expo-router",
     "expo-localization",
     "@react-native-firebase/app",
     "@react-native-firebase/auth",
     "@react-native-firebase/crashlytics",
+    "expo-status-bar",
+    "react-native-maps",
+
     [
       "expo-build-properties",
       {
