@@ -1,15 +1,16 @@
 import React from "react";
-import { Dimensions, Pressable, ScrollView, Text, View } from "react-native";
+import { ActivityIndicator, Alert, Dimensions, Pressable, ScrollView, Text, View } from "react-native";
 
-import { getDeliveryDetailsById } from "@/api/delivery";
+import { getDeliveryDetailsById, requestRefund } from "@/api/delivery";
 import LoadingIndicator from "@/components/LoadingIndicator";
 import { useToast } from "@/components/ToastProvider";
 import { HEADER_BG_DARK, HEADER_BG_LIGHT } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useUserStore } from "@/store/userStore";
 import { DeliveryOrder } from "@/types/delivey-types";
+import { AppButton } from "@/components/ui/app-button";
 import Feather from "@react-native-vector-icons/feather/static";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import * as Print from "expo-print";
 import { Stack, useLocalSearchParams } from "expo-router";
@@ -20,6 +21,19 @@ const DeliveryReceiptPage = () => {
   const theme = useColorScheme();
   const { user } = useUserStore();
   const { showError, showSuccess } = useToast();
+  const queryClient = useQueryClient();
+
+  const refundMutation = useMutation({
+    mutationFn: () => requestRefund(id),
+    onSuccess: () => {
+      showSuccess("Refund initiated", "Your refund request has been submitted.");
+      queryClient.invalidateQueries({ queryKey: ["delivery-order", id] });
+      queryClient.invalidateQueries({ queryKey: ["delivery-orders", user?.id] });
+    },
+    onError: (error: Error) => {
+      showError("Error", error.message || "Failed to request refund");
+    },
+  });
 
   const isDark = theme === "dark";
   const BG_COLOR = isDark ? HEADER_BG_DARK : HEADER_BG_LIGHT;
@@ -466,6 +480,36 @@ const DeliveryReceiptPage = () => {
           </View>
         </View>
       </View>
+
+      {!data.rider_id && data.delivery_status === "PAID_NEEDS_RIDER" && (
+        <View className="px-4 mt-8">
+          <AppButton
+            text="Request Refund"
+            variant="outline"
+            color="#ef4444"
+            onPress={() =>
+              Alert.alert(
+                "Request Refund",
+                "Are you sure you want to request a refund? Note that payment gateway transfer fees will be deducted.",
+                [
+                  { text: "Cancel", style: "cancel" },
+                  {
+                    text: "Yes, Request Refund",
+                    style: "destructive",
+                    onPress: () => refundMutation.mutate(),
+                  },
+                ],
+              )
+            }
+            disabled={refundMutation.isPending}
+            icon={
+              refundMutation.isPending ? (
+                <ActivityIndicator color="#ef4444" />
+              ) : undefined
+            }
+          />
+        </View>
+      )}
 
       <Text className="text-center text-[10px] text-gray-500 mt-10 font-poppins tracking-widest uppercase">
         ServiPal • Delivery Service

@@ -292,9 +292,12 @@ const ReceiptPage = () => {
     },
     
     onSuccess: (result) => {
-      queryClient.invalidateQueries({ queryKey: ["user-orders", user?.id] });
-      queryClient.invalidateQueries({ queryKey: ["food-orders", user?.id], });
       queryClient.invalidateQueries({ queryKey: ["order", id, orderType] });
+      if (orderType === "FOOD") {
+        queryClient.invalidateQueries({ queryKey: ["food-orders", user?.id] });
+      } else {
+        queryClient.invalidateQueries({ queryKey: ["laundry-orders", user?.id] });
+      }
       refetch();
       setTimeout(() => setMenuOpen(false), 600);
       showSuccess("Success", `Order status updated to ${result.status}`);
@@ -316,7 +319,6 @@ const ReceiptPage = () => {
         new_status: buttonConfig.nextStatus!,
       }),
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["user-orders", user?.id] });
       queryClient.invalidateQueries({ queryKey: ["food-orders", user?.id] });
       queryClient.invalidateQueries({ queryKey: ["order", id, orderType] });
       refetch();
@@ -333,7 +335,7 @@ const ReceiptPage = () => {
         new_status: buttonConfig.nextStatus!,
       }),
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["user-orders", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["laundry-orders", user?.id] });
       queryClient.invalidateQueries({ queryKey: ["order", id, orderType] });
       refetch();
       showSuccess(`${data.status}`, `Order status updated to ${data.status}`);

@@ -631,3 +631,34 @@ export const cancelDeliveryBySender = async (
     throw error;
   }
 };
+
+/**
+ * Request a refund for a delivery order
+ *
+ * @param deliveryId - The delivery order ID
+ */
+export const requestRefund = async (deliveryId: string): Promise<any> => {
+  const {
+    data: { session },
+    error: sessionError,
+  } = await supabase.auth.getSession();
+
+  if (sessionError || !session) {
+    throw new Error("User not authenticated");
+  }
+
+  const response = await apiClient.post(
+    `${BASE_URL}/${deliveryId}/request-refund`,
+  );
+
+  if (!response.ok) {
+    const errorData = response.data as any;
+    throw new Error(
+      errorData?.detail ||
+        errorData?.message ||
+        "Failed to request refund",
+    );
+  }
+
+  return response.data;
+};

@@ -116,10 +116,7 @@ const RidersScreen = () => {
       showSuccess("Success", data?.message);
       refetch();
       await queryClient.invalidateQueries({
-        queryKey: ["user-orders", user?.id],
-      });
-      await queryClient.invalidateQueries({
-        queryKey: ["orders", user?.id],
+        queryKey: ["delivery-orders", user?.id],
       });
     },
   });

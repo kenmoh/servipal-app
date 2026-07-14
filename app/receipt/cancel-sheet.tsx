@@ -46,8 +46,8 @@ const CancelSheet = () => {
         cancel_reason: reason,
       }),
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["user-orders", user?.id] });
       queryClient.invalidateQueries({ queryKey: ["food-orders", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["order", id, orderType] });
       showSuccess(`${data.status}`, `Order status updated to ${data.status}`);
       router.back();
     },
@@ -63,7 +63,9 @@ const CancelSheet = () => {
         cancel_reason: reason,
       }),
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["user-orders", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["laundry-orders", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["order", id, orderType] });
+      queryClient.invalidateQueries({ queryKey: ["laundry-order-details", id, orderType] });
       showSuccess(`${data.status}`, `Order status updated to ${data.status}`);
       router.back();
     },
