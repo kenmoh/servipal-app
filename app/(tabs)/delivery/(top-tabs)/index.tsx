@@ -78,7 +78,9 @@ const DeliveryScreen = () => {
     return [
       {
         id: "total",
-        icon: <FontAwesome5 name="coins" color="gray" size={24} />,
+        icon: (
+          <FontAwesome5 name="coins" color="gray" size={24} iconStyle="solid" />
+        ),
         label: "Total Orders",
         value: data?.length || 0,
       },
@@ -160,10 +162,16 @@ const DeliveryScreen = () => {
           }}
           ListEmptyComponent={() => (
             <EmptyList
-              title="No deliveries yet"
-              description="Send packages quickly and safely to anywhere with our reliable dispatch service. Press the > button below to get started."
+              title="Coming soon..."
+              description="This feature is not available yet. Please try again later."
             />
           )}
+          // ListEmptyComponent={() => (
+          //   <EmptyList
+          //     title="No deliveries yet"
+          //     description="Send packages quickly and safely to anywhere with our reliable dispatch service. Press the > button below to get started."
+          //   />
+          // )}
           onEndReachedThreshold={0.5}
           ListFooterComponent={() =>
             isFetchingNextPage ? (
@@ -175,9 +183,13 @@ const DeliveryScreen = () => {
           showsVerticalScrollIndicator={false}
           removeClippedSubviews={true}
         />
+        {/* {["CUSTOMER", "RESTAURANT_VENDOR", "LAUNDRY_VENDOR"].includes(
+          user?.user_metadata?.user_type!,
+        ) && <FAB onPress={() => navigateTo("/send-package")} />} */}
+
         {["CUSTOMER", "RESTAURANT_VENDOR", "LAUNDRY_VENDOR"].includes(
           user?.user_metadata?.user_type!,
-        ) && <FAB onPress={() => navigateTo("/send-package")} />}
+        ) && <FAB onPress={() => {}} />}
       </View>
     </ErrorBoundary>
   );

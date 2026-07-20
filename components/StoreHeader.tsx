@@ -74,7 +74,7 @@ const StoreHeader = ({ storeId }: StoreHeaderProps) => {
             <View className="mt-3">
               <View className="flex-row items-center justify-between gap-4 mt-4">
                 <View className="flex-row gap-2 items-center flex-1">
-                  <FontAwesome6 name="landmark" color="gray" size={12} />
+                  <FontAwesome6 name="landmark" color="gray" size={12} iconStyle="solid" />
                   <Text
                     numberOfLines={1}
                     className="text-primary text-sm font-poppins-semibold uppercase flex-1"

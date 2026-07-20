@@ -24,7 +24,7 @@ import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
 import * as Sentry from "@sentry/react-native";
 import { FlashList } from "@shopify/flash-list";
 import { useLocalSearchParams, usePathname } from "expo-router";
-import { Alert, FlatList, Image, Text, View } from "react-native";
+import { Alert, Image, Text, View } from "react-native";
 import { useTrack } from "@/hooks/use-events";
 
 // Helper: Calculate distance in meters (Haversine)

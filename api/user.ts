@@ -404,7 +404,7 @@ export async function getNearbyVendors(
 ): Promise<NearbyVendorsResponse | null> {
   const {
     userType,
-    maxDistanceKm = 1000000,
+    maxDistanceKm = 50,
     page = 0,
     pageSize = 20,
     minRating,
@@ -863,7 +863,7 @@ interface GetNearbyRidersOptions {
 export const getNearbyRiders = async (
   options: GetNearbyRidersOptions = {},
 ): Promise<DispatchRidersResponse> => {
-  const { maxDistanceKm = 1000000, page = 0, pageSize = 20 } = options;
+  const { maxDistanceKm = 50, page = 0, pageSize = 20 } = options;
   try {
     const {
       data: { session },

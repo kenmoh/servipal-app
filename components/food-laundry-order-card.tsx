@@ -65,7 +65,7 @@ const FoodLaundryOrderCard = ({ order, orderType }: OrderProps) => {
         {/* Left column */}
         <View className="flex-1 gap-3">
           <View className="flex-row items-center gap-2">
-            <FontAwesome6 name="landmark" color="gray" size={12} />
+            <FontAwesome6 name="landmark" color="gray" size={12} iconStyle="solid" />
             <Text
               className="flex-1 text-secondary font-poppins-medium text-xs"
               numberOfLines={1}

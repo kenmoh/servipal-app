@@ -185,7 +185,7 @@ const ConfirmAvailability = () => {
               {/* Service Type */}
               <View className="flex-row items-center justify-between">
                 <View className="flex-row items-center gap-2 flex-1">
-                  <FontAwesome5 name="shipping-fast" size={16} color="orange" />
+                  <FontAwesome5 name="shipping-fast" size={16} color="orange" iconStyle="solid" />
                   <Text className="text-primary font-poppins text-sm">
                     Service Type
                   </Text>

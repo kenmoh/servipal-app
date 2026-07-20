@@ -72,7 +72,7 @@ const FoodOrdersScreen = () => {
     return [
       {
         id: "total",
-        icon: <FontAwesome5 name="coins" color="gray" size={24} />,
+        icon: <FontAwesome5 name="coins" color="gray" size={24} iconStyle="solid" />,
         label: "Total Orders",
         value: orders?.orders?.length || 0,
       },
