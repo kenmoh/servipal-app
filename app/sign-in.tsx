@@ -84,31 +84,42 @@ const SignIn = () => {
         />
 
         {/* Forgot Password */}
-        <View className="w-[50%] self-end mr-2">
-          <AppButton
-            text="Forgot Password"
-            variant="ghost"
-            onPress={() => router.push("/forgot-password")}
-          />
-        </View>
-
-        {/* Login Button */}
-        <View className="mt">
-          <AppButton
-            disabled={isPending || !isValid}
-            icon={isPending && <ActivityIndicator color="white" size="large" />}
-            text={isPending ? "Logging in..." : "Sign In"}
-            onPress={handleSubmit(onSubmit)}
-          />
+        <View className="self-end mr-2">
+          <Pressable
+            onPress={() => {
+              if (!isPending) router.push("/forgot-password");
+            }}
+          >
+            <Text className="font-poppins-medium text-[14px] text-button-primary underline">
+              Forgot Password
+            </Text>
+          </Pressable>
         </View>
       </View>
+
+      {/* Login Button */}
+      <View
+        style={{
+          marginTop: 25,
+        }}
+      />
+      <AppButton
+        width={"90%"}
+        disabled={isPending || !isValid}
+        icon={isPending && <ActivityIndicator color="white" size="large" />}
+        text={isPending ? "Logging in..." : "Sign In"}
+        onPress={handleSubmit(onSubmit)}
+      />
 
       {/* Sign Up Link */}
       <View className="flex-row items-center justify-center w-[90%] mt-[25px] align-baseline">
         <Text className="text-primary font-normal text-[14px]">
           Don't have an account?{" "}
         </Text>
-        <Pressable onPress={() => router.push("/user-selection")} disabled={isPending}>
+        <Pressable
+          onPress={() => router.push("/user-selection")}
+          disabled={isPending}
+        >
           <Text className="font-poppins-medium text-[14px] text-button-primary underline">
             Register
           </Text>

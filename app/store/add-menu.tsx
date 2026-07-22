@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   ScrollView,
@@ -45,7 +45,10 @@ const schema = z
       .number({ message: "Price must be a number" })
       .positive("Price must be greater than 0"),
     // Ingredients (description) is only required when type is FOOD
-    description: z.string().max(200, "Ingredients cannot exceed 200 characters").optional(),
+    description: z
+      .string()
+      .max(200, "Ingredients cannot exceed 200 characters")
+      .optional(),
     restaurant_item_type: z.string({ message: "Please select a type" }),
     sides: z.array(z.string()),
     sizes: z.array(
@@ -81,6 +84,7 @@ const RESTAURANT_ITEM_TYPE = [
 ];
 
 const addMenu = () => {
+  const [defaultSize, setDefaultSize] = useState<string | null>(null);
   const { id } = useLocalSearchParams<{ id?: string }>();
   const isEditing = Boolean(id);
   const { showError, showSuccess } = useToast();
@@ -134,25 +138,34 @@ const addMenu = () => {
   const sides = watch("sides");
   const sizes = watch("sizes");
 
-  // Synchronize main price with the smallest size price
+  // Auto-manage defaultSize when sizes change
   useEffect(() => {
-    if ((sizes || []).length > 0) {
-      // Normalization: Ensure we have objects even if watching raw values
+    const normalized = (sizes || []).map((s: any) =>
+      typeof s === "string" ? { size: s, price: 0 } : s,
+    );
+    if (normalized.length === 0) {
+      setDefaultSize(null);
+    } else if (
+      !defaultSize ||
+      !normalized.find((s) => s.size === defaultSize)
+    ) {
+      // If no default set or the current default was removed, pick the first selected
+      setDefaultSize(normalized[0].size);
+    }
+  }, [sizes]);
+
+  // Synchronize main price with the default size's price
+  useEffect(() => {
+    if (defaultSize && (sizes || []).length > 0) {
       const normalized = (sizes || []).map((s: any) =>
         typeof s === "string" ? { size: s, price: 0 } : s,
       );
-
-      // Find the "smallest" selected size based on SIZE_OPTIONS order
-      for (const option of SIZE_OPTIONS) {
-        const found = normalized.find((s) => s.size === option);
-        if (found) {
-          // Sync the main price field with this size's price
-          setValue("price", found.price || 0);
-          break;
-        }
+      const found = normalized.find((s) => s.size === defaultSize);
+      if (found) {
+        setValue("price", found.price || 0);
       }
     }
-  }, [sizes, setValue]);
+  }, [sizes, defaultSize, setValue]);
 
   // Fetch menu data if editing
   const { data: existingMenuItem, isLoading: isLoadingProduct } = useQuery({
@@ -481,30 +494,54 @@ const addMenu = () => {
                               typeof item === "string"
                                 ? { size: item, price: 0 }
                                 : item;
+                            const isDefault = defaultSize === sizeOption.size;
                             return (
                               <View key={`price-input-${sizeOption.size}`}>
-                                <AppTextInput
-                                  placeholder="Enter price"
-                                  label={`Price for ${sizeOption.size}`}
-                                  keyboardType="numeric"
-                                  value={sizeOption.price?.toString() || ""}
-                                  onChangeText={(text) => {
-                                    const newPrice = Number(text) || 0;
-                                    const normalizedValue = (value || []).map(
-                                      (v: any) =>
-                                        typeof v === "string"
-                                          ? { size: v, price: 0 }
-                                          : v,
-                                    );
-                                    onChange(
-                                      normalizedValue.map((s) =>
-                                        s.size === sizeOption.size
-                                          ? { ...s, price: newPrice }
-                                          : s,
-                                      ),
-                                    );
-                                  }}
-                                />
+                                <View className="flex-row items-center gap-2">
+                                  <View className="flex-1">
+                                    <AppTextInput
+                                      placeholder="Enter price"
+                                      label={`Price for ${sizeOption.size}`}
+                                      keyboardType="numeric"
+                                      value={sizeOption.price?.toString() || ""}
+                                      onChangeText={(text) => {
+                                        const newPrice = Number(text) || 0;
+                                        const normalizedValue = (
+                                          value || []
+                                        ).map((v: any) =>
+                                          typeof v === "string"
+                                            ? { size: v, price: 0 }
+                                            : v,
+                                        );
+                                        onChange(
+                                          normalizedValue.map((s) =>
+                                            s.size === sizeOption.size
+                                              ? { ...s, price: newPrice }
+                                              : s,
+                                          ),
+                                        );
+                                      }}
+                                    />
+                                  </View>
+                                  <TouchableOpacity
+                                    onPress={() =>
+                                      setDefaultSize(sizeOption.size)
+                                    }
+                                    className={`mt-8 px-3 py-2 rounded-full border ${
+                                      isDefault
+                                        ? "bg-button-primary/20 border-button-primary"
+                                        : "bg-input border-border"
+                                    }`}
+                                  >
+                                    <Text
+                                      className={`text-xs font-poppins-medium ${
+                                        isDefault ? "text-white" : "text-muted"
+                                      }`}
+                                    >
+                                      {isDefault ? "Default" : "Set default"}
+                                    </Text>
+                                  </TouchableOpacity>
+                                </View>
                               </View>
                             );
                           })}
