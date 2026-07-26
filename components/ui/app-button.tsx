@@ -16,68 +16,72 @@ import Animated, {
 } from "react-native-reanimated";
 
 interface AppButtonProps extends Omit<PressableProps, "style"> {
-  /**
-   * Button text content
-   */
-  text: string;
-  /**
-   * Button variant (default: 'fill')
-   * - fill: Solid background color
-   * - outline: Transparent background with border
-   * - ghost: Transparent background without border
-   */
-  variant?: "fill" | "outline" | "ghost";
-  /**
-   * Button height (default: 45)
-   */
-  height?: number;
-  /**
-   * Button width (default: '100%')
-   */
-  width?: DimensionValue;
-  /**
-   * Button color (default: orange '#FF8C00')
-   * Used as background for fill variant
-   */
-  color?: string;
-  /**
-   * Background color as NativeWind class (e.g., 'bg-primary')
-   * Overrides color prop when using variant='fill'
-   */
-  backgroundColor?: string;
-  /**
-   * Text color - can be hex color or NativeWind class (e.g., 'text-primary')
-   */
-  textColor?: string;
-  /**
-   * Border radius (default: 12)
-   */
-  borderRadius?: number;
-  /**
-   * Border width for outline variant (default: 2)
-   */
-  borderWidth?: number;
-  /**
-   * Optional icon
-   */
-  icon?: ReactNode;
-  /**
-   * Optional custom container styles
-   */
-  style?: StyleProp<ViewStyle>;
-  /**
-   * Optional custom text styles
-   */
-  textStyle?: StyleProp<TextStyle>;
-  /**
-   * Optional className for NativeWind styling
-   */
-  className?: string;
-  /**
-   * Optional borderColor for outline variant
-   */
-  borderColor?: string;
-}
+   /**
+    * Button text content
+    */
+   text: string;
+   /**
+    * Button variant (default: 'fill')
+    * - fill: Solid background color
+    * - outline: Transparent background with border
+    * - ghost: Transparent background without border
+    */
+   variant?: "fill" | "outline" | "ghost";
+   /**
+    * Button height (default: 45)
+    */
+   height?: number;
+   /**
+    * Button width (default: '100%')
+    */
+   width?: DimensionValue;
+   /**
+    * Button color (default: orange '#FF8C00')
+    * Used as background for fill variant
+    */
+   color?: string;
+   /**
+    * Background color as NativeWind class (e.g., 'bg-primary')
+    * Overrides color prop when using variant='fill'
+    */
+   backgroundColor?: string;
+   /**
+    * Text color - can be hex color or NativeWind class (e.g., 'text-primary')
+    */
+   textColor?: string;
+   /**
+    * Border radius (default: 12)
+    */
+   borderRadius?: number;
+   /**
+    * Border width for outline variant (default: 2)
+    */
+   borderWidth?: number;
+   /**
+    * Optional icon
+    */
+   icon?: ReactNode;
+   /**
+    * Optional custom container styles
+    */
+   style?: StyleProp<ViewStyle>;
+   /**
+    * Optional custom text styles
+    */
+   textStyle?: StyleProp<TextStyle>;
+   /**
+    * Optional className for NativeWind styling
+    */
+   className?: string;
+   /**
+    * Optional borderColor for outline variant
+    */
+   borderColor?: string;
+   /**
+    * Optional maximum number of lines for the text
+    */
+   textNumberOfLines?: number;
+ }
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -188,16 +192,16 @@ export function AppButton({
           ]}
         >
           {icon}
-          <Text
-            className={textClassName}
-            style={[
-              computedTextColor ? { color: computedTextColor } : {},
-              textStyle,
-              { flexShrink: 1, flexWrap: "wrap" },
-            ]}
-          >
-            {text}
-          </Text>
+<Text
+             className={textClassName}
+             style={[
+               computedTextColor ? { color: computedTextColor } : {},
+               textStyle,
+               { flexShrink: 1, flexWrap: "wrap" },
+             ]}
+           >
+             {text}
+           </Text>
         </View>
       )}
     </AnimatedPressable>

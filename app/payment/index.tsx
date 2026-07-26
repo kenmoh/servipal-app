@@ -169,7 +169,7 @@ const payment = () => {
             tx_ref: txRef,
             amount: Number(amount),
             currency: "NGN",
-            authorization: "FLWPUBK_TEST-8d37c5a0a80727a45d17dfa0064b0fec-X",
+            authorization: "FLWPUBK_TEST-e627a53f96168c7f41367c62d1fa9397-X",
             payment_options: "card, banktransfer",
             customer: {
               email: email || "customer@servipal.com",
