@@ -19,8 +19,7 @@ import {
 import { apiClient } from "@/utils/client";
 import { supabase } from "@/utils/supabase";
 
-
-const INTENT_URL = "/reservations";
+const BASE_URL = "/reservations";
 
 async function getVendorId() {
   const {
@@ -230,38 +229,26 @@ export async function getUserReservations(params?: {
   return data as unknown as GetUserReservationsResponse;
 }
 
-
 export async function updateReservationStatus(
   data: UpdateReservationStatus,
 ): Promise<UpdateReservationStatus> {
-  try {
-    const { data: session, error } = await supabase.auth.getSession();
-    if (error) throw new Error(error.message);
-  
-    const response = await apiClient.put(
-      `${BASE_URL}/update-status`,
-      {new_status: data.new_status, reservation_id:data.reservation_id},
-      {
-        headers: {
-          "Content-Type": "application/json",
-          
-        },
-      },
-    );
+  const response = await apiClient.put(`${BASE_URL}/update-status`, {
+    new_status: data.new_status,
+    reservation_id: data.reservation_id,
+  });
 
-    if (!response.ok) {
-      const errorData = response.data as any;
-      throw new Error(
-        errorData?.detail ||
+  if (!response.ok) {
+    const errorData = response.data as any;
+    const errorMessage =
+      typeof errorData?.detail === "object"
+        ? errorData.detail.message
+        : errorData?.detail ||
           errorData?.message ||
-          "Failed to initiate delivery request",
-      );
-    }
-
-    return response.data as UpdateReservationStatus
-  } catch (error) {
-    throw error;
+          "Failed to update reservation status";
+    throw new Error(errorMessage);
   }
+
+  return response.data as UpdateReservationStatus;
 }
 
 /**
@@ -321,41 +308,39 @@ export async function getVendorReservationRules(
 /**
  * Customer: Create a new reservation intent
  */
-const BASE_URL = "/reservations";
 
 export async function createReservationIntent(
   data: CreateReservationIntent,
 ): Promise<InitiatePaymentResponse> {
-  try {
-    const { data: session, error } = await supabase.auth.getSession();
-    if (error) throw new Error(error.message);
-    const customerId = session?.session?.user?.id;
-    const response = await apiClient.post(
-      `${BASE_URL}/initiate-payment`,
-      { ...data, customer_id: customerId },
-      {
-        headers: {
-          "Content-Type": "application/json",
-          ...(data.idempotencyKey && {
-            "X-Idempotency-Key": data.idempotencyKey,
-          }),
-        },
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  const customerId = session?.user?.id;
+  const response = await apiClient.post(
+    `${BASE_URL}/initiate-payment`,
+    { ...data, customer_id: customerId },
+    {
+      headers: {
+        "Content-Type": "application/json",
+        ...(data.idempotencyKey && {
+          "X-Idempotency-Key": data.idempotencyKey,
+        }),
       },
-    );
+    },
+  );
 
-    if (!response.ok) {
-      const errorData = response.data as any;
-      throw new Error(
-        errorData?.detail ||
+  if (!response.ok) {
+    const errorData = response.data as any;
+    const errorMessage =
+      typeof errorData?.detail === "object"
+        ? errorData.detail.message
+        : errorData?.detail ||
           errorData?.message ||
-          "Failed to initiate delivery request",
-      );
-    }
-
-    return response.data as InitiatePaymentResponse;
-  } catch (error) {
-    throw error;
+          "Failed to initiate reservation payment";
+    throw new Error(errorMessage);
   }
+
+  return response.data as InitiatePaymentResponse;
 }
 
 /**

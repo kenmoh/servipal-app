@@ -84,11 +84,7 @@ export type OrderStatus =
   | "DISPUTED";
 export type PaymentStatus = "PENDING" | "SUCCESS" | "FAILED" | "REFUNDED";
 export type EscrowStatus =
-  | "PENDING"
-  | "HELD"
-  | "RELEASED"
-  | "REFUNDED"
-  | "DISPUTED";
+  "PENDING" | "HELD" | "RELEASED" | "REFUNDED" | "DISPUTED";
 export type DeliveryOption = "VENDOR_DELIVERY" | "PICKUP";
 
 export interface ProductOrderItem {
@@ -139,6 +135,14 @@ export interface ProductOrder {
   dispute_id: string | null;
   created_at: string;
   updated_at: string;
+  customer: {
+    name: string;
+    phone: string;
+  };
+  vendor: {
+    name: string;
+    phone: string;
+  };
   items: ProductOrderItem[];
   transaction?: OrderTransaction; // only in details response
 }

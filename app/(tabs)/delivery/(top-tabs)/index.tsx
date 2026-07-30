@@ -163,7 +163,7 @@ const DeliveryScreen = () => {
           ListEmptyComponent={() => (
             <EmptyList
               title="Coming soon..."
-              description="This feature is not available yet. Please try again later."
+              description="The DELIVERY feature is not available yet. Please try again later."
             />
           )}
           // ListEmptyComponent={() => (

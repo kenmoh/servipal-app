@@ -599,7 +599,8 @@ export const getOrderDetails = async (orderId: string) => {
     });
     throw error;
   }
-  return data as ProductOrder;
+  const result = Array.isArray(data) ? data[0] : data;
+  return result as ProductOrder;
 };
 
 export const updateOrderStatus = async ({

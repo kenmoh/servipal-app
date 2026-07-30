@@ -406,6 +406,7 @@ const PurchaseSummary = () => {
                   placeholderTextColor="#94A3B8"
                   textAlignVertical="top"
                   maxLength={500}
+                  editable={!buyMutation.isPending}
                 />
                 <Text className="text-[10px] text-gray-400 self-end mt-1 font-poppins px-1">
                   {additionalInfo.length}/500
@@ -485,7 +486,13 @@ const PurchaseSummary = () => {
               disabled={buyMutation.isPending}
               borderRadius={50}
               height={50}
-              icon={<Feather name="credit-card" size={20} color="white" />}
+              icon={
+                buyMutation.isPending ? (
+                  <ActivityIndicator color={"white"} />
+                ) : (
+                  <Feather name="credit-card" size={20} color="white" />
+                )
+              }
             />
           </View>
         </ScrollView>

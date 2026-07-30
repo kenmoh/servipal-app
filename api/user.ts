@@ -6,6 +6,7 @@ import {
   NearbyVendorsResponse,
   PayoutAccount,
   RiderResponse,
+  TransactionDetails,
   UpdateLocationResponse,
   UpdateRiderData,
   UserProfile,
@@ -476,6 +477,46 @@ export const fetchServiceProviders = async (
   } catch (error) {
     throw error;
   }
+};
+
+export const fetchCurrentUserTransactions = async (
+  page: number = 1,
+  pageSize: number = 50,
+): Promise<{ data: TransactionDetails[]; total: number }> => {
+  const { data: session, error: sessionError } =
+    await supabase.auth.getSession();
+
+  if (sessionError || !session) {
+    throw new Error("User not authenticated");
+  }
+
+  const userId = session.session?.user.id;
+
+  const { data, error } = await supabase.rpc("list_user_transactions", {
+    p_user_id: userId,
+    p_page: page,
+    p_page_size: pageSize,
+  });
+
+  if (error) {
+    console.log(error)
+    throw new Error(error.message || "Failed to fetch transactions");
+  }
+
+ 
+  const rows = (data ?? []) as any[];
+  const transactions: TransactionDetails[] = rows.map((tx) => ({
+    ...tx,
+    from_user: tx.from_name
+      ? { full_name: tx.from_name, business_name: null, store_name: null }
+      : null,
+    to_user: tx.to_name
+      ? { full_name: tx.to_name, business_name: null, store_name: null }
+      : null,
+  }));
+  const total = rows[0]?.total_count ?? 0;
+
+  return { data: transactions, total };
 };
 
 export const fetchUserTransactions = async (

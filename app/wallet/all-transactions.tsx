@@ -1,4 +1,4 @@
-import { fetchUserTransactions } from "@/api/user";
+import { fetchCurrentUserTransactions } from "@/api/user";
 import HDivider from "@/components/HDivider";
 import LoadingIndicator from "@/components/LoadingIndicator";
 import Transactioncard from "@/components/Transactioncard";
@@ -34,12 +34,12 @@ const AllTransactions = () => {
     isFetchingNextPage,
   } = useInfiniteQuery({
     queryKey: ["user-transactions", profile?.id],
-    queryFn: ({ pageParam = 0 }) =>
-      fetchUserTransactions(profile?.id!, pageParam, 15),
-    initialPageParam: 0,
+    queryFn: ({ pageParam = 1 }) =>
+      fetchCurrentUserTransactions(pageParam, 15),
+    initialPageParam: 1,
     getNextPageParam: (lastPage, allPages) => {
-      const count = lastPage?.transactions?.length ?? 0;
-      return count === 15 ? allPages.length : undefined;
+      const loaded = allPages.reduce((sum, p) => sum + p.data.length, 0);
+      return loaded < lastPage.total ? allPages.length + 1 : undefined;
     },
     enabled: !!profile?.id,
     staleTime: 0,
@@ -48,6 +48,7 @@ const AllTransactions = () => {
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 
+ 
   const onRefresh = async () => {
     setRefreshing(true);
     try {
@@ -58,7 +59,7 @@ const AllTransactions = () => {
   };
 
   const transactions =
-    data?.pages.flatMap((page) => page?.transactions || []) || [];
+    data?.pages.flatMap((page) => page?.data || []) || [];
 
   return (
     <View className="flex-1 bg-background">

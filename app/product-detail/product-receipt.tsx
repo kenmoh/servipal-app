@@ -182,10 +182,31 @@ const ProductReceiptPage = () => {
                     <div class="container">
                         <div class="header">
                             <h1>ServiPal</h1>
+                            ${data.vendor?.name ? `<div class="business-name">${data.vendor.name}</div>` : ""}
                             <div class="order-meta">Order #${data.order_number}</div>
                         </div>
                         
                         <div class="section">
+                            ${
+                              data.customer?.name
+                                ? `
+                            <div class="line-item">
+                                <span class="label">Customer</span>
+                                <span class="value">${data.customer.name}${data.customer.phone ? ` (${data.customer.phone})` : ""}</span>
+                            </div>
+                            `
+                                : ""
+                            }
+                            ${
+                              data.vendor?.name
+                                ? `
+                            <div class="line-item">
+                                <span class="label">Vendor</span>
+                                <span class="value">${data.vendor.name}${data.vendor.phone ? ` (${data.vendor.phone})` : ""}</span>
+                            </div>
+                            `
+                                : ""
+                            }
                             <div class="line-item">
                                 <span class="label">Payment Status</span>
                                 <span class="status status-${data.payment_status === "SUCCESS" ? "paid" : "unpaid"}">
@@ -339,8 +360,40 @@ const ProductReceiptPage = () => {
           </Text>
         </View>
 
-        {/* Status Section */}
+        {/* Status & Parties Section */}
         <View className={`py-4 border-y ${BORDER_COLOR} mb-8 gap-4`}>
+          {!!(data.customer?.name || data.customer?.phone) && (
+            <View className="flex-row justify-between items-center">
+              <Text className={`${TEXT_SECONDARY} font-poppins`}>Customer</Text>
+              <View className="items-end">
+                <Text className={`${TEXT_PRIMARY} font-poppins-medium`}>
+                  {data.customer?.name || "Customer"}
+                </Text>
+                {!!data.customer?.phone && (
+                  <Text className="text-[11px] text-gray-400 font-poppins">
+                    {data.customer.phone}
+                  </Text>
+                )}
+              </View>
+            </View>
+          )}
+
+          {!!(data.vendor?.name || data.vendor?.phone) && (
+            <View className="flex-row justify-between items-center">
+              <Text className={`${TEXT_SECONDARY} font-poppins`}>Vendor</Text>
+              <View className="items-end">
+                <Text className={`${TEXT_PRIMARY} font-poppins-medium`}>
+                  {data.vendor?.name || "Vendor"}
+                </Text>
+                {!!data.vendor?.phone && (
+                  <Text className="text-[11px] text-gray-400 font-poppins">
+                    {data.vendor.phone}
+                  </Text>
+                )}
+              </View>
+            </View>
+          )}
+
           <View className="flex-row justify-between items-center">
             <Text className={`${TEXT_SECONDARY} font-poppins`}>
               Payment Status

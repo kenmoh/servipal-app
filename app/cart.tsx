@@ -1,11 +1,7 @@
 import { initiateRestaurantOrderPayment } from "@/api/food";
 import { initiateLaundryOrderPayment } from "@/api/laundry";
 import { fetchProfile } from "@/api/user";
-import {
-  AvailableSlot,
-  fetchVendorAvailability,
-  getAvailableSlots,
-} from "@/api/user";
+import { AvailableSlot, getAvailableSlots } from "@/api/user";
 import CartModal from "@/components/CartModal";
 import Item from "@/components/CartItem";
 import CurrentLocationButton from "@/components/CurrentLocationButton";
@@ -23,7 +19,6 @@ import { useUserStore } from "@/store/userStore";
 import { OrderCreate, RestaurantOrderCreate } from "@/types/item-types";
 import { RequireDelivery } from "@/types/order-types";
 import { generateIdempotencyKey } from "@/utils/utils";
-import { supabase } from "@/utils/supabase";
 import Feather from "@react-native-vector-icons/feather/static";
 import MaterialCommunityIcons from "@react-native-vector-icons/material-design-icons/static";
 import Ionicons from "@react-native-vector-icons/ionicons/static";
@@ -33,7 +28,13 @@ import { BottomSheetScrollView, BottomSheetModal } from "@gorhom/bottom-sheet";
 import { format } from "date-fns";
 import DateTimePicker from "react-native-modal-datetime-picker";
 import { router, Stack, useLocalSearchParams } from "expo-router";
-import React, { useCallback, useEffect, useMemo, useState, useRef } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  useRef,
+} from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -690,8 +691,10 @@ const Cart = () => {
             </Text>
             <AppButton
               text="Go Back"
-              width="50%"
+              width="55%"
               height={45}
+              color="#FF8C00"
+              textColor="#FF8C00"
               variant="outline"
               borderRadius={50}
               onPress={() => router.back()}
@@ -764,7 +767,7 @@ const Cart = () => {
               {/* ─── Delivery Options ────────────────────────────── */}
               {isLaundryOrder ? (
                 /* ── Laundry: single button to open booking modal ── */
-                (<View className="mb-8">
+                <View className="mb-8">
                   <Text className="text-base font-poppins-bold text-primary mb-4">
                     Laundry Booking
                   </Text>
@@ -795,10 +798,10 @@ const Cart = () => {
                     </View>
                     <Feather name="chevron-right" size={20} color="#FF8C00" />
                   </Pressable>
-                </View>)
+                </View>
               ) : (
                 /* ── Restaurant: existing radio buttons ── */
-                (<View className="mb-8">
+                <View className="mb-8">
                   <Text className="text-base font-poppins-bold text-primary mb-4">
                     Delivery Method
                   </Text>
@@ -894,7 +897,7 @@ const Cart = () => {
                       </View>
                     )}
                   </View>
-                </View>)
+                </View>
               )}
 
               {/* ─── Laundry Booking Summary (after modal confirm) ── */}
@@ -1134,236 +1137,126 @@ const Cart = () => {
               }}
             >
               {isLaundryOrder ? (
-              /* ════════════════════════════════════════════════════
+                /* ════════════════════════════════════════════════════
                    LAUNDRY BOOKING MODAL
                    ════════════════════════════════════════════════════ */
-              (<>
-                <BottomSheetScrollView
-                  className="flex-1"
-                  showsVerticalScrollIndicator={false}
-                  keyboardShouldPersistTaps="handled"
-                  contentContainerStyle={{ paddingBottom: 100 }}
-                >
-                  <View className="px-5">
-                    <Text className="text-xl font-poppins-bold text-primary mb-4">
-                      Book Laundry Slot
-                    </Text>
+                <>
+                  <BottomSheetScrollView
+                    className="flex-1"
+                    showsVerticalScrollIndicator={false}
+                    keyboardShouldPersistTaps="handled"
+                    contentContainerStyle={{ paddingBottom: 100 }}
+                  >
+                    <View className="px-5">
+                      <Text className="text-xl font-poppins-bold text-primary mb-4">
+                        Book Laundry Slot
+                      </Text>
 
-                    {/* ── Service type ─────────────────── */}
-                    <Text className="text-xs text-gray-400 font-poppins-medium mb-2 uppercase ml-1">
-                      Service Type
-                    </Text>
-                    <View className="flex-row gap-3 mb-4">
-                      <Pressable
-                        onPress={() => handleLaundryServiceChange("PICKUP")}
-                        className={`flex-1 py-3 rounded-full items-center ${
-                          laundryServiceType === "PICKUP"
-                            ? "bg-button-primary"
-                            : "bg-input border border-gray-300 dark:border-gray-600"
-                        }`}
-                      >
-                        <Text
-                          className={`text-xs font-poppins-semibold ${laundryServiceType === "PICKUP" ? "text-white" : "text-primary"}`}
-                        >
-                          Self Dropoff/Pickup
-                        </Text>
-                      </Pressable>
-                      {vendorProfile?.can_pickup_and_dropoff && (
+                      {/* ── Service type ─────────────────── */}
+                      <Text className="text-xs text-gray-400 font-poppins-medium mb-2 uppercase ml-1">
+                        Service Type
+                      </Text>
+                      <View className="flex-row gap-3 mb-4">
                         <Pressable
-                          onPress={() =>
-                            handleLaundryServiceChange("VENDOR_DELIVERY")
-                          }
+                          onPress={() => handleLaundryServiceChange("PICKUP")}
                           className={`flex-1 py-3 rounded-full items-center ${
-                            laundryServiceType === "VENDOR_DELIVERY"
+                            laundryServiceType === "PICKUP"
                               ? "bg-button-primary"
                               : "bg-input border border-gray-300 dark:border-gray-600"
                           }`}
                         >
                           <Text
-                            className={`text-xs font-poppins-semibold ${laundryServiceType === "VENDOR_DELIVERY" ? "text-white" : "text-primary"}`}
+                            className={`text-xs font-poppins-semibold ${laundryServiceType === "PICKUP" ? "text-white" : "text-primary"}`}
                           >
-                            Vendor Pickup/Delivery
+                            Self Dropoff/Pickup
                           </Text>
                         </Pressable>
-                      )}
-                    </View>
-                    {/* ── Delivery address (vendor delivery) ── */}
-                    {laundryServiceType === "VENDOR_DELIVERY" && (
-                      <View className="mb-6 ">
-                        <Text className="text-xs text-gray-400 font-poppins-medium mb-2 uppercase ml-1">
-                          Delivery Address
-                        </Text>
-                        <View className="flex-row items-center gap-2">
-                          <View className="w-[81%]">
-                            <GoogleTextInput
-                              placeholder="Enter delivery address"
-                              value={destination}
-                              scrollEnabled={false}
-                              onChangeText={(text) =>
-                                setDestination(text, null)
-                              }
-                              onPlaceSelect={(lat, lng, address) => {
-                                setDestination(address, [lat, lng]);
-                              }}
-                            />
-                          </View>
-                          <View className="w-[20%]">
-                            <CurrentLocationButton
-                              height={55}
-                              width={55}
-                              onLocationSet={(address, coords) => {
-                                setDestination(address, coords);
-                              }}
-                            />
-                          </View>
-                        </View>
-                      </View>
-                    )}
-                    {/* ── Select date ─────────────── */}
-                    <View className="px-5 mb-4 flex-row justify-between items-center">
-                      <Text className="text-xs text-gray-400 font-poppins-medium uppercase ml-1">
-                        Select Date
-                      </Text>
-                    </View>
-                  </View>
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    className="mb-6 flex-row"
-                    contentContainerStyle={{ paddingHorizontal: 20 }}
-                  >
-                    {bookingDates.map((d) =>
-                      renderDateCard(d, selectedDate, handleDateChange),
-                    )}
-                  </ScrollView>
-
-                  {/* ── Select time slot ─────────────── */}
-                  {selectedDate !== "" && laundryServiceType !== "PICKUP" && (
-                    <>
-                      <View className="px-5">
-                        <Text className="text-xs text-gray-400 font-poppins-medium mb-2 uppercase ml-1">
-                          Available Time Slots
-                        </Text>
-                      </View>
-                      {pickupSlotsLoading ? (
-                        <View className="py-6 items-center">
-                          <ActivityIndicator color="#FF8C00" />
-                          <Text className="text-xs text-gray-400 font-poppins mt-2">
-                            Loading slots…
-                          </Text>
-                        </View>
-                      ) : (pickupSlots?.length ?? 0) === 0 ? (
-                        <View className="px-5">
-                          <View className="py-6 items-center bg-input rounded-xl mb-6">
-                            <Ionicons
-                              name="sad-outline"
-                              size={28}
-                              color="#999"
-                            />
-                            <Text className="text-sm text-gray-400 font-poppins mt-2">
-                              No slots available for this date
+                        {vendorProfile?.can_pickup_and_dropoff && (
+                          <Pressable
+                            onPress={() =>
+                              handleLaundryServiceChange("VENDOR_DELIVERY")
+                            }
+                            className={`flex-1 py-3 rounded-full items-center ${
+                              laundryServiceType === "VENDOR_DELIVERY"
+                                ? "bg-button-primary"
+                                : "bg-input border border-gray-300 dark:border-gray-600"
+                            }`}
+                          >
+                            <Text
+                              className={`text-xs font-poppins-semibold ${laundryServiceType === "VENDOR_DELIVERY" ? "text-white" : "text-primary"}`}
+                            >
+                              Vendor Pickup/Delivery
                             </Text>
-                          </View>
-                        </View>
-                      ) : (
-                        <ScrollView
-                          horizontal
-                          showsHorizontalScrollIndicator={false}
-                          className="mb-4 flex-row"
-                          contentContainerStyle={{ paddingHorizontal: 20 }}
-                        >
-                          <View className="flex-row gap-x-1">
-                            {chunk(pickupSlots || [], 2).map((pair, idx) => (
-                              <View key={idx} className="flex-col">
-                                {pair.map((slot) =>
-                                  renderSlotChip(
-                                    slot,
-                                    selectedSlot?.slot_start ===
-                                      slot.slot_start,
-                                    () => setSelectedSlot(slot),
-                                  ),
-                                )}
-                              </View>
-                            ))}
-                          </View>
-                        </ScrollView>
-                      )}
-                    </>
-                  )}
-
-                  {/* ── Express toggle ───────────────── */}
-                  {vendorHasExpress && selectedSlot && (
-                    <View className="px-5">
-                      <View className="bg-input rounded-2xl p-4 border border-gray-300 dark:border-gray-600 mb-4">
-                        <View className="flex-row items-center justify-between">
-                          <View className="flex-1 mr-4">
-                            <View className="flex-row items-center gap-2 mb-1">
-                              <Ionicons
-                                name="flash"
-                                size={16}
-                                color="#FF8C00"
-                              />
-                              <Text className="text-sm font-poppins-semibold text-primary">
-                                Express Service
-                              </Text>
-                            </View>
-                            <Text className="text-xs font-poppins text-gray-400">
-                              Priority processing
-                              {expressFee > 0 ? ` • +₦${expressFee}` : ""}
-                            </Text>
-                          </View>
-                          <Switch
-                            value={expressEnabled}
-                            onValueChange={setExpressEnabled}
-                            trackColor={{ false: "#767577", true: "#FF8C00" }}
-                            thumbColor={expressEnabled ? "#fff" : "#f4f3f4"}
-                          />
-                        </View>
-                      </View>
-
-                      {/* ── Express delivery date ─── */}
-                      {expressEnabled && (
-                        <>
-                          <Text className="text-xs text-gray-400 font-poppins-medium mb-2 uppercase ml-1">
-                            Delivery Date
-                          </Text>
-                        </>
-                      )}
-                    </View>
-                  )}
-                  {vendorHasExpress && selectedSlot && expressEnabled && (
-                    <>
-                      <ScrollView
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
-                        className="mb-4 flex-row"
-                        contentContainerStyle={{ paddingHorizontal: 20 }}
-                      >
-                        {bookingDates.map((d) =>
-                          renderDateCard(
-                            d,
-                            expressDate,
-                            handleExpressDateChange,
-                          ),
+                          </Pressable>
                         )}
-                      </ScrollView>
+                      </View>
+                      {/* ── Delivery address (vendor delivery) ── */}
+                      {laundryServiceType === "VENDOR_DELIVERY" && (
+                        <View className="mb-6 ">
+                          <Text className="text-xs text-gray-400 font-poppins-medium mb-2 uppercase ml-1">
+                            Delivery Address
+                          </Text>
+                          <View className="flex-row items-center gap-2">
+                            <View className="w-[81%]">
+                              <GoogleTextInput
+                                placeholder="Enter delivery address"
+                                value={destination}
+                                scrollEnabled={false}
+                                onChangeText={(text) =>
+                                  setDestination(text, null)
+                                }
+                                onPlaceSelect={(lat, lng, address) => {
+                                  setDestination(address, [lat, lng]);
+                                }}
+                              />
+                            </View>
+                            <View className="w-[20%]">
+                              <CurrentLocationButton
+                                height={55}
+                                width={55}
+                                onLocationSet={(address, coords) => {
+                                  setDestination(address, coords);
+                                }}
+                              />
+                            </View>
+                          </View>
+                        </View>
+                      )}
+                      {/* ── Select date ─────────────── */}
+                      <View className="px-5 mb-4 flex-row justify-between items-center">
+                        <Text className="text-xs text-gray-400 font-poppins-medium uppercase ml-1">
+                          Select Date
+                        </Text>
+                      </View>
+                    </View>
+                    <ScrollView
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      className="mb-6 flex-row"
+                      contentContainerStyle={{ paddingHorizontal: 20 }}
+                    >
+                      {bookingDates.map((d) =>
+                        renderDateCard(d, selectedDate, handleDateChange),
+                      )}
+                    </ScrollView>
 
-                      {/* ── Express delivery time ── */}
-                      {expressDate !== "" && (
-                        <>
-                          <View className="w-[88%] self-center">
-                            <Text className="text-xs text-gray-400 font-poppins-medium mb-2 uppercase ml-">
-                              Delivery Time Slot
+                    {/* ── Select time slot ─────────────── */}
+                    {selectedDate !== "" && laundryServiceType !== "PICKUP" && (
+                      <>
+                        <View className="px-5">
+                          <Text className="text-xs text-gray-400 font-poppins-medium mb-2 uppercase ml-1">
+                            Available Time Slots
+                          </Text>
+                        </View>
+                        {pickupSlotsLoading ? (
+                          <View className="py-6 items-center">
+                            <ActivityIndicator color="#FF8C00" />
+                            <Text className="text-xs text-gray-400 font-poppins mt-2">
+                              Loading slots…
                             </Text>
                           </View>
-                          {deliverySlotsLoading ? (
-                            <View className="py-6 items-center">
-                              <ActivityIndicator color="#FF8C00" />
-                              <Text className="text-xs text-gray-400 font-poppins mt-2">
-                                Loading delivery slots…
-                              </Text>
-                            </View>
-                          ) : (deliverySlots?.length ?? 0) === 0 ? (
+                        ) : (pickupSlots?.length ?? 0) === 0 ? (
+                          <View className="px-5">
                             <View className="py-6 items-center bg-input rounded-xl mb-6">
                               <Ionicons
                                 name="sad-outline"
@@ -1371,101 +1264,213 @@ const Cart = () => {
                                 color="#999"
                               />
                               <Text className="text-sm text-gray-400 font-poppins mt-2">
-                                No delivery slots available
+                                No slots available for this date
                               </Text>
                             </View>
-                          ) : (
-                            <ScrollView
-                              horizontal
-                              showsHorizontalScrollIndicator={false}
-                              className="mb-6 flex-row"
-                              contentContainerStyle={{ paddingHorizontal: 20 }}
-                            >
-                              <View className="flex-row gap-x-1">
-                                {chunk(deliverySlots || [], 2).map(
-                                  (pair, idx) => (
-                                    <View key={idx} className="flex-col">
-                                      {pair.map((slot) =>
-                                        renderSlotChip(
-                                          slot,
-                                          expressSlot?.slot_start ===
-                                            slot.slot_start,
-                                          () => setExpressSlot(slot),
-                                        ),
-                                      )}
-                                    </View>
-                                  ),
-                                )}
+                          </View>
+                        ) : (
+                          <ScrollView
+                            horizontal
+                            showsHorizontalScrollIndicator={false}
+                            className="mb-4 flex-row"
+                            contentContainerStyle={{ paddingHorizontal: 20 }}
+                          >
+                            <View className="flex-row gap-x-1">
+                              {chunk(pickupSlots || [], 2).map((pair, idx) => (
+                                <View key={idx} className="flex-col">
+                                  {pair.map((slot) =>
+                                    renderSlotChip(
+                                      slot,
+                                      selectedSlot?.slot_start ===
+                                        slot.slot_start,
+                                      () => setSelectedSlot(slot),
+                                    ),
+                                  )}
+                                </View>
+                              ))}
+                            </View>
+                          </ScrollView>
+                        )}
+                      </>
+                    )}
+
+                    {/* ── Express toggle ───────────────── */}
+                    {vendorHasExpress && selectedSlot && (
+                      <View className="px-5">
+                        <View className="bg-input rounded-2xl p-4 border border-gray-300 dark:border-gray-600 mb-4">
+                          <View className="flex-row items-center justify-between">
+                            <View className="flex-1 mr-4">
+                              <View className="flex-row items-center gap-2 mb-1">
+                                <Ionicons
+                                  name="flash"
+                                  size={16}
+                                  color="#FF8C00"
+                                />
+                                <Text className="text-sm font-poppins-semibold text-primary">
+                                  Express Service
+                                </Text>
                               </View>
-                            </ScrollView>
+                              <Text className="text-xs font-poppins text-gray-400">
+                                Priority processing
+                                {expressFee > 0 ? ` • +₦${expressFee}` : ""}
+                              </Text>
+                            </View>
+                            <Switch
+                              value={expressEnabled}
+                              onValueChange={setExpressEnabled}
+                              trackColor={{ false: "#767577", true: "#FF8C00" }}
+                              thumbColor={expressEnabled ? "#fff" : "#f4f3f4"}
+                            />
+                          </View>
+                        </View>
+
+                        {/* ── Express delivery date ─── */}
+                        {expressEnabled && (
+                          <>
+                            <Text className="text-xs text-gray-400 font-poppins-medium mb-2 uppercase ml-1">
+                              Delivery Date
+                            </Text>
+                          </>
+                        )}
+                      </View>
+                    )}
+                    {vendorHasExpress && selectedSlot && expressEnabled && (
+                      <>
+                        <ScrollView
+                          horizontal
+                          showsHorizontalScrollIndicator={false}
+                          className="mb-4 flex-row"
+                          contentContainerStyle={{ paddingHorizontal: 20 }}
+                        >
+                          {bookingDates.map((d) =>
+                            renderDateCard(
+                              d,
+                              expressDate,
+                              handleExpressDateChange,
+                            ),
                           )}
-                        </>
-                      )}
-                    </>
-                  )}
-                </BottomSheetScrollView>
-                {/* ── Confirm button ───────────────── */}
-                <View className="absolute bottom-0 w-full px-5 pt-4 pb-10 bg-background border-t border-gray-100 dark:border-gray-800">
-                  <AppButton
-                    text="Confirm Booking"
-                    onPress={handleLaundryBookingConfirm}
-                    disabled={
-                      laundryServiceType === "VENDOR_DELIVERY" &&
-                      (!selectedDate || !selectedSlot)
-                    }
-                    icon={
-                      <Ionicons
-                        name="checkmark-circle"
-                        size={18}
-                        color="white"
-                      />
-                    }
-                  />
-                </View>
-              </>)
-            ) : (
-              /* ════════════════════════════════════════════════════
+                        </ScrollView>
+
+                        {/* ── Express delivery time ── */}
+                        {expressDate !== "" && (
+                          <>
+                            <View className="w-[88%] self-center">
+                              <Text className="text-xs text-gray-400 font-poppins-medium mb-2 uppercase ml-">
+                                Delivery Time Slot
+                              </Text>
+                            </View>
+                            {deliverySlotsLoading ? (
+                              <View className="py-6 items-center">
+                                <ActivityIndicator color="#FF8C00" />
+                                <Text className="text-xs text-gray-400 font-poppins mt-2">
+                                  Loading delivery slots…
+                                </Text>
+                              </View>
+                            ) : (deliverySlots?.length ?? 0) === 0 ? (
+                              <View className="py-6 items-center bg-input rounded-xl mb-6">
+                                <Ionicons
+                                  name="sad-outline"
+                                  size={28}
+                                  color="#999"
+                                />
+                                <Text className="text-sm text-gray-400 font-poppins mt-2">
+                                  No delivery slots available
+                                </Text>
+                              </View>
+                            ) : (
+                              <ScrollView
+                                horizontal
+                                showsHorizontalScrollIndicator={false}
+                                className="mb-6 flex-row"
+                                contentContainerStyle={{
+                                  paddingHorizontal: 20,
+                                }}
+                              >
+                                <View className="flex-row gap-x-1">
+                                  {chunk(deliverySlots || [], 2).map(
+                                    (pair, idx) => (
+                                      <View key={idx} className="flex-col">
+                                        {pair.map((slot) =>
+                                          renderSlotChip(
+                                            slot,
+                                            expressSlot?.slot_start ===
+                                              slot.slot_start,
+                                            () => setExpressSlot(slot),
+                                          ),
+                                        )}
+                                      </View>
+                                    ),
+                                  )}
+                                </View>
+                              </ScrollView>
+                            )}
+                          </>
+                        )}
+                      </>
+                    )}
+                  </BottomSheetScrollView>
+                  {/* ── Confirm button ───────────────── */}
+                  <View className="absolute bottom-0 w-full px-5 pt-4 pb-10 bg-background border-t border-gray-100 dark:border-gray-800">
+                    <AppButton
+                      text="Confirm Booking"
+                      onPress={handleLaundryBookingConfirm}
+                      disabled={
+                        laundryServiceType === "VENDOR_DELIVERY" &&
+                        (!selectedDate || !selectedSlot)
+                      }
+                      icon={
+                        <Ionicons
+                          name="checkmark-circle"
+                          size={18}
+                          color="white"
+                        />
+                      }
+                    />
+                  </View>
+                </>
+              ) : (
+                /* ════════════════════════════════════════════════════
                    RESTAURANT DELIVERY ADDRESS MODAL
                    ════════════════════════════════════════════════════ */
-              (<View className="flex-1 pt-2 px-5">
-                <Text className="text-xl font-poppins-bold text-primary mb-6">
-                  Delivery Address
-                </Text>
-                <View className="mb-4">
-                  <View className="flex-row items-center gap-2">
-                    <View className="w-[81%]">
-                      <GoogleTextInput
-                        placeholder="Enter delivery address"
-                        value={destination}
-                        scrollEnabled={false}
-                        onChangeText={(text) => setDestination(text, null)}
-                        onPlaceSelect={(lat, lng, address) => {
-                          setDestination(address, [lat, lng]);
-                        }}
-                      />
-                    </View>
-                    <View className="w-[20%]">
-                      <CurrentLocationButton
-                        height={55}
-                        width={55}
-                        onLocationSet={(address, coords) => {
-                          setDestination(address, coords);
-                        }}
-                      />
+                <View className="flex-1 pt-2 px-5">
+                  <Text className="text-xl font-poppins-bold text-primary mb-6">
+                    Delivery Address
+                  </Text>
+                  <View className="mb-4">
+                    <View className="flex-row items-center gap-2">
+                      <View className="w-[81%]">
+                        <GoogleTextInput
+                          placeholder="Enter delivery address"
+                          value={destination}
+                          scrollEnabled={false}
+                          onChangeText={(text) => setDestination(text, null)}
+                          onPlaceSelect={(lat, lng, address) => {
+                            setDestination(address, [lat, lng]);
+                          }}
+                        />
+                      </View>
+                      <View className="w-[20%]">
+                        <CurrentLocationButton
+                          height={55}
+                          width={55}
+                          onLocationSet={(address, coords) => {
+                            setDestination(address, coords);
+                          }}
+                        />
+                      </View>
                     </View>
                   </View>
+                  <View className="mt-auto">
+                    <AppButton
+                      text="Confirm Address"
+                      onPress={() => {
+                        setModalVisible(false);
+                        bottomSheetRef.current?.dismiss();
+                      }}
+                      disabled={!destination}
+                    />
+                  </View>
                 </View>
-                <View className="mt-auto">
-                  <AppButton
-                    text="Confirm Address"
-                    onPress={() => {
-                      setModalVisible(false);
-                      bottomSheetRef.current?.dismiss();
-                    }}
-                    disabled={!destination}
-                  />
-                </View>
-              </View>)
               )}
             </Animated.View>
           )}

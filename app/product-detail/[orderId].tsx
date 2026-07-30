@@ -3,10 +3,18 @@ import ProductDetailWrapper from "@/components/ProductDetailWrapper";
 import { useToast } from "@/components/ToastProvider";
 import { AppButton } from "@/components/ui/app-button";
 import { useUserStore } from "@/store/userStore";
+import Ionicons from "@react-native-vector-icons/ionicons/static";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
-import React from "react";
-import { ActivityIndicator, Text, TouchableOpacity, View } from "react-native";
+import React, { useState } from "react";
+import {
+  ActivityIndicator,
+  Pressable,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import Animated, { ZoomIn, ZoomOut } from "react-native-reanimated";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -24,7 +32,8 @@ interface ActionButton {
   label: string;
   newStatus: OrderStatus;
   variant?: "fill" | "outline" | "ghost";
-  color?: string;
+  color: string;
+  icon: string;
   isPrimary: boolean;
 }
 
@@ -46,14 +55,16 @@ function getAvailableActions(
           actions.push({
             label: "Mark as Shipped",
             newStatus: "SHIPPED",
+            color: "#3b82f6",
+            icon: "cube-outline",
             isPrimary: true,
           });
         }
         actions.push({
           label: "Cancel Order",
           newStatus: "CANCELLED",
-          variant: "outline",
           color: "#EF4444",
+          icon: "close-circle-outline",
           isPrimary: false,
         });
         break;
@@ -62,13 +73,15 @@ function getAvailableActions(
         actions.push({
           label: "Mark as Delivered",
           newStatus: "DELIVERED",
+          color: "#22c55e",
+          icon: "checkmark-circle-outline",
           isPrimary: true,
         });
         actions.push({
           label: "Dispute",
           newStatus: "DISPUTED",
-          variant: "outline",
           color: "#F59E0B",
+          icon: "alert-circle-outline",
           isPrimary: false,
         });
         break;
@@ -78,6 +91,8 @@ function getAvailableActions(
         actions.push({
           label: "Confirm Item Returned",
           newStatus: "RETURNED",
+          color: "#a855f7",
+          icon: "return-down-back-outline",
           isPrimary: true,
         });
         break;
@@ -86,6 +101,8 @@ function getAvailableActions(
         actions.push({
           label: "Release Payment",
           newStatus: "COMPLETED",
+          color: "#22c55e",
+          icon: "cash-outline",
           isPrimary: true,
         });
         break;
@@ -101,8 +118,8 @@ function getAvailableActions(
         actions.push({
           label: "Cancel Order",
           newStatus: "CANCELLED",
-          variant: "outline",
           color: "#EF4444",
+          icon: "close-circle-outline",
           isPrimary: false,
         });
         break;
@@ -111,8 +128,8 @@ function getAvailableActions(
         actions.push({
           label: "Dispute",
           newStatus: "DISPUTED",
-          variant: "outline",
           color: "#F59E0B",
+          icon: "alert-circle-outline",
           isPrimary: false,
         });
         break;
@@ -121,20 +138,22 @@ function getAvailableActions(
         actions.push({
           label: "Mark as Received",
           newStatus: "COMPLETED",
+          color: "#22c55e",
+          icon: "checkmark-done-outline",
           isPrimary: true,
         });
         actions.push({
           label: "Reject Item",
           newStatus: "REJECTED",
-          variant: "outline",
           color: "#EF4444",
+          icon: "close-circle-outline",
           isPrimary: false,
         });
         actions.push({
           label: "Dispute",
           newStatus: "DISPUTED",
-          variant: "outline",
           color: "#F59E0B",
+          icon: "alert-circle-outline",
           isPrimary: false,
         });
         break;
@@ -216,15 +235,21 @@ const formatPrice = (price: number) =>
 
 const ProductDetail = () => {
   const { user } = useUserStore();
-  const { orderId } = useLocalSearchParams<{ orderId: string }>();
+  const params = useLocalSearchParams<{ orderId?: string; id?: string }>();
+  const orderId = Array.isArray(params.orderId)
+    ? params.orderId[0]
+    : params.orderId || (Array.isArray(params.id) ? params.id[0] : params.id);
+  const [menuOpen, setMenuOpen] = useState(false);
   const { showSuccess, showError } = useToast();
   const queryClient = useQueryClient();
 
-  const { data, isLoading, refetch } = useQuery({
+  const { data: rawData, isLoading, refetch } = useQuery({
     queryKey: ["product-order", orderId],
     queryFn: () => getOrderDetails(orderId!),
     enabled: !!orderId,
   });
+
+  const data = Array.isArray(rawData) ? rawData[0] : rawData;
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ["product-order", orderId] });
@@ -278,9 +303,10 @@ const ProductDetail = () => {
           Order not found
         </Text>
         <AppButton
-          width="50%"
+          width="60%"
           borderRadius={50}
           text="Go Back"
+          textNumberOfLines={1}
           onPress={() => router.back()}
         />
       </View>
@@ -378,8 +404,11 @@ const ProductDetail = () => {
           </View>
         </View>
 
-        {/* Status Badges */}
-        <View className="flex-row gap-3 my-6">
+        {/* Status Badges + Action Menu */}
+        <View
+          className="flex-row gap-3 my-6"
+          style={{ zIndex: menuOpen ? 100 : 1 }}
+        >
           <View
             className={
               "flex-1 px-4 py-3 rounded-2xl border " +
@@ -418,6 +447,121 @@ const ProductDetail = () => {
               {statusLabel}
             </Text>
           </View>
+
+          {/* Context menu trigger — 3rd equal column card */}
+          {hasActions && (
+            <View className="flex-1" style={{ position: "relative" }}>
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() => setMenuOpen((v) => !v)}
+                className="px-4 py-3 rounded-2xl border bg-slate-50 border-slate-200 dark:bg-slate-800/40 dark:border-slate-700"
+              >
+                <Text className="text-[10px] uppercase tracking-wider font-poppins-medium text-slate-500 dark:text-slate-400 mb-1">
+                  Update
+                </Text>
+                <View className="flex-row items-center justify-between">
+                  <Text className="font-poppins-bold text-sm text-slate-900 dark:text-white">
+                    Actions
+                  </Text>
+                  {statusMutation.isPending ? (
+                    <ActivityIndicator size="small" color="gray" />
+                  ) : (
+                    <Ionicons name="chevron-down" size={14} color="gray" />
+                  )}
+                </View>
+              </TouchableOpacity>
+
+              {menuOpen && (
+                <>
+                  <Pressable
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      zIndex: 998,
+                    }}
+                    onPress={() => setMenuOpen(false)}
+                  />
+                  <Animated.View
+                    entering={ZoomIn.duration(160)
+                      .springify()
+                      .damping(18)
+                      .stiffness(260)}
+                    exiting={ZoomOut.duration(120)}
+                    style={{
+                      position: "absolute",
+                      top: 56,
+                      right: 0,
+                      zIndex: 999,
+                      width: 200,
+                      borderRadius: 14,
+                      backgroundColor: "#1c1c1e",
+                      borderWidth: 1,
+                      borderColor: "#2c2c2e",
+                      shadowColor: "#000",
+                      shadowOffset: { width: 0, height: 4 },
+                      shadowOpacity: 0.4,
+                      shadowRadius: 12,
+                      elevation: 8,
+                      overflow: "hidden",
+                    }}
+                  >
+                    {actions.map((action, index) => (
+                      <React.Fragment key={action.newStatus}>
+                        {index > 0 && (
+                          <View
+                            style={{ height: 1, backgroundColor: "#2c2c2e" }}
+                          />
+                        )}
+                        <TouchableOpacity
+                          activeOpacity={0.6}
+                          disabled={statusMutation.isPending}
+                          onPress={() => {
+                            setMenuOpen(false);
+                            handleAction(action);
+                          }}
+                          style={{
+                            flexDirection: "row",
+                            alignItems: "center",
+                            paddingHorizontal: 14,
+                            paddingVertical: 12,
+                          }}
+                        >
+                          <Ionicons
+                            name={action.icon as any}
+                            size={17}
+                            color={action.color}
+                            style={{ marginRight: 10 }}
+                          />
+                          <View style={{ flex: 1 }}>
+                            <Text
+                              style={{
+                                fontSize: 13,
+                                fontFamily: "Poppins-Medium",
+                                color: action.color,
+                              }}
+                            >
+                              {action.label}
+                            </Text>
+                          </View>
+                          {statusMutation.isPending &&
+                            statusMutation.variables?.newStatus ===
+                              action.newStatus && (
+                              <ActivityIndicator
+                                size="small"
+                                color={action.color}
+                              />
+                            )}
+                        </TouchableOpacity>
+                      </React.Fragment>
+                    ))}
+                  </Animated.View>
+                </>
+              )}
+            </View>
+          )}
         </View>
 
         {/* Disputed Banner */}
@@ -582,50 +726,6 @@ const ProductDetail = () => {
           </View>
         </View>
       </View>
-
-      {/* ── Floating Action Bar ─────────────────────────────────────────────── */}
-      {hasActions && (
-        <View className="absolute bottom-0 left-0 right-0 bg-background border-t border-slate-100 dark:border-slate-800 px-4 py-4 pb-8">
-          <View className="flex-row items-center gap-3">
-            {secondaryActions.map((action) => (
-              <AppButton
-                key={action.newStatus}
-                text={action.label}
-                variant={action.variant ?? "outline"}
-                width={secondaryActions.length > 1 ? "28%" : "35%"}
-                borderRadius={50}
-                color={action.color ?? "#EF4444"}
-                borderColor={action.color ?? "#EF4444"}
-                textStyle={{ color: action.color ?? "#EF4444", fontSize: 12 }}
-                onPress={() => handleAction(action)}
-                disabled={statusMutation.isPending}
-              />
-            ))}
-
-            {primaryAction && (
-              <View className="flex-1">
-                <AppButton
-                  text={
-                    statusMutation.isPending &&
-                    statusMutation.variables?.newStatus ===
-                      primaryAction.newStatus
-                      ? "Updating..."
-                      : primaryAction.label
-                  }
-                  width="100%"
-                  borderRadius={50}
-                  onPress={() => handleAction(primaryAction)}
-                  disabled={statusMutation.isPending}
-                />
-              </View>
-            )}
-
-            {!primaryAction && secondaryActions.length > 0 && (
-              <View className="flex-1" />
-            )}
-          </View>
-        </View>
-      )}
     </ProductDetailWrapper>
   );
 };

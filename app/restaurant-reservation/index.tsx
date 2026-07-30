@@ -23,8 +23,8 @@ import { format, parseISO } from "date-fns";
 import { Stack, useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
-  Modal,
   Pressable,
   RefreshControl,
   Text,
@@ -98,12 +98,17 @@ function ReservationContextMenu({
 
   return (
     <>
-      {/* Full-screen transparent Modal — only purpose is catching outside taps */}
-      <Modal visible transparent animationType="none" onRequestClose={onDismiss}>
-        <Pressable style={{ flex: 1 }} onPress={onDismiss} />
-      </Modal>
-
-      {/* Menu card — rendered inline, floats above via zIndex */}
+      <Pressable
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          zIndex: 998,
+        }}
+        onPress={onDismiss}
+      />
       <Animated.View
         entering={ZoomIn.duration(160).springify().damping(18).stiffness(260)}
         exiting={ZoomOut.duration(120)}
@@ -200,6 +205,7 @@ type ReservationCardProps = {
   actionList: ActionConfig[];
   onStatusSelect: (reservationId: string, status: BookingStatus) => void;
   colorScheme: string | null | undefined;
+  isUpdating?: boolean;
 };
 
 function ReservationCard({
@@ -208,6 +214,7 @@ function ReservationCard({
   actionList,
   onStatusSelect,
   colorScheme,
+  isUpdating = false,
 }: ReservationCardProps) {
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -234,11 +241,26 @@ function ReservationCard({
         </View>
 
         <View className="flex-row items-center gap-2">
-          <View className={`px-3 py-1 rounded-full ${getStatusColor(currentStatus)}`}>
-            <Text className="text-white text-xs font-poppins-medium uppercase">
-              {item.reservation_status}
-            </Text>
-          </View>
+          {isUpdating ? (
+            <View
+              style={{
+                minWidth: 72,
+                alignItems: "center",
+                paddingHorizontal: 12,
+                paddingVertical: 4,
+                borderRadius: 999,
+                backgroundColor: "rgba(100,100,100,0.55)",
+              }}
+            >
+              <ActivityIndicator size="small" color="#ffffff" />
+            </View>
+          ) : (
+            <View className={`px-3 py-1 rounded-full ${getStatusColor(currentStatus)}`}>
+              <Text className="text-white text-xs font-poppins-medium uppercase">
+                {item.reservation_status}
+              </Text>
+            </View>
+          )}
 
           {!isTerminal && (
             <View style={{ position: "relative" }}>
@@ -298,6 +320,7 @@ export default function ReservationDashboard() {
   const router = useRouter()
   const [activeTab, setActiveTab] = useState("upcoming");
   const [selectedPeriod, setSelectedPeriod] = useState<GetServingPeriod | null>(null);
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
 
   const { profile, user } = useUserStore();
   const userType = user?.user_metadata?.user_type || profile?.user_type;
@@ -364,6 +387,9 @@ export default function ReservationDashboard() {
     },
     onError: (error: Error) => {
       showError("Error", error.message || "Failed to update status");
+    },
+    onSettled: () => {
+      setUpdatingId(null);
     },
   });
 
@@ -583,9 +609,11 @@ export default function ReservationDashboard() {
               userRole={userRole}
               actionList={actionList}
               colorScheme={colorScheme}
-              onStatusSelect={(reservationId, status) =>
-                updateStatus({ reservation_id: reservationId, new_status: status })
-              }
+              isUpdating={updatingId === item.id}
+              onStatusSelect={(reservationId, status) => {
+                setUpdatingId(reservationId);
+                updateStatus({ reservation_id: reservationId, new_status: status });
+              }}
             />
           )}
           keyExtractor={(item) => item.id}
