@@ -1,10 +1,11 @@
-import ToastProvider from "@/components/ToastProvider";
+import ToastProvider, { useToast } from "@/components/ToastProvider";
 import { PostHogProvider, usePostHog } from "posthog-react-native";
 import { HEADER_BG_DARK, HEADER_BG_LIGHT } from "@/constants/theme";
 import "@/global.css";
 import { useTheme } from "@/hooks/theme-toggle";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useUserStore } from "@/store/userStore";
+import authStorage from "@/storage/auth-storage";
 import { useColorScheme as useNativeWind } from "nativewind";
 import { defineLocationTask } from "@/utils/location-tracking";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
@@ -41,6 +42,97 @@ function ScreenTracker() {
       previousPathname.current = pathname;
     }
   }, [pathname, params]);
+
+  return null;
+}
+
+function extractParams(rawUrl: string): Record<string, string> {
+  const params: Record<string, string> = {};
+
+  const queryIdx = rawUrl.indexOf("?");
+  if (queryIdx !== -1) {
+    const queryEnd = rawUrl.indexOf("#", queryIdx);
+    const queryStr = rawUrl.substring(
+      queryIdx + 1,
+      queryEnd === -1 ? rawUrl.length : queryEnd,
+    );
+    new URLSearchParams(queryStr).forEach((value, key) => {
+      params[key] = value;
+    });
+  }
+
+  const hashIdx = rawUrl.indexOf("#");
+  if (hashIdx !== -1) {
+    const hashStr = rawUrl.substring(hashIdx + 1);
+    new URLSearchParams(hashStr).forEach((value, key) => {
+      if (!params[key]) params[key] = value;
+    });
+  }
+
+  return params;
+}
+
+function DeepLinkHandler() {
+  const pathname = usePathname();
+  const pathnameRef = useRef(pathname);
+  pathnameRef.current = pathname;
+  const { showError } = useToast();
+
+  useEffect(() => {
+    const handleDeepLink = async (event: { url: string }) => {
+      const parsed = Linking.parse(event.url);
+
+      Sentry.addBreadcrumb({
+        category: "navigation",
+        message: `Deep link received: ${parsed.hostname}`,
+        level: "info",
+      });
+
+      // Debug — surface the raw URL on-device (no Metro console in release builds)
+      showError("Deep Link", event.url);
+
+      // Parse BOTH query (?) and fragment (#) params — Supabase uses both formats
+      const params = extractParams(event.url);
+      const accessToken = (params.access_token ||
+        parsed.queryParams?.access_token) as string | undefined;
+
+      showError(
+        "Reset token",
+        accessToken
+          ? `present (${accessToken.substring(0, 20)}...)`
+          : "MISSING",
+      );
+
+      if (parsed.hostname === "reset-password" && accessToken) {
+        await authStorage.storeResetToken(accessToken);
+        if (pathnameRef.current !== "/reset-password") {
+          router.replace({
+            pathname: "/reset-password",
+            params: { accessToken },
+          });
+        }
+      }
+    };
+
+    const subscription = Linking.addEventListener("url", handleDeepLink);
+
+    Linking.getInitialURL().then(async (url) => {
+      if (url) {
+        await handleDeepLink({ url });
+      }
+
+      // If a reset token was persisted (e.g. app restarted and dropped the
+      // URL params), reopen the reset screen.
+      const storedToken = await authStorage.getResetToken();
+      if (storedToken && pathnameRef.current !== "/reset-password") {
+        router.replace("/reset-password");
+      }
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [showError]);
 
   return null;
 }
@@ -123,48 +215,6 @@ export default Sentry.wrap(
       return cleanup;
     }, [hydrate, initialize]);
 
-    useEffect(() => {
-      // Handle deep links
-      const handleDeepLink = (event: { url: string }) => {
-        const url = Linking.parse(event.url);
-
-        console.log("Deep link received:", url);
-        Sentry.addBreadcrumb({
-          category: "navigation",
-          message: `Deep link received: ${url.hostname}`,
-          level: "info",
-        });
-
-        // Handle password reset link
-        // Format: servipal://reset-password?access_token=xxx&type=recovery
-        if (url.hostname === "reset-password") {
-          const accessToken = url.queryParams?.access_token as string;
-          const type = url.queryParams?.type as string;
-
-          if (accessToken && type === "recovery") {
-            router.push({
-              pathname: "/reset-password",
-              params: { accessToken },
-            });
-          }
-        }
-      };
-
-      // Listen for deep links
-      const subscription = Linking.addEventListener("url", handleDeepLink);
-
-      // Check if app was opened with a deep link
-      Linking.getInitialURL().then((url) => {
-        if (url) {
-          handleDeepLink({ url });
-        }
-      });
-
-      return () => {
-        subscription.remove();
-      };
-    }, []);
-
     return (
       <View className="bg-background flex-1 w-full">
         <GestureHandlerRootView style={{ flex: 1 }}>
@@ -179,6 +229,7 @@ export default Sentry.wrap(
                 <ScreenTracker />
                 <BottomSheetModalProvider>
                   <ToastProvider>
+                    <DeepLinkHandler />
                     {/* <ThemeTransitionOverlay /> */}
                     <Stack
                       screenOptions={{

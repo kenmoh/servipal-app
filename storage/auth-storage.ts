@@ -4,6 +4,7 @@ import { ColorSchemeName } from "react-native";
 
 const THEME_KEY = "theme";
 const USER_KEY = "user";
+const RESET_TOKEN_KEY = "reset_token";
 
 // Supabase Storage Interface - Required methods
 const getItem = async (key: string): Promise<string | null> => {
@@ -77,6 +78,32 @@ const removeUser = async () => {
   }
 };
 
+// Password reset token storage (survives dev-server reloads)
+const storeResetToken = async (token: string) => {
+  try {
+    await SecureStore.setItemAsync(RESET_TOKEN_KEY, token);
+  } catch (error) {
+    console.error("Error storing reset token:", error);
+  }
+};
+
+const getResetToken = async (): Promise<string | null> => {
+  try {
+    return await SecureStore.getItemAsync(RESET_TOKEN_KEY);
+  } catch (error) {
+    console.error("Error getting reset token:", error);
+    return null;
+  }
+};
+
+const removeResetToken = async () => {
+  try {
+    await SecureStore.deleteItemAsync(RESET_TOKEN_KEY);
+  } catch (error) {
+    console.error("Error removing reset token:", error);
+  }
+};
+
 export default {
   // Supabase required methods
   getItem,
@@ -86,6 +113,10 @@ export default {
   storeUser,
   getUser,
   removeUser,
+  // Reset token methods
+  storeResetToken,
+  getResetToken,
+  removeResetToken,
   // Theme methods (optional)
   storeTheme,
   getTheme,

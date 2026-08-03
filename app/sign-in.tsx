@@ -83,18 +83,18 @@ const SignIn = () => {
           )}
         />
 
-{/* Forgot Password */}
-         <View className="items-end my-2">
-           <Pressable
-             onPress={() => {
-               if (!isPending) router.push("/forgot-password");
-             }}
-           >
-             <Text className="font-poppins-medium text-[14px] text-button-primary underline" numberOfLines={undefined}>
-               Forgot Password
-             </Text>
-           </Pressable>
-         </View>
+        {/* Forgot Password */}
+
+        <Pressable
+          className="items-end my-2"
+          onPress={() => {
+            if (!isPending) router.push("/forgot-password");
+          }}
+        >
+          <Text className="font-poppins-medium text-[16px] text-button-primary underline">
+            Forgot Password
+          </Text>
+        </Pressable>
       </View>
 
       {/* Login Button */}
@@ -103,29 +103,31 @@ const SignIn = () => {
           marginTop: 25,
         }}
       />
-<AppButton
-         width={"90%"}
-         disabled={isPending || !isValid}
-         icon={isPending && <ActivityIndicator color="white" size="large" />}
-         text={isPending ? "Logging in..." : "Login"}
-         onPress={handleSubmit(onSubmit)}
-        
-       />
+      <AppButton
+        width={"90%"}
+        disabled={isPending || !isValid}
+        icon={isPending && <ActivityIndicator color="white" size="large" />}
+        text={isPending ? "Logging in..." : "Login"}
+        onPress={handleSubmit(onSubmit)}
+      />
 
-{/* Sign Up Link */}
-       <View className="flex-row items-center justify-center w-full mt-[25px] align-baseline">
-         <Text className="text-primary font-normal text-[14px]">
-           Don't have an account?{" "}
-         </Text>
-         <Pressable
-           onPress={() => router.push("/user-selection")}
-           disabled={isPending}
-         >
-           <Text className="font-poppins-medium text-[16px] text-button-primary underline" numberOfLines={undefined}>
-             Register
-           </Text>
-         </Pressable>
-       </View>
+      {/* Sign Up Link */}
+      <View className="flex-row items-center justify-center w-full mt-[25px] align-baseline">
+        <Text className="text-primary font-poppins text-[16px]">
+          Don't have an account?{" "}
+        </Text>
+        <Pressable
+          onPress={() => router.push("/user-selection")}
+          disabled={isPending}
+        >
+          <Text
+            className="font-poppins-bold text-[16px] text-button-primary underline"
+            numberOfLines={undefined}
+          >
+            {"  "}Register
+          </Text>
+        </Pressable>
+      </View>
     </View>
   );
 };

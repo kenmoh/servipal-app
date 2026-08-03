@@ -44,7 +44,7 @@ const RecoverPassword = () => {
         "Success",
         "Password reset link sent to your email. It will expire in 24 hours.",
       );
-      router.replace("/sign-in");
+      router.replace("/reset-password");
     },
   });
 
