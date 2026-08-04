@@ -196,6 +196,7 @@ export function AppButton({
           {icon}
           <Text
             numberOfLines={textNumberOfLines ?? 1}
+            maxFontSizeMultiplier={1.3}
             className={textClassName}
             style={[
               computedTextColor ? { color: computedTextColor } : {},

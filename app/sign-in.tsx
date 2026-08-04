@@ -83,10 +83,11 @@ const SignIn = () => {
           )}
         />
 
+      </View>
         {/* Forgot Password */}
 
         <Pressable
-          className="items-end my-2"
+          className="items-end self-center w-[90%] my-2"
           onPress={() => {
             if (!isPending) router.push("/forgot-password");
           }}
@@ -95,7 +96,6 @@ const SignIn = () => {
             Forgot Password
           </Text>
         </Pressable>
-      </View>
 
       {/* Login Button */}
       <View

@@ -106,6 +106,8 @@ const RecoverPassword = () => {
         contentContainerStyle={{
           alignItems: "center",
           justifyContent: "center",
+          flexGrow: 1,
+          width: "100%",
         }}
       >
         <View className="gap-5 w-[90%]">
@@ -145,7 +147,7 @@ const RecoverPassword = () => {
             onPress={handleSubmit(onSubmit)}
           >
             {isPending && <ActivityIndicator size={"small"} color="#eee" />}
-            <Text className="text-primary font-poppins-bold text-[16px]">
+            <Text maxFontSizeMultiplier={1.3} className="text-primary font-poppins-bold text-[16px]">
               Send
             </Text>
           </Pressable>
@@ -155,7 +157,7 @@ const RecoverPassword = () => {
           <Text className="text-primary font-poppins text-[14px]">
             Or continue to{"  "}
             <Text
-              onPress={() => router.back()}
+              onPress={() => router.replace("/sign-in")}
               className="font-poppins-bold text-[16px] text-button-primary underline"
             >
               Login

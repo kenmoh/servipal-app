@@ -151,6 +151,7 @@ export function AppTextInput({
         <TextInput
           ref={inputRef}
           editable={!disabled}
+          maxFontSizeMultiplier={1.3}
           placeholderTextColor={placeholderColor}
           multiline={multiline}
           textAlignVertical={multiline ? "top" : "center"}

@@ -80,6 +80,8 @@ const RecoverPassword = () => {
         contentContainerStyle={{
           alignItems: "center",
           justifyContent: "center",
+          flexGrow: 1,
+          width: "100%",
         }}
       >
         <View className="flex-1 bg-background w-full items-center mt-4 ">

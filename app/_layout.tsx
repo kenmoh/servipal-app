@@ -27,6 +27,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { ObserveRoot, useObserve } from "expo-observe";
 
+
 function ScreenTracker() {
   const posthog = usePostHog();
   const pathname = usePathname();
