@@ -28,7 +28,7 @@ const SignIn = () => {
   };
 
   return (
-    <View className="flex-1 w-full bg-background items-center ">
+    <View style={{flex: 1, width:'100%', backgroundColor:'#18191c', alignItems:'center'}}>
       {/* Header */}
       <View className="w-[90%] mb-10">
         <Text className="font-poppins-semibold text-[20px] text-primary">
@@ -92,7 +92,7 @@ const SignIn = () => {
             if (!isPending) router.push("/forgot-password");
           }}
         >
-          <Text className="font-poppins-medium text-[16px] text-button-primary underline">
+          <Text style={{fontFamily: 'Poppins-Medium', fontSize: 16, color:'orange',   textDecorationLine: 'underline'}} >
             Forgot Password
           </Text>
         </Pressable>
@@ -103,13 +103,23 @@ const SignIn = () => {
           marginTop: 25,
         }}
       />
-      <AppButton
+
+      <Pressable
+        className="w-[90%] my-4 active:opacity-70 bg-primary rounded-lg h-[45px] items-center justify-center gap-3"
+        onPress={handleSubmit(onSubmit)}
+      >
+        {isPending && <ActivityIndicator color="white" size="large" />}
+        <Text style={{fontFamily: 'Poppins-Medium', fontSize: 14, color:'#FFFFFF',}} >
+          {isPending ? "Logging in..." : "Login"}
+        </Text>
+      </Pressable>
+      {/* <AppButton
         width={"90%"}
         disabled={isPending || !isValid}
         icon={isPending && <ActivityIndicator color="white" size="large" />}
         text={isPending ? "Logging in..." : "Login"}
-        onPress={handleSubmit(onSubmit)}
-      />
+        
+      /> */}
 
       {/* Sign Up Link */}
       <View className="flex-row items-center justify-center w-full mt-[25px] align-baseline">
@@ -118,10 +128,11 @@ const SignIn = () => {
         </Text>
         <Pressable
           onPress={() => router.push("/user-selection")}
-          disabled={isPending}
+         
         >
           <Text
-            className="font-poppins-bold text-[16px] text-button-primary underline"
+          style={{fontFamily: 'Poppins-Bold', fontSize: 16, color:'orange', textDecorationLine: 'underline'}}
+          
             numberOfLines={undefined}
           >
             {"  "}Register
