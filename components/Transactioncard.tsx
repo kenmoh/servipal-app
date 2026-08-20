@@ -1,0 +1,95 @@
+import { useUserStore } from "@/store/userStore";
+import { resolveDisplayName, TransactionDetails } from "@/types/user-types";
+import AntDesign from "@react-native-vector-icons/ant-design/static";
+import { router } from "expo-router";
+import React from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+
+const Transactioncard = ({ data }: { data: TransactionDetails }) => {
+  const { user } = useUserStore();
+  // Determine circle and icon color
+  let circleBg =
+    data?.details.label === "CREDIT" || data?.transaction_type === "REFUNDED"
+      ? "rgba(4, 255, 130, 0.1)"
+      : data?.details.label === "DEBIT"
+        ? "rgba(255, 0, 0, 0.2)"
+        : "rgba(214, 152, 40, 0.2)";
+  let iconColor =
+    data?.details.label === "CREDIT" || data?.transaction_type === "REFUNDED"
+      ? "green"
+      : data?.details.label === "DEBIT"
+        ? "red"
+        : "gold";
+  if (data?.payment_status === "PENDING" && data?.details.label === "CREDIT") {
+    circleBg = "rgba(255, 193, 7, 0.2)";
+    iconColor = "#FFC107";
+  }
+
+  const handleTransactionDetail = () => {
+    router.push({
+      pathname: "/wallet/transaction/[id]",
+      params: {
+        id: data?.id,
+        txRef: data?.tx_ref,
+        amount: data.amount,
+        date: data?.created_at,
+        status: data?.payment_status,
+        fromUser: resolveDisplayName(data?.from_user),
+        toUser: resolveDisplayName(data?.to_user),
+        transactionType: data?.transaction_type,
+        transactionDirection: data?.transaction_type,
+        paymentStatus: data?.payment_status,
+      },
+    });
+  };
+
+  const displayName =
+    data.details?.label === "CREDIT"
+      ? resolveDisplayName(data?.from_user)
+      : resolveDisplayName(data?.to_user);
+
+  return (
+    <Pressable
+      hitSlop={25}
+      onPress={handleTransactionDetail}
+      className="active:opacity-80"
+    >
+      <View className="w-full self-center  rounded-none py-4 flex-row items-center justify-between">
+        <View className="flex-row items-center gap-3" style={{ flex: 1 }}>
+          <View
+            style={{ backgroundColor: circleBg }}
+            className="w-8 h-8 rounded-full items-center justify-center"
+          >
+            {data?.details?.label === "CREDIT" ||
+            data?.transaction_type === "REFUNDED" ? (
+              <AntDesign name="arrow-down" color={iconColor} size={14} />
+            ) : data?.details?.label === "DEBIT" ? (
+              <AntDesign name="arrow-up" color={iconColor} size={12} />
+            ) : (
+              <AntDesign name="lock" color={iconColor} size={12} />
+            )}
+          </View>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text
+              className="capitalize text-xs font-normal text-primary"
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
+              {data?.transaction_type === "REFUNDED"
+                ? "SYSTEM REFUND | Order Cancelled"
+                : displayName}
+            </Text>
+            <Text className="text-muted text-[10px]">{data?.created_at}</Text>
+          </View>
+        </View>
+        <Text className="text-xs font-bold text-primary" style={{ flexShrink: 0 }}>
+          ₦ {Number(data?.amount).toFixed(2)}
+        </Text>
+      </View>
+    </Pressable>
+  );
+};
+
+export default Transactioncard;
+
+const styles = StyleSheet.create({});

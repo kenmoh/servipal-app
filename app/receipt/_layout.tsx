@@ -1,0 +1,57 @@
+import { HEADER_BG_DARK, HEADER_BG_LIGHT } from "@/constants/theme";
+import { useColorScheme } from "@/hooks/use-color-scheme";
+import { Stack } from "expo-router";
+import React from "react";
+
+const ReceiptLayout = () => {
+  const theme = useColorScheme();
+  return (
+    <Stack
+      screenOptions={{
+        contentStyle: {
+          backgroundColor: theme === "dark" ? HEADER_BG_DARK : HEADER_BG_LIGHT,
+        },
+      }}
+    >
+      <Stack.Screen
+        name="cancel-sheet"
+        options={{
+          headerShown: false,
+          presentation: "formSheet",
+          sheetAllowedDetents: [0.75],
+          sheetCornerRadius: 25,
+          sheetGrabberVisible: true,
+          sheetInitialDetentIndex: 0,
+        }}
+      />
+
+      <Stack.Screen
+        name="laundry-receipt/[id]"
+        options={{
+          title: "Receipt",
+          headerTintColor: theme === "dark" ? HEADER_BG_LIGHT : HEADER_BG_DARK,
+          headerShadowVisible: false,
+          headerTitleStyle: { fontFamily: "Poppins-Medium" },
+          headerStyle: {
+            backgroundColor:
+              theme === "dark" ? HEADER_BG_DARK : HEADER_BG_LIGHT,
+          },
+        }}
+      />
+
+      <Stack.Screen
+        name="[id]"
+        options={{
+          title: "Receipt",
+          headerShadowVisible: false,
+          headerStyle: {
+            backgroundColor:
+              theme === "dark" ? HEADER_BG_DARK : HEADER_BG_LIGHT,
+          },
+        }}
+      />
+    </Stack>
+  );
+};
+
+export default ReceiptLayout;

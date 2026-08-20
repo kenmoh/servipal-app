@@ -1,0 +1,629 @@
+import { InitiatePaymentResponse } from "@/types/payment-types";
+import {
+  CategoriesWithSubcategories,
+  CreateProduct,
+  ProductOrder,
+  ProductOrderCreateRequest,
+  ProductResponse,
+  ProductSubcategory,
+  UserOrdersResponse,
+} from "@/types/product-types";
+import { apiClient } from "@/utils/client";
+import { supabase } from "@/utils/supabase";
+import * as Sentry from "@sentry/react-native";
+import { ApiResponse } from "apisauce";
+import { ErrorResponse } from "./auth";
+import { normalizeMenuImages } from "./food";
+
+const BASE_URL = "/products";
+
+/**
+ * Initiate payment for a product
+ * @param data Order details
+ * @returns Payment initialization details
+ */
+export const initiateProductPayment = async (
+  data: ProductOrderCreateRequest,
+): Promise<InitiatePaymentResponse> => {
+  try {
+    const response: ApiResponse<InitiatePaymentResponse | ErrorResponse> =
+      await apiClient.post(`${BASE_URL}/initiate-payment`, data, {
+        headers: {
+          "Content-Type": "application/json",
+          ...(data.idempotencyKey && {
+            "X-Idempotency-Key": data.idempotencyKey,
+          }),
+        },
+      });
+
+    if (!response.ok || !response.data || "detail" in response.data) {
+      const errorMessage =
+        response.data && "detail" in response.data
+          ? response.data.detail
+          : "Failed to initiate payment";
+      throw new Error(errorMessage);
+    }
+
+    Sentry.addBreadcrumb({
+      category: "api.product",
+      message: "Product payment initiated",
+      level: "info",
+    });
+
+    return response.data;
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error("An unexpected error occurred while initiating payment");
+  }
+};
+
+/**
+ * Product filters for querying products
+ */
+export interface ProductFilters {
+  category_id?: string;
+  vendor_id?: string;
+  product_type?: "PHYSICAL" | "DIGITAL";
+  in_stock?: boolean;
+  include_deleted?: boolean;
+}
+
+const PRODUCT_IMAGE_BUCKET = "product-images";
+
+/**
+ * Create product-images records
+ * @param productId Product ID
+ * @param imageUrls Array of image URLs
+ */
+const createProductImages = async (
+  productId: string,
+  imageUrls: string[],
+): Promise<void> => {
+  try {
+    const imageRecords = imageUrls.map((url, index) => ({
+      product_id: productId,
+      url: url,
+      display_order: index,
+    }));
+
+    const { error } = await supabase
+      .from(PRODUCT_IMAGE_BUCKET)
+      .insert(imageRecords);
+
+    if (error) {
+      throw new Error(`Failed to create image records: ${error.message}`);
+    }
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error("Failed to create product images");
+  }
+};
+
+/**
+ * Delete files from Supabase storage
+ * @param urls Array of public URLs to delete
+ */
+const deleteFilesFromStorage = async (urls: string[]) => {
+  const buckets: Record<string, string[]> = {};
+
+  urls.forEach((url) => {
+    try {
+      const urlObj = new URL(url);
+      // pathname usually: /storage/v1/object/public/bucket/path/to/file
+      const parts = urlObj.pathname.split("/");
+      const publicIndex = parts.indexOf("public");
+      if (publicIndex !== -1 && publicIndex + 2 < parts.length) {
+        const bucket = parts[publicIndex + 1];
+        const path = parts.slice(publicIndex + 2).join("/");
+
+        if (!buckets[bucket]) buckets[bucket] = [];
+        buckets[bucket].push(path);
+      }
+    } catch (e) {
+      console.error("Invalid URL for deletion", url);
+    }
+  });
+
+  for (const [bucket, paths] of Object.entries(buckets)) {
+    if (paths.length > 0) {
+      await supabase.storage.from(bucket).remove(paths);
+    }
+  }
+};
+
+/**
+ * Create a new product
+ * @param data Product data to create
+ * @returns Created product
+ */
+export const createProduct = async (
+  data: CreateProduct,
+): Promise<ProductResponse> => {
+  try {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (!session) {
+      throw new Error("User not authenticated");
+    }
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("store_name, business_name, full_name")
+      .eq("id", session.user.id)
+      .single();
+
+    const uploadedImages = await normalizeMenuImages(
+      data.images,
+      session.user.id,
+      PRODUCT_IMAGE_BUCKET,
+    );
+
+    const storeName =
+      profile?.store_name || profile?.business_name || profile?.full_name;
+
+    const response: ApiResponse<ProductResponse | ErrorResponse> =
+      await apiClient.post(`${BASE_URL}/items`, {
+        name: data.name,
+        description: data.description,
+        price: data.price,
+        product_type: data.product_type,
+        stock: data.stock,
+        sizes: data.sizes,
+        colors: data.colors,
+        category_id: data.category_id,
+        warranty: data.warranty,
+        return_days: data.return_days,
+        shipping_cost: data.shipping_cost,
+        images: uploadedImages,
+        store_name: storeName,
+      });
+
+    if (!response.ok || !response.data || "detail" in response.data) {
+      const errorMessage =
+        response.data && "detail" in response.data
+          ? response.data.detail
+          : "Failed to create product";
+      throw new Error(errorMessage);
+    }
+
+    return response.data as ProductResponse;
+  } catch (error) {
+    if (error instanceof Error) {
+      throw new Error(`Error creating product: ${error.message}`);
+    }
+    throw new Error("An unexpected error occurred while creating product");
+  }
+};
+
+/**
+ * Get a single product by ID
+ * @param id Product ID
+ * @returns Product data
+ */
+export const getProduct = async (id: string): Promise<ProductResponse> => {
+  try {
+    const response: ApiResponse<ProductResponse | ErrorResponse> =
+      await apiClient.get(`${BASE_URL}/items/${id}`);
+
+    if (!response.ok || !response.data || "detail" in response.data) {
+      const errorMessage =
+        response.data && "detail" in response.data
+          ? response.data.detail
+          : "Failed to fetch product";
+      throw new Error(errorMessage);
+    }
+
+    return response.data as ProductResponse;
+  } catch (error) {
+    if (error instanceof Error) {
+      throw new Error(`Error fetching product: ${error.message}`);
+    }
+    throw new Error("An unexpected error occurred while fetching product");
+  }
+};
+
+/**
+ * Get all products with optional filters
+ * @param filters Optional filters to apply
+ * @returns Array of products
+ */
+
+export const getProducts = async (
+  filters?: ProductFilters,
+): Promise<ProductResponse[]> => {
+  try {
+    const { data, error } = await supabase.rpc("get_products", {
+      p_category_id: filters?.category_id ?? null,
+      p_vendor_id: filters?.vendor_id ?? null,
+      p_product_type: filters?.product_type ?? null,
+      p_in_stock: filters?.in_stock ?? null,
+      p_include_deleted: filters?.include_deleted ?? false,
+    });
+
+    if (error) {
+      throw new Error(error.message || "Failed to fetch products");
+    }
+
+    return (data || []) as ProductResponse[];
+  } catch (error) {
+    if (error instanceof Error) {
+      throw new Error(`Error fetching products: ${error.message}`);
+    }
+    throw new Error("An unexpected error occurred while fetching products");
+  }
+};
+// export const getProducts = async (
+//   filters?: ProductFilters,
+// ): Promise<ProductResponse[]> => {
+//   try {
+//     let query = supabase.from("product_items").select("*");
+
+//     // Apply filters
+//     if (filters?.category_id) {
+//       query = query.eq("category_id", filters.category_id);
+//     }
+
+//     if (filters?.vendor_id) {
+//       query = query.eq("vendor_id", filters.vendor_id);
+//     }
+
+//     if (filters?.product_type) {
+//       query = query.eq("product_type", filters.product_type);
+//     }
+
+//     if (filters?.in_stock !== undefined) {
+//       query = query.eq("in_stock", filters.in_stock);
+//     }
+
+//     // By default, exclude deleted products unless explicitly requested
+//     if (!filters?.include_deleted) {
+//       query = query.eq("is_deleted", false);
+//     }
+
+//     // Order by created_at descending
+//     query = query.order("created_at", { ascending: false });
+
+//     const { data: products, error } = await query;
+
+//     if (error) {
+//       throw new Error(error.message || "Failed to fetch products");
+//     }
+
+//     return (products || []) as ProductResponse[];
+//   } catch (error) {
+//     if (error instanceof Error) {
+//       throw new Error(`Error fetching products: ${error.message}`);
+//     }
+//     throw new Error("An unexpected error occurred while fetching products");
+//   }
+// };
+
+/**
+ * Get all products for the current vendor
+ * @returns Array of products
+ */
+export const getUserProducts = async (): Promise<ProductResponse[]> => {
+  try {
+    const response: ApiResponse<ProductResponse[] | ErrorResponse> =
+      await apiClient.get(`${BASE_URL}/my-items`);
+
+    if (!response.ok || !response.data || "detail" in response.data) {
+      const errorMessage =
+        response.data && "detail" in response.data
+          ? response.data.detail
+          : "Failed to fetch user products";
+      throw new Error(errorMessage);
+    }
+
+    return response.data as ProductResponse[];
+  } catch (error) {
+    if (error instanceof Error) {
+      throw new Error(error.message || "Failed to fetch user products");
+    }
+    throw new Error("An unexpected error occurred while fetching user products");
+  }
+};
+
+/**
+ * Update an existing product
+ * @param id Product ID
+ * @param data Partial product data to update
+ * @returns Updated product
+ */
+export const updateProduct = async (
+  id: string,
+  data: Partial<CreateProduct>,
+): Promise<ProductResponse> => {
+  try {
+    const updateData: Record<string, unknown> = {};
+
+    // Only include fields that are provided (excluding images for now)
+    if (data.name !== undefined) updateData.name = data.name;
+    if (data.description !== undefined)
+      updateData.description = data.description;
+    if (data.price !== undefined) updateData.price = data.price;
+    if (data.sizes !== undefined) updateData.sizes = data.sizes;
+    if (data.colors !== undefined) updateData.colors = data.colors;
+    if (data.stock !== undefined) updateData.stock = data.stock;
+    if (data.category_id !== undefined)
+      updateData.category_id = data.category_id;
+    if (data.product_type !== undefined)
+      updateData.product_type = data.product_type;
+    if (data.warranty !== undefined) updateData.warranty = data.warranty;
+    if (data.return_days !== undefined) updateData.return_days = data.return_days;
+    if (data.shipping_cost !== undefined)
+      updateData.shipping_cost = data.shipping_cost;
+
+    // Handle images separately
+    if (data.images !== undefined) {
+      try {
+        // Get current user session for vendor ID
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        if (!session) {
+          throw new Error("User not authenticated");
+        }
+
+        // 1. Get current product images to identify deletions
+        const { data: currentProduct } = await supabase
+          .from("product_items")
+          .select("images")
+          .eq("id", id)
+          .single();
+
+        const currentImages: string[] = currentProduct?.images || [];
+
+        // 2. Normalize/Update images
+        const uploadedUrls = await normalizeMenuImages(
+          data.images,
+          session.user.id,
+          PRODUCT_IMAGE_BUCKET,
+        );
+
+        // 3. Identify deleted images (present in current but not in new list)
+        const imagesToDelete = currentImages.filter(
+          (img) => !uploadedUrls.includes(img),
+        );
+
+        if (imagesToDelete.length > 0) {
+          await deleteFilesFromStorage(imagesToDelete);
+        }
+
+        updateData.images = uploadedUrls;
+      } catch (imageError) {
+        Sentry.captureException(imageError, {
+          tags: { action: "update_product_images" },
+        });
+      }
+    }
+
+    const response: ApiResponse<ProductResponse | ErrorResponse> =
+      await apiClient.patch(`${BASE_URL}/items/${id}`, updateData);
+
+    if (!response.ok || !response.data || "detail" in response.data) {
+      const errorMessage =
+        response.data && "detail" in response.data
+          ? response.data.detail
+          : "Failed to update product";
+      throw new Error(errorMessage);
+    }
+
+    return response.data as ProductResponse;
+  } catch (error) {
+    if (error instanceof Error) {
+      throw new Error(`Error updating product: ${error.message}`);
+    }
+    throw new Error("An unexpected error occurred while updating product");
+  }
+};
+
+/**
+ * Soft delete a product (set is_deleted to true)
+ * @param productId Product ID
+ */
+export const softDeleteProduct = async (
+  productId: string,
+  _vendorId?: string,
+): Promise<void> => {
+  try {
+    const response: ApiResponse<{ success: boolean } | ErrorResponse> =
+      await apiClient.delete(`${BASE_URL}/items/${productId}`);
+
+    if (!response.ok || !response.data || "detail" in response.data) {
+      const errorMessage =
+        response.data && "detail" in response.data
+          ? response.data.detail
+          : "Failed to delete product";
+      throw new Error(errorMessage);
+    }
+  } catch (error) {
+    if (error instanceof Error) {
+      throw new Error(error.message || "Failed to delete product");
+    }
+    throw new Error("An unexpected error occurred while deleting product");
+  }
+};
+
+/**
+ * Permanently delete a product (hard delete)
+ * Use with caution - this cannot be undone
+ * @param id Product ID
+ */
+export const deleteProduct = async (
+  id: string,
+  vendorId: string,
+): Promise<void> => {
+  try {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (!session) {
+      throw new Error("User not authenticated");
+    }
+    if (session?.user.id !== vendorId) {
+      throw new Error("You can only delete your own products");
+    }
+    const { error } = await supabase
+      .from("product_items")
+      .delete()
+      .eq("id", id)
+      .eq("vendor_id", vendorId);
+
+    if (error) {
+      throw new Error(error.message || "Failed to permanently delete product");
+    }
+  } catch (error) {
+    if (error instanceof Error) {
+      throw new Error(`Error permanently deleting product: ${error.message}`);
+    }
+  }
+};
+
+/**
+ * Fetch a single product by ID (alias for backward compatibility)
+ * @param productId Product ID
+ * @returns Product data
+ */
+export const fetchProduct = async (
+  productId: string,
+): Promise<ProductResponse> => {
+  return getProduct(productId);
+};
+
+/**
+ * Fetch all products with optional category filter (alias for backward compatibility)
+ * @param categoryId Optional category ID
+ * @returns Array of products
+ */
+export const fetchProducts = async (
+  categoryId?: string,
+): Promise<ProductResponse[]> => {
+  return getProducts(categoryId ? { category_id: categoryId } : undefined);
+};
+
+export const getCategoriesWithSubcategories =
+  async (): Promise<CategoriesWithSubcategories> => {
+    const { data, error } = await supabase.rpc(
+      "get_categories_with_subcategories",
+    );
+
+    if (error) {
+      console.error("Error fetching categories:", error);
+      Sentry.captureException(error, { tags: { action: "get_categories" } });
+      throw new Error(error.message || "Failed to fetch categories");
+    }
+
+    const categories: CategoriesWithSubcategories = data;
+
+    return categories;
+  };
+
+export const getAllProductSubcategories = async (): Promise<
+  ProductSubcategory[]
+> => {
+  const { data, error } = await supabase.rpc("get_all_product_subcategories");
+
+  if (error) {
+    console.error("Error fetching categories:", error);
+    Sentry.captureException(error, { tags: { action: "get_subcategories" } });
+    throw new Error(error.message || "Failed to fetch categories");
+  }
+
+  return data as ProductSubcategory[];
+};
+
+export const listOrders = async (page = 0, limit = 20) => {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (!session) {
+    throw new Error("User not authenticated");
+  }
+  const userId = session.user.id;
+  const { data, error } = await supabase.rpc("get_user_product_orders", {
+    p_user_id: userId,
+    p_limit: limit,
+    p_offset: page * limit,
+  });
+  if (error) {
+    Sentry.captureException(error, {
+      tags: { action: "list_orders" },
+    });
+    throw error;
+  }
+  return data as UserOrdersResponse;
+};
+
+export const getOrderDetails = async (orderId: string) => {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (!session) {
+    throw new Error("User not authenticated");
+  }
+  const userId = session.user.id;
+
+  const { data, error } = await supabase.rpc("get_product_order_details", {
+    p_order_id: orderId,
+    p_user_id: userId,
+  });
+  if (error) {
+    Sentry.captureException(error, {
+      tags: { action: "get_order_details" },
+    });
+    throw error;
+  }
+  const result = Array.isArray(data) ? data[0] : data;
+  return result as ProductOrder;
+};
+
+export const updateOrderStatus = async ({
+  orderId,
+  newStatus,
+  cancelReason,
+}: {
+  orderId: string;
+  newStatus: string;
+  cancelReason?: string;
+}) => {
+  try {
+    const response = await apiClient.patch(
+      `${BASE_URL}/orders/${orderId}/status`,
+      {
+        order_id: orderId,
+        new_status: newStatus,
+        cancel_reason: cancelReason ?? null,
+      },
+    );
+    return response.data;
+  } catch (error) {
+    Sentry.captureException(error, {
+      tags: { action: "update_order_status" },
+    });
+    throw error;
+  }
+};
+
+export const confirmProductOrder = async ({
+  orderId,
+}: {
+  orderId: string;
+}) => {
+  try {
+    const response = await apiClient.post(
+      `${BASE_URL}/orders/${orderId}/confirm-receipt`,
+    );
+    return response.data;
+  } catch (error) {
+    Sentry.captureException(error, {
+      tags: { action: "confirm_product_order" },
+    });
+    throw error;
+  }
+};

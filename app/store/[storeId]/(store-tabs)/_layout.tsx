@@ -1,0 +1,112 @@
+import FAB from "@/components/FAB";
+import { HEADER_BG_DARK, HEADER_BG_LIGHT } from "@/constants/theme";
+
+import { useUserStore } from "@/store/userStore";
+import AntDesign from "@react-native-vector-icons/ant-design/static";
+import { createMaterialTopTabNavigator } from 'expo-router/js-top-tabs';
+import { useLocalSearchParams, withLayoutContext } from "expo-router";
+// import { Bike, Landmark, MapPin, Menu, Star } from "lucide-react-native";
+import LoadingIndicator from "@/components/LoadingIndicator";
+import React from "react";
+import { Dimensions, StyleSheet, View } from "react-native";
+
+import StoreHeader from "@/components/StoreHeader";
+import { useColorScheme } from "@/hooks/use-color-scheme";
+import { useVerifiedNavigation } from "@/hooks/use-verification";
+
+const StoreTabs = withLayoutContext(createMaterialTopTabNavigator().Navigator);
+
+const StoreTabLayout = () => {
+  const { storeId } = useLocalSearchParams<{ storeId: string }>();
+  const theme = useColorScheme();
+
+  const BG_COLOR = theme === "dark" ? HEADER_BG_DARK : HEADER_BG_LIGHT;
+  return (
+    <Wrapper storeId={storeId}>
+      <StoreHeader storeId={storeId!} />
+      <StoreTabs
+        className="bg-background border-b-border-subtle text-primary"
+        initialRouteName="index"
+        initialLayout={{ width: Dimensions.get("window").width }}
+        screenOptions={{
+          tabBarLabelStyle: {
+            fontSize: 11,
+            textAlign: "center",
+            textTransform: "capitalize",
+            fontFamily: "Poppins-Medium",
+          },
+          swipeEnabled: false,
+          lazy: true,
+          lazyPreloadDistance: 0,
+          lazyPlaceholder: () => <LoadingIndicator />,
+          tabBarActiveTintColor: theme === "dark" ? "white" : "black",
+          tabBarAndroidRipple: { borderless: false },
+          tabBarPressOpacity: 0,
+
+          tabBarIndicatorStyle: {
+            backgroundColor: "orange",
+            height: 1,
+          },
+          tabBarStyle: {
+            backgroundColor: BG_COLOR,
+            borderTopColor: "orange",
+            borderTopWidth: StyleSheet.hairlineWidth,
+            borderBottomColor: "gray",
+            borderBottomWidth: StyleSheet.hairlineWidth,
+            elevation: 0,
+            shadowOpacity: 0,
+          },
+        }}
+      >
+        <StoreTabs.Screen
+          name="index"
+          options={{
+            tabBarLabel: "Menu",
+          }}
+        />
+        <StoreTabs.Screen
+          name="beverage"
+          options={{
+            tabBarLabel: "Beverages",
+          }}
+        />
+        <StoreTabs.Screen
+          name="extras"
+          options={{
+            tabBarLabel: "Extras",
+          }}
+        />
+      </StoreTabs>
+    </Wrapper>
+  );
+};
+
+export default StoreTabLayout;
+
+const Wrapper = ({
+  children,
+  storeId,
+}: {
+  children: React.ReactNode;
+  storeId: string;
+}) => {
+  const { user } = useUserStore();
+  const { navigateTo } = useVerifiedNavigation();
+  const showFAB =
+    user?.user_metadata?.user_type === "RESTAURANT_VENDOR" &&
+    user?.id === storeId;
+
+  return (
+    <View className="flex-1">
+      {children}
+      {showFAB && (
+        <View className="absolute bottom-12 right-3">
+          <FAB
+            icon={<AntDesign name="menu" color={"white"} />}
+            onPress={() => navigateTo("/store/add-menu")}
+          />
+        </View>
+      )}
+    </View>
+  );
+};

@@ -1,0 +1,135 @@
+import { fetchVendorLaundryItems } from "@/api/laundry";
+import CartInfoBtn from "@/components/CartInfoBtn";
+import EmptyList from "@/components/EmptyList";
+import FAB from "@/components/FAB";
+import LaundryCard from "@/components/LaundryCard";
+import LoadingIndicator from "@/components/LoadingIndicator";
+import StoreHeader from "@/components/StoreHeader";
+import { useVerifiedNavigation } from "@/hooks/use-verification";
+import { useCartStore } from "@/store/cartStore";
+import { useUserStore } from "@/store/userStore";
+import { LaundryItemResponse } from "@/types/item-types";
+import AntDesign from "@react-native-vector-icons/ant-design/static";
+import { FlashList } from "@shopify/flash-list";
+import { useQuery } from "@tanstack/react-query";
+import { router, useLocalSearchParams, usePathname } from "expo-router";
+import React, { useCallback, useEffect, useState } from "react";
+import { View } from "react-native";
+import { useTrack } from "@/hooks/use-events";
+import { usePayoutAccountGuard } from "@/hooks/use-payout-guard";
+
+const LaundryStore = () => {
+  const { storeId, deliveryFee } = useLocalSearchParams<{
+    storeId: string;
+    deliveryFee: string;
+  }>();
+  const { user } = useUserStore();
+  const { cart, addItem, totalCost, removeItem } = useCartStore();
+  const [checkedItems, setCheckedItems] = useState<Set<string>>(new Set());
+  const { navigateTo } = useVerifiedNavigation();
+  const { track } = useTrack();
+  const pathName = usePathname();
+  const { ensurePayoutAccount } = usePayoutAccountGuard();
+
+  const { data, refetch, isFetching } = useQuery({
+    queryKey: ["laundryItems", storeId],
+    queryFn: () => fetchVendorLaundryItems(storeId!),
+    enabled: !!storeId,
+  });
+
+  const showFAB =
+    user?.user_metadata.user_type === "LAUNDRY_VENDOR" && user?.id === storeId;
+
+  const handleAddToCart = useCallback(
+    (item: LaundryItemResponse) => {
+      const isChecked = cart.order_items.some(
+        (cartItem) => cartItem.item_id === item.id,
+      );
+
+      if (isChecked) {
+        removeItem(item.id);
+        const next = new Set(checkedItems);
+        next.delete(item.id);
+        setCheckedItems(next);
+      } else {
+        ensurePayoutAccount(() => {
+          addItem(storeId!, item.id, 1, {
+            name: item.name,
+            price: item.price,
+            image: item.images[0] || "",
+            laundry_type: item.laundry_type,
+          });
+
+          const next = new Set(checkedItems);
+          next.add(item.id);
+          setCheckedItems(next);
+        });
+      }
+    },
+    [
+      cart.order_items,
+      addItem,
+      removeItem,
+      checkedItems,
+      ensurePayoutAccount,
+      storeId,
+    ],
+  );
+
+  const renderItem = ({ item }: { item: LaundryItemResponse }) => (
+    <LaundryCard item={item} onPress={handleAddToCart} />
+  );
+
+  useEffect(() => {
+    track("laundry_vendor_screen_viewed", {
+      storeId: storeId!,
+      screen: pathName,
+    });
+  }, [track, pathName]);
+
+  if (isFetching && !data) return <LoadingIndicator />;
+
+  return (
+    <View className="flex-1 bg-background">
+      <FlashList
+        data={data}
+        renderItem={renderItem}
+        keyExtractor={(item) => item.id}
+        ListHeaderComponent={<StoreHeader storeId={storeId!} />}
+        ListEmptyComponent={
+          <EmptyList
+            title="No Services"
+            description="This laundry store hasn't added any services yet."
+          />
+        }
+        onRefresh={refetch}
+        refreshing={isFetching}
+        contentContainerStyle={{ paddingBottom: 100 }}
+      />
+
+      {showFAB && (
+        <View className="absolute bottom-12 right-3">
+          <FAB
+            icon={<AntDesign name="plus" color={"white"} size={24} />}
+            onPress={() => navigateTo("/laundry-store/add-item")}
+          />
+        </View>
+      )}
+
+      {totalCost > 0 && (
+        <CartInfoBtn
+          orderType="LAUNDRY"
+          totalItem={cart.order_items.length}
+          onPress={() =>
+            router.push({
+              pathname: "/cart",
+              params: { isLaundry: "true", deliveryFee },
+            })
+          }
+        />
+      )}
+    </View>
+  );
+};
+
+export default LaundryStore;

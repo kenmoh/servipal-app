@@ -1,0 +1,152 @@
+import EmptyList from "@/components/EmptyList";
+import FoodCard from "@/components/FoodCard";
+import ItemCustomizationSheet from "@/components/ItemCustomizationSheet";
+import { useCartStore } from "@/store/cartStore";
+import { RestaurantMenuItemResponse, SizeOption } from "@/types/item-types";
+import { BottomSheetModal } from "@gorhom/bottom-sheet";
+import { FlashList } from "@shopify/flash-list";
+import { useQuery } from "@tanstack/react-query";
+import { useGlobalSearchParams, usePathname } from "expo-router";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { View } from "react-native";
+
+import { fetchVendorMenuItems } from "@/api/food";
+import { useTrack } from "@/hooks/use-events";
+import { usePayoutAccountGuard } from "@/hooks/use-payout-guard";
+import { useUserStore } from "@/store/userStore";
+
+const ExtrasMenu = () => {
+  const { storeId } = useGlobalSearchParams<{ storeId: string }>();
+  const { profile } = useUserStore();
+  const { track } = useTrack();
+  const pathName = usePathname();
+  const { ensurePayoutAccount } = usePayoutAccountGuard();
+  const { addItem, removeItem } = useCartStore();
+  const [checkedItems, setCheckedItems] = useState<Set<string>>(new Set());
+  const [selectedItem, setSelectedItem] =
+    useState<RestaurantMenuItemResponse | null>(null);
+  const bottomSheetRef = useRef<BottomSheetModal>(null);
+
+  const { data, refetch, isFetching } = useQuery({
+    queryKey: ["extrasItems", storeId],
+    queryFn: () => fetchVendorMenuItems(storeId!, "EXTRAS"),
+    enabled: !!storeId,
+  });
+
+  const handleAddToCart = useCallback(
+    (item: RestaurantMenuItemResponse) => {
+      const hasOptions =
+        (item.sides && item.sides.length > 0) ||
+        (item.sizes && item.sizes.length > 0);
+
+      if (checkedItems.has(item.id)) {
+        removeItem(item.id);
+        setCheckedItems((prev) => {
+          const newChecked = new Set(prev);
+          newChecked.delete(item.id);
+          return newChecked;
+        });
+      } else {
+        ensurePayoutAccount(() => {
+          if (hasOptions) {
+            setSelectedItem(item);
+            bottomSheetRef.current?.present();
+          } else {
+            addItem(storeId as string, item.id, 1, {
+              name: item.name,
+              price: Number(item.price),
+              image: item.images[0] || "",
+            });
+            setCheckedItems((prev) => {
+              const newChecked = new Set(prev);
+              newChecked.add(item.id);
+              return newChecked;
+            });
+          }
+        });
+      }
+    },
+    [addItem, removeItem, profile?.id, checkedItems, ensurePayoutAccount],
+  );
+
+  const handleCustomAdd = useCallback(
+    (
+      item: RestaurantMenuItemResponse,
+      selectedSizes: SizeOption[],
+      selectedSide: string,
+    ) => {
+      if (selectedSizes.length > 0) {
+        // Add each selected size as a separate cart item
+        selectedSizes.forEach((size) => {
+          addItem(storeId as string, item.id, 1, {
+            name: item.name,
+            price: Number(size.price),
+            image: item.images[0] || "",
+            selected_size: size,
+            selected_side: selectedSide,
+          });
+        });
+      } else {
+        // No sizes — use base price
+        addItem(storeId as string, item.id, 1, {
+          name: item.name,
+          price: Number(item.price),
+          image: item.images[0] || "",
+          selected_side: selectedSide,
+        });
+      }
+
+      setCheckedItems((prev) => {
+        const newChecked = new Set(prev);
+        newChecked.add(item.id);
+        return newChecked;
+      });
+
+      bottomSheetRef.current?.dismiss();
+    },
+    [addItem, profile?.id],
+  );
+
+  useEffect(() => {
+    track("extras_menu_viewed", {
+      store_id: storeId,
+      screen: pathName,
+    });
+  }, [track, pathName]);
+
+  return (
+    <View className="flex-1 bg-background p-2">
+      <View className="flex-1">
+        <FlashList
+          data={data ?? []}
+          keyExtractor={(item) => item?.id}
+          renderItem={({ item }: { item: RestaurantMenuItemResponse }) => (
+            <FoodCard item={item} onPress={() => handleAddToCart(item)} />
+          )}
+          ListEmptyComponent={
+            !isFetching ? (
+              <EmptyList
+                title="No Menu Items"
+                description="Add your first menu item to start selling. Click the button below"
+                buttonTitle="Add Menu"
+                route="/store/add-menu"
+              />
+            ) : null
+          }
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: 80 }}
+          refreshing={isFetching}
+          onRefresh={refetch}
+        />
+      </View>
+
+      <ItemCustomizationSheet
+        ref={bottomSheetRef}
+        item={selectedItem}
+        onAdd={handleCustomAdd}
+      />
+    </View>
+  );
+};
+
+export default ExtrasMenu;
