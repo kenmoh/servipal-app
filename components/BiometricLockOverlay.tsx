@@ -1,33 +1,78 @@
-import React, { useEffect, useRef } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useUserStore } from "@/store/userStore";
 import { promptBiometric } from "@/hooks/use-biometric";
 import { router } from "expo-router";
-import { ActivityIndicator, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, Text, View } from "react-native";
 import { Ionicons } from "@react-native-vector-icons/ionicons";
+import * as Sentry from "@sentry/react-native";
+
+const MAX_AUTO_RETRIES = 1;
 
 export default function BiometricLockOverlay() {
-  const { setBiometricUnlocked, signOut } = useUserStore();
-  const promptStartedRef = useRef(false);
+  const {
+    setBiometricUnlocked,
+    setBiometricPromptActive,
+    signOut,
+  } = useUserStore();
+  const [status, setStatus] = useState<"prompting" | "failed" | "error">(
+    "prompting",
+  );
+  const retryCountRef = useRef(0);
+  const mountedRef = useRef(true);
+
+  const authenticate = useCallback(async () => {
+    try {
+      setStatus("prompting");
+      const success = await promptBiometric("Unlock ServiPal");
+
+      if (!mountedRef.current) return;
+
+      if (success) {
+        setBiometricUnlocked(true);
+        return;
+      }
+
+      // Prompt returned false — either user cancelled or device failed
+      if (retryCountRef.current < MAX_AUTO_RETRIES) {
+        // Auto-retry once (handles transient device failures)
+        retryCountRef.current += 1;
+        setTimeout(() => {
+          if (mountedRef.current) authenticate();
+        }, 500);
+      } else {
+        setStatus("failed");
+      }
+    } catch (error) {
+      if (!mountedRef.current) return;
+
+      Sentry.captureException(error, { tags: { action: "biometric_prompt" } });
+
+      if (retryCountRef.current < MAX_AUTO_RETRIES) {
+        retryCountRef.current += 1;
+        setTimeout(() => {
+          if (mountedRef.current) authenticate();
+        }, 500);
+      } else {
+        setStatus("error");
+      }
+    }
+  }, [setBiometricUnlocked]);
 
   useEffect(() => {
-    // Guard against double prompts (StrictMode double-invoke or a rapid
-    // unmount/remount): only start the OS prompt once per mount.
-    if (promptStartedRef.current) return;
-    promptStartedRef.current = true;
-
-    const authenticate = async () => {
-      try {
-        const success = await promptBiometric("Unlock ServiPal");
-        if (success) {
-          setBiometricUnlocked(true);
-        }
-      } catch (error) {
-        // Fall through to UI — user can tap "Use Password"
-      }
-    };
-
+    mountedRef.current = true;
+    setBiometricPromptActive(true);
     authenticate();
-  }, [setBiometricUnlocked]);
+
+    return () => {
+      mountedRef.current = false;
+      setBiometricPromptActive(false);
+    };
+  }, [authenticate, setBiometricPromptActive]);
+
+  const handleRetry = () => {
+    retryCountRef.current = 0;
+    authenticate();
+  };
 
   const handleUsePassword = async () => {
     try {
@@ -69,20 +114,48 @@ export default function BiometricLockOverlay() {
             ServiPal
           </Text>
           <Text style={{ fontSize: 14, color: "#999", textAlign: "center" }}>
-            Use fingerprint to unlock
+            {status === "error"
+              ? "Fingerprint unavailable. Use the options below."
+              : "Use fingerprint to unlock"}
           </Text>
         </View>
-        <ActivityIndicator color="#FF8C00" size="small" />
-        <Text
-          onPress={handleUsePassword}
-          style={{
-            fontSize: 14,
-            color: "#FF8C00",
-            marginTop: 16,
-          }}
-        >
-          Use Password
-        </Text>
+
+        {status === "prompting" && (
+          <ActivityIndicator color="#FF8C00" size="small" />
+        )}
+
+        {(status === "failed" || status === "error") && (
+          <View style={{ alignItems: "center", gap: 12 }}>
+            <Pressable
+              onPress={handleRetry}
+              style={{
+                backgroundColor: "rgba(255, 140, 0, 0.15)",
+                paddingHorizontal: 24,
+                paddingVertical: 12,
+                borderRadius: 24,
+                borderWidth: 1,
+                borderColor: "#FF8C00",
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: 14,
+                  fontWeight: "600",
+                  color: "#FF8C00",
+                }}
+              >
+                Try Again
+              </Text>
+            </Pressable>
+            <Pressable onPress={handleUsePassword} style={{ padding: 8 }}>
+              <Text
+                style={{ fontSize: 14, color: "#999", marginTop: 4 }}
+              >
+                Use Password
+              </Text>
+            </Pressable>
+          </View>
+        )}
       </View>
     </View>
   );

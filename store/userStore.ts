@@ -79,6 +79,7 @@ interface UserStore {
   // Biometric State
   biometricEnabled: boolean;
   biometricUnlocked: boolean;
+  biometricPromptActive: boolean;
 
   // Loading States
   hasHydrated: boolean;
@@ -108,6 +109,7 @@ interface UserStore {
   // Biometric Setters
   setBiometricEnabled: (enabled: boolean) => void;
   setBiometricUnlocked: (unlocked: boolean) => void;
+  setBiometricPromptActive: (active: boolean) => void;
   relock: () => void;
 
   // Profile Setters
@@ -160,6 +162,7 @@ export const useUserStore = create<UserStore>((set, get) => ({
   isFirstLaunch: true,
   biometricEnabled: false,
   biometricUnlocked: false,
+  biometricPromptActive: false,
   hasHydrated: false,
   isLoading: false,
   isProfileLoading: false,
@@ -183,6 +186,7 @@ export const useUserStore = create<UserStore>((set, get) => ({
   setUser: (user) => set({ user }),
   setBiometricEnabled: (enabled) => set({ biometricEnabled: enabled }),
   setBiometricUnlocked: (unlocked) => set({ biometricUnlocked: unlocked }),
+  setBiometricPromptActive: (active) => set({ biometricPromptActive: active }),
   relock: () => set({ biometricUnlocked: false }),
   setProfile: (profile) =>
     set({
@@ -1098,6 +1102,7 @@ export const useUserStore = create<UserStore>((set, get) => ({
               isReassign: false,
               storeAddress: null,
               profileError: null,
+              biometricUnlocked: false,
               currentLocation: null,
               locationPermissionGranted: null,
               locationTrackingActive: false,

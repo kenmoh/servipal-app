@@ -245,27 +245,32 @@ const ProfileScreen = () => {
         }
       }
 
-      await saveBiometricEnabled(newValue);
+      const { secureOk, asyncOk } = await saveBiometricEnabled(newValue);
 
-      // Verify the preference actually persisted (SecureStore can be
-      // unreadable on some devices). If it failed everywhere, warn the user
-      // instead of showing a success that will silently reset next launch.
-      const persisted = await isBiometricEnabled();
-      if (newValue && !persisted) {
-        showError(
-          "Warning",
-          "Fingerprint setting could not be saved on this device. It may reset after closing the app.",
-        );
-        return;
-      }
-
+      // Always update Zustand so the toggle reflects the user's choice.
+      // Even if storage is flaky, the preference is active for this session.
       setStoreBiometric(newValue);
-      showSuccess(
-        "Success",
-        newValue
-          ? "Fingerprint login enabled"
-          : "Fingerprint login disabled"
-      );
+
+      if (newValue && !secureOk && !asyncOk) {
+        // Both stores failed — very unlikely but possible
+        showError(
+          "Error",
+          "Could not save fingerprint setting. It will not persist after closing the app."
+        );
+      } else if (newValue && !secureOk) {
+        // AsyncStorage succeeded but SecureStore failed — common on flaky Android
+        showSuccess(
+          "Success",
+          "Fingerprint login enabled"
+        );
+      } else {
+        showSuccess(
+          "Success",
+          newValue
+            ? "Fingerprint login enabled"
+            : "Fingerprint login disabled"
+        );
+      }
     } catch (error) {
       showError("Error", "Failed to update fingerprint setting");
     }

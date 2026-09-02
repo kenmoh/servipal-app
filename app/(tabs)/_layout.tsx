@@ -14,6 +14,7 @@ export default function TabLayout() {
   const hideForRider = user?.user_metadata.user_type === "RIDER";
   return (
     <NativeTabs
+    tabBarRespectsIMEInsets
       backgroundColor={BG_COLOR}
       indicatorColor={"rgba(255, 140, 50, 0.12)"}
       rippleColor={"rgba(255, 140, 50, 0.25)"}

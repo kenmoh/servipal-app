@@ -182,7 +182,7 @@ export default Sentry.wrap(
     const { markInteractive } = useObserve();
 
     const BG_COLOR = colorScheme === "dark" ? HEADER_BG_DARK : HEADER_BG_LIGHT;
-    const { user, hydrate, initialize, biometricEnabled, biometricUnlocked, hasHydrated, relock } = useUserStore();
+    const { user, hydrate, initialize, biometricEnabled, biometricUnlocked, biometricPromptActive, hasHydrated, relock } = useUserStore();
 
     useEffect(() => {
       if (currentTheme) {
@@ -228,8 +228,13 @@ export default Sentry.wrap(
           // Debounce relock: on Android the system biometric dialog can emit a
           // transient 'background' event. Only re-lock if the app really stays
           // in the background, otherwise we'd re-prompt right after a success.
+          // Also skip relocking if the biometric prompt is currently active —
+          // the dialog itself causes a background transition.
           relockTimer.current = setTimeout(() => {
-            if (AppState.currentState === "background") {
+            if (
+              AppState.currentState === "background" &&
+              !biometricPromptActive
+            ) {
               relock();
             }
           }, 1000);
@@ -247,7 +252,7 @@ export default Sentry.wrap(
           clearTimeout(relockTimer.current);
         }
       };
-    }, [relock]);
+    }, [relock, biometricPromptActive]);
 
     if (!loaded && !fontError) {
       return null; // splash stays up, nothing mounts underneath it yet

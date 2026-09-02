@@ -29,6 +29,8 @@ export async function isBiometricEnabled(): Promise<boolean> {
   return authStorage.getBiometricEnabled();
 }
 
-export async function setBiometricEnabled(enabled: boolean): Promise<void> {
-  await authStorage.setBiometricEnabled(enabled);
+export async function setBiometricEnabled(
+  enabled: boolean,
+): Promise<{ secureOk: boolean; asyncOk: boolean }> {
+  return authStorage.setBiometricEnabled(enabled);
 }

@@ -112,38 +112,53 @@ const removeResetToken = async () => {
 // change, OEM cleanup) which would silently reset the toggle. We dual-write to
 // AsyncStorage and fall back to it when SecureStore is unavailable.
 const getBiometricEnabled = async (): Promise<boolean> => {
+  let secureValue: string | null = null;
+  let asyncValue: string | null = null;
+
   try {
-    const value = await SecureStore.getItemAsync(BIOMETRIC_ENABLED_KEY);
-    if (value !== null) {
-      return value === "true";
-    }
+    secureValue = await SecureStore.getItemAsync(BIOMETRIC_ENABLED_KEY);
   } catch (error) {
-    console.error("Error getting biometric enabled:", error);
+    // SecureStore can throw on some Android devices after reboot/lock change
   }
 
   try {
-    const fallback = await AsyncStorage.getItem(BIOMETRIC_ENABLED_KEY);
-    return fallback === "true";
+    asyncValue = await AsyncStorage.getItem(BIOMETRIC_ENABLED_KEY);
   } catch (error) {
-    console.error("Error getting biometric enabled (fallback):", error);
-    return false;
+    // AsyncStorage is generally more reliable but can also fail
   }
+
+  // If either store has "true", consider biometric enabled.
+  // This handles the case where one store is corrupted but the other isn't.
+  if (secureValue === "true" || asyncValue === "true") {
+    return true;
+  }
+
+  // Both are explicitly "false" or both are null (never set)
+  return false;
 };
 
-const setBiometricEnabled = async (enabled: boolean): Promise<void> => {
+const setBiometricEnabled = async (
+  enabled: boolean,
+): Promise<{ secureOk: boolean; asyncOk: boolean }> => {
   const value = String(enabled);
+  let secureOk = false;
+  let asyncOk = false;
 
   try {
     await SecureStore.setItemAsync(BIOMETRIC_ENABLED_KEY, value);
+    secureOk = true;
   } catch (error) {
-    console.error("Error setting biometric enabled:", error);
+    // SecureStore can fail on flaky Android devices
   }
 
   try {
     await AsyncStorage.setItem(BIOMETRIC_ENABLED_KEY, value);
+    asyncOk = true;
   } catch (error) {
-    console.error("Error setting biometric enabled (fallback):", error);
+    // AsyncStorage is generally more reliable
   }
+
+  return { secureOk, asyncOk };
 };
 
 export default {
