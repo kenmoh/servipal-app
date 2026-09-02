@@ -8,7 +8,6 @@ import LoadingIndicator from "@/components/LoadingIndicator";
 import StoreCard from "@/components/StoreCard";
 import { AppTextInput } from "@/components/ui/app-text-input";
 import { useQuery } from "@tanstack/react-query";
-import * as Location from "expo-location";
 
 import HDivider from "@/components/HDivider";
 import RefreshButton from "@/components/RefreshButton";
@@ -24,14 +23,10 @@ const DISTANCE_OPTIONS = [20, 30, 50] as const;
 const RestaurantScreen = () => {
   const theme = useColorScheme();
   const { user } = useUserStore();
+  const currentLocation = useUserStore((s) => s.currentLocation);
   const { track } = useTrack();
   const pathName = usePathname();
   const isDark = theme === "dark";
-
-  const [userLocation, setCurrentUserLocation] = useState<{
-    latitude: number;
-    longitude: number;
-  } | null>(null);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [searchInput, setSearchInput] = useState("");
@@ -42,40 +37,21 @@ const RestaurantScreen = () => {
       "restaurants",
       searchQuery,
       selectedKm,
-      userLocation?.latitude,
-      userLocation?.longitude,
+      currentLocation?.lat,
+      currentLocation?.lng,
     ],
     queryFn: () =>
       searchNearbyRestaurants(searchQuery, {
-        lat: userLocation?.latitude,
-        lng: userLocation?.longitude,
+        lat: currentLocation?.lat,
+        lng: currentLocation?.lng,
         maxDistanceKm: selectedKm,
       }),
-    enabled: !!user?.id && !!userLocation,
+    enabled: !!user?.id && !!currentLocation,
   });
 
   const handleRefresh = useCallback(() => {
     refetch();
   }, [refetch]);
-
-  // Get user's location
-  useEffect(() => {
-    const getUserLocation = async () => {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== "granted") return;
-
-      const location = await Location.getCurrentPositionAsync({});
-
-      if (location) {
-        setCurrentUserLocation({
-          latitude: location?.coords.latitude,
-          longitude: location?.coords.longitude,
-        });
-      }
-    };
-
-    getUserLocation();
-  }, []);
 
   // Simple debounce for search
   useEffect(() => {
@@ -144,7 +120,7 @@ const RestaurantScreen = () => {
     [searchInput, selectedKm, isDark],
   );
 
-  if (!userLocation || (isFetching && !data)) {
+  if (!currentLocation || (isFetching && !data)) {
     return <LoadingIndicator />;
   }
 
