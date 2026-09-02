@@ -1,4 +1,5 @@
 import { useToast } from "@/components/ToastProvider";
+import { useNetwork } from "@/components/NetworkProvider";
 import authStorage from "@/storage/auth-storage";
 import { useUserStore } from "@/store/userStore";
 import { SignInFormValues } from "@/types/auth-types";
@@ -12,11 +13,16 @@ import { usePostHog } from "posthog-react-native";
 
 export const useSignIn = () => {
   const { showError } = useToast();
+  const { isConnected } = useNetwork();
   const { setUser } = useUserStore();
   const posthog = usePostHog();
 
   const signInMutation = useMutation({
     mutationFn: async ({ identifier, password }: SignInFormValues) => {
+      if (!isConnected) {
+        throw new Error("OFFLINE");
+      }
+
       const trimmed = identifier.trim();
       const isEmail = trimmed.includes("@");
 
@@ -52,6 +58,21 @@ export const useSignIn = () => {
       posthog.capture("sign_in_failed", {
         error_message: error.message,
       });
+
+      if (error.message === "OFFLINE") {
+        showError("No Internet", "Please check your connection and try again.");
+        return;
+      }
+
+      if (
+        error instanceof TypeError ||
+        error.message?.includes("fetch") ||
+        error.message?.includes("host") ||
+        error.message?.includes("network")
+      ) {
+        showError("No Internet", "Please check your connection and try again.");
+        return;
+      }
 
       let errorMessage = "Login failed. Please try again.";
 

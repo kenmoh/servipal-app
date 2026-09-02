@@ -27,6 +27,8 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { ObserveRoot, useObserve } from "expo-observe";
 import BiometricLockOverlay from "@/components/BiometricLockOverlay";
+import { NetworkProvider } from "@/components/NetworkProvider";
+import { NetworkNotifier } from "@/components/NetworkNotifier";
 
 
 function ScreenTracker() {
@@ -265,6 +267,9 @@ export default Sentry.wrap(
                 <ScreenTracker />
                 <BottomSheetModalProvider>
                   <ToastProvider>
+                    <NetworkProvider>
+                      <NetworkNotifier />
+                    </NetworkProvider>
                     <DeepLinkHandler />
                     {hasHydrated && user?.id && biometricEnabled && !biometricUnlocked && (
                       <BiometricLockOverlay />
