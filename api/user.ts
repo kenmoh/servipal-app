@@ -1228,3 +1228,16 @@ export const fetchPayoutAccounts = async (): Promise<PayoutAccountResponse | nul
 
   return data;
 };
+
+
+export const isPhoneVerified = async (
+  userId: string,
+): Promise<boolean> => {
+  const { data } = await supabase
+    .from("otp")
+    .select("phone_verified")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  return data?.phone_verified === true;
+};

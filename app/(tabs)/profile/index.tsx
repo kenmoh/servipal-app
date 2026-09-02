@@ -2,6 +2,7 @@ import { requestOtp } from "@/api/auth";
 import {
   fetchProfileImageUrls,
   ImageData,
+  isPhoneVerified,
   updateBackgroundLocationStatus,
   uploadImage,
 } from "@/api/user";
@@ -205,6 +206,11 @@ const ProfileScreen = () => {
   useEffect(() => {
     checkLocationPermission();
   }, [checkLocationPermission]);
+
+  const { data: verified } = useQuery({
+    queryKey: ["phoneVerified", user?.id],
+    queryFn: () => isPhoneVerified(profile?.id! || user?.id!),
+  });
 
   const requestOtpMutation = useMutation({
     mutationFn: requestOtp,
@@ -634,7 +640,7 @@ const ProfileScreen = () => {
                 name="Change Password"
                 icon={<Ionicons name="key-outline" size={18} color="gray" />}
               />
-              {profile?.account_status !== "ACTIVE" && (
+              {!verified && (
                 <>
                   <HDivider />
                   <AppLink

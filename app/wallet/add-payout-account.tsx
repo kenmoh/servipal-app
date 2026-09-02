@@ -124,7 +124,7 @@ const CreatePayoutAccountScreen = () => {
     mutationFn: (data: PayoutAccount) => createPayoutAccount(data),
     onSuccess: (data) => {
       posthog.capture("payout_account_created");
-      showSuccess(data?.status.toUpperCase(),  data.message ||"Payout account created successfully.");
+      showSuccess('PAYOUT ACCOUNT CREATED', data.message ||"Payout account created successfully.");
       queryClient.invalidateQueries();
       router.back();
     },
