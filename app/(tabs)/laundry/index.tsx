@@ -16,7 +16,8 @@ import { useTrack } from "@/hooks/use-events";
 import { useUserStore } from "@/store/userStore";
 import { UserProfile } from "@/types/user-types";
 
-import { usePathname } from "expo-router";
+import * as Location from "expo-location";
+import { useFocusEffect, usePathname } from "expo-router";
 
 const DISTANCE_OPTIONS = [20, 30, 50] as const;
 
@@ -24,7 +25,23 @@ const LaundryScreen = () => {
   const theme = useColorScheme();
   const { user } = useUserStore();
   const currentLocation = useUserStore((s) => s.currentLocation);
+  const setCurrentLocation = useUserStore((s) => s.setCurrentLocation);
   const isDark = theme === "dark";
+
+  useFocusEffect(
+    useCallback(() => {
+      Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      })
+        .then((loc) => {
+          setCurrentLocation({
+            lat: loc.coords.latitude,
+            lng: loc.coords.longitude,
+          });
+        })
+        .catch(() => {});
+    }, [setCurrentLocation]),
+  );
 
   const [searchQuery, setSearchQuery] = useState("");
   const [searchInput, setSearchInput] = useState("");
