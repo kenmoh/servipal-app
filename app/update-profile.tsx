@@ -94,7 +94,7 @@ const UpdateProfile = () => {
     "RESTAURANT_VENDOR",
     "LAUNDRY_VENDOR",
     "DISPATCH",
-  ].includes(userType);
+  ].includes(userType!);
 
   const profileUpdateSchema = useMemo(
     () => createProfileUpdateSchema(isVendor),

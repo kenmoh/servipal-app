@@ -26,23 +26,35 @@ const RestaurantScreen = () => {
   const { user } = useUserStore();
   const currentLocation = useUserStore((s) => s.currentLocation);
   const setCurrentLocation = useUserStore((s) => s.setCurrentLocation);
+  const lastLocationUpdate = useUserStore((s) => s.lastLocationUpdate);
   const { track } = useTrack();
   const pathName = usePathname();
   const isDark = theme === "dark";
+  const [focusGeneration, setFocusGeneration] = useState(0);
 
   useFocusEffect(
     useCallback(() => {
+      setFocusGeneration((prev) => prev + 1);
+
       Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,
+        accuracy: Location.Accuracy.BestForNavigation,
       })
         .then((loc) => {
-          setCurrentLocation({
-            lat: loc.coords.latitude,
-            lng: loc.coords.longitude,
-          });
+          const newLoc = { lat: loc.coords.latitude, lng: loc.coords.longitude };
+          const existing = currentLocation;
+          const isRecentlyUpdated =
+            lastLocationUpdate && Date.now() - lastLocationUpdate < 30000;
+          const sameCoords =
+            existing &&
+            existing.lat === newLoc.lat &&
+            existing.lng === newLoc.lng;
+
+          if (isRecentlyUpdated && sameCoords) return;
+
+          setCurrentLocation(newLoc);
         })
         .catch(() => {});
-    }, [setCurrentLocation]),
+    }, [setCurrentLocation, currentLocation, lastLocationUpdate]),
   );
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -56,6 +68,7 @@ const RestaurantScreen = () => {
       selectedKm,
       currentLocation?.lat,
       currentLocation?.lng,
+      focusGeneration,
     ],
     queryFn: () =>
       searchNearbyRestaurants(searchQuery, {
@@ -64,6 +77,7 @@ const RestaurantScreen = () => {
         maxDistanceKm: selectedKm,
       }),
     enabled: !!user?.id && !!currentLocation,
+    staleTime: 0,
   });
 
   const handleRefresh = useCallback(() => {
