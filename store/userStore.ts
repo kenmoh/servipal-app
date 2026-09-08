@@ -370,6 +370,17 @@ export const useUserStore = create<UserStore>((set, get) => ({
 
     if (!currentLocation || !userId || !userType) return false;
 
+    // ── Vendors: NEVER overwrite after business location is set (static) ──
+    const vendorTypes = ["RESTAURANT_VENDOR", "LAUNDRY_VENDOR", "DISPATCH"];
+    if (vendorTypes.includes(userType)) {
+      const { vendorLocationCaptured } = get();
+      Sentry.logger.info(
+        `[Location] shouldUpdateServerLocation: vendor vendorLocationCaptured=${vendorLocationCaptured}`,
+      );
+      if (vendorLocationCaptured) return false;
+      // Fall through to Rule 1 for initial capture only
+    }
+
     // ── Rule 1: Always allow the first position update of the session ──
     if (!lastSentLocation) {
       Sentry.logger.info(
@@ -388,13 +399,6 @@ export const useUserStore = create<UserStore>((set, get) => ({
         `[Location] Customer location update check: ${hasActive ? "YES" : "NO"}`,
       );
       return hasActive;
-    }
-
-    // ── Rule 4: Vendors/Others — usually only need a one-time capture ─
-    const vendorTypes = ["RESTAURANT_VENDOR", "LAUNDRY_VENDOR", "DISPATCH"];
-    if (vendorTypes.includes(userType)) {
-      const { vendorLocationCaptured } = get();
-      return !vendorLocationCaptured;
     }
 
     return false;
@@ -870,12 +874,13 @@ export const useUserStore = create<UserStore>((set, get) => ({
       const vendorTypes = ["RESTAURANT_VENDOR", "LAUNDRY_VENDOR", "DISPATCH"];
       const isVendor = vendorTypes.includes(profile.user_type);
       const locationCaptured = profile.metadata?.location_captured === true;
+      const hasBusinessAddress = isVendor && !!profile.business_address?.trim();
 
       set({
         profile,
         profileImageUrl: profile.profile_image_url ?? null,
         backdropImageUrl: profile.backdrop_image_url ?? null,
-        vendorLocationCaptured: isVendor ? locationCaptured : true, // Non-vendors default to "captured"
+        vendorLocationCaptured: isVendor ? (locationCaptured || hasBusinessAddress) : true, // Non-vendors default to "captured"
         isProfileLoading: false,
         profileError: null,
       });
