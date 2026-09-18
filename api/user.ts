@@ -855,6 +855,47 @@ export const updatecurrentUserLocation = async (
   }
 };
 
+export const updateBusinessLocation = async (
+  coordinates: LocationCoordinates,
+): Promise<void> => {
+  try {
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession();
+
+    if (sessionError || !session) {
+      throw new Error("User not authenticated");
+    }
+
+    const userId = session.user.id;
+
+    if (
+      coordinates.latitude < -90 ||
+      coordinates.latitude > 90 ||
+      coordinates.longitude < -180 ||
+      coordinates.longitude > 180
+    ) {
+      throw new Error(
+        `Invalid coordinates: lat=${coordinates.latitude} lng=${coordinates.longitude}`,
+      );
+    }
+
+    const { error } = await supabase.rpc("update_business_location", {
+      user_id: userId,
+      latitude: coordinates.latitude,
+      longitude: coordinates.longitude,
+    });
+
+    if (error) {
+      throw new Error(error.message || "Failed to update business location");
+    }
+  } catch (error: any) {
+    Sentry.logger.error(`[updateBusinessLocation] Error: ${error}`);
+    throw error;
+  }
+};
+
 // Get user location from profile
 export const getUserLocation =
   async (): Promise<LocationCoordinates | null> => {

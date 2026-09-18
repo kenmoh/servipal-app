@@ -96,7 +96,6 @@ interface UserStore {
   locationWatcher: Location.LocationSubscription | null;
   lastSentLocation: { lat: number; lng: number } | null;
   lastLocationUpdate: number | null;
-  vendorLocationCaptured: boolean; // Tracks if vendor's one-time location was captured
   isIosBackgroundLocationEnabled: boolean | null;
   isAndroidBackgroundLocationEnabled: boolean | null;
   locationAlwaysAndWhenInUsePermission: boolean | null;
@@ -127,7 +126,6 @@ interface UserStore {
   setCurrentLocation: (location: { lat: number; lng: number } | null) => void;
   setLocationPermissionGranted: (granted: boolean) => void;
   setLocationTrackingActive: (active: boolean) => void;
-  setVendorLocationCaptured: (captured: boolean) => void;
   setSelectedUserType: (type: string | null) => void;
 
   // Actions
@@ -146,7 +144,6 @@ interface UserStore {
   stopLocationTracking: () => void;
   checkCustomerHasActiveOrder: (userId: string) => Promise<boolean>;
   shouldUpdateServerLocation: () => Promise<boolean>;
-  captureVendorLocationOnce: () => Promise<void>;
 }
 
 export const useUserStore = create<UserStore>((set, get) => ({
@@ -175,7 +172,6 @@ export const useUserStore = create<UserStore>((set, get) => ({
   locationWatcher: null,
   lastSentLocation: null,
   lastLocationUpdate: null,
-  vendorLocationCaptured: false,
   isIosBackgroundLocationEnabled: null,
   isAndroidBackgroundLocationEnabled: null,
   locationAlwaysAndWhenInUsePermission: null,
@@ -231,17 +227,6 @@ export const useUserStore = create<UserStore>((set, get) => ({
       message: active
         ? "Location tracking ACTIVE"
         : "Location tracking INACTIVE",
-      level: "info",
-    });
-  },
-  setVendorLocationCaptured: (captured) => {
-    set({ vendorLocationCaptured: captured });
-
-    Sentry.addBreadcrumb({
-      category: "location",
-      message: captured
-        ? "Vendor location captured"
-        : "Vendor location not yet captured",
       level: "info",
     });
   },
@@ -370,17 +355,6 @@ export const useUserStore = create<UserStore>((set, get) => ({
 
     if (!currentLocation || !userId || !userType) return false;
 
-    // ── Vendors: NEVER overwrite after business location is set (static) ──
-    const vendorTypes = ["RESTAURANT_VENDOR", "LAUNDRY_VENDOR", "DISPATCH"];
-    if (vendorTypes.includes(userType)) {
-      const { vendorLocationCaptured } = get();
-      Sentry.logger.info(
-        `[Location] shouldUpdateServerLocation: vendor vendorLocationCaptured=${vendorLocationCaptured}`,
-      );
-      if (vendorLocationCaptured) return false;
-      // Fall through to Rule 1 for initial capture only
-    }
-
     // ── Rule 1: Always allow the first position update of the session ──
     if (!lastSentLocation) {
       Sentry.logger.info(
@@ -404,87 +378,6 @@ export const useUserStore = create<UserStore>((set, get) => ({
     return false;
   },
 
-  //  Capture vendor location ONCE (on first sign-in or when missing)
-  captureVendorLocationOnce: async () => {
-    const { user, profile, vendorLocationCaptured, currentLocation } = get();
-    const userType = user?.user_metadata?.user_type || profile?.user_type;
-
-    // Only for vendors
-    if (
-      !["RESTAURANT_VENDOR", "LAUNDRY_VENDOR", "DISPATCH"].includes(userType!)
-    ) {
-      Sentry.logger.info(`[Vendor] Not a vendor - skipping`);
-      return;
-    }
-
-    // Skip if already captured
-    if (vendorLocationCaptured) {
-      Sentry.logger.info(
-        `[Vendor] Vendor location already captured - skipping`,
-      );
-      Sentry.addBreadcrumb({
-        category: "location",
-        message: "Vendor location already captured - skipping",
-        level: "debug",
-      });
-      return;
-    }
-
-    // Skip if no location available
-    if (!get().currentLocation) {
-      Sentry.logger.error(
-        `[Vendor] Cannot capture vendor location: No current location`,
-      );
-      Sentry.addBreadcrumb({
-        category: "location",
-        message: "Cannot capture vendor location: No current location",
-        level: "warning",
-      });
-      return;
-    }
-
-    Sentry.addBreadcrumb({
-      category: "location",
-      message: `Capturing vendor location ONCE for ${userType}`,
-      level: "info",
-    });
-
-    try {
-      const lat = currentLocation?.lat;
-      const lng = currentLocation?.lng;
-
-      const coordinate: LocationCoordinates = {
-        latitude: lat!,
-        longitude: lng!,
-      };
-
-      // Update server location
-      Sentry.logger.info(
-        `[Vendor] Capturing vendor location ONCE for ${userType}`,
-      );
-
-      Sentry.logger.info(
-        `[Vendor] Capturing vendor location ONCE for ${coordinate}`,
-      );
-
-      await updatecurrentUserLocation(coordinate);
-
-      // Mark as captured
-      set({ vendorLocationCaptured: true });
-
-      Sentry.addBreadcrumb({
-        category: "location",
-        message: "Vendor location captured",
-        level: "info",
-        data: { lat, lng },
-      });
-    } catch (error) {
-      Sentry.captureException(error, {
-        tags: { action: "capture_vendor_location" },
-      });
-    }
-  },
-
   //  Start location tracking (context-aware per user type)
   startLocationTracking: async () => {
     const {
@@ -492,7 +385,6 @@ export const useUserStore = create<UserStore>((set, get) => ({
       profile,
       locationTrackingActive,
       locationWatcher,
-      vendorLocationCaptured,
     } = get();
 
     const userType = user?.user_metadata?.user_type || profile?.user_type;
@@ -661,24 +553,6 @@ export const useUserStore = create<UserStore>((set, get) => ({
                     level: "info",
                     data: { latitude, longitude, userType },
                   });
-
-                  // If vendor, mark as captured
-                  const vendorTypes = [
-                    "RESTAURANT_VENDOR",
-                    "LAUNDRY_VENDOR",
-                    "DISPATCH",
-                  ];
-                  const currentUserType =
-                    user?.user_metadata?.user_type || profile?.user_type;
-                  if (
-                    vendorTypes.includes(currentUserType!) &&
-                    !vendorLocationCaptured
-                  ) {
-                    set({ vendorLocationCaptured: true });
-                    Sentry.logger.info(
-                      `[Location] 📍 Vendor location marked as captured`,
-                    );
-                  }
                 })
                 .catch((error: any) => {
                   Sentry.logger.error(
@@ -750,21 +624,6 @@ export const useUserStore = create<UserStore>((set, get) => ({
                   Sentry.logger.info(
                     `[Location] Server updated lat=${latitude.toFixed(4)} lng=${longitude.toFixed(4)} userType=${userType}`,
                   );
-
-                  // If vendor and we just updated, mark as captured
-                  const vendorTypes = [
-                    "RESTAURANT_VENDOR",
-                    "LAUNDRY_VENDOR",
-                    "DISPATCH",
-                  ];
-                  const currentUserType =
-                    user?.user_metadata?.user_type || profile?.user_type;
-                  if (
-                    vendorTypes.includes(currentUserType!) &&
-                    !vendorLocationCaptured
-                  ) {
-                    set({ vendorLocationCaptured: true });
-                  }
                 } catch (error: any) {
                   Sentry.captureException(error, {
                     tags: { action: "update_location_to_server" },
@@ -870,17 +729,10 @@ export const useUserStore = create<UserStore>((set, get) => ({
 
       const profile = data as UserProfile;
 
-      // Check if vendor location was previously captured
-      const vendorTypes = ["RESTAURANT_VENDOR", "LAUNDRY_VENDOR", "DISPATCH"];
-      const isVendor = vendorTypes.includes(profile.user_type);
-      const locationCaptured = profile.metadata?.location_captured === true;
-      const hasBusinessAddress = isVendor && !!profile.business_address?.trim();
-
       set({
         profile,
         profileImageUrl: profile.profile_image_url ?? null,
         backdropImageUrl: profile.backdrop_image_url ?? null,
-        vendorLocationCaptured: isVendor ? (locationCaptured || hasBusinessAddress) : true, // Non-vendors default to "captured"
         isProfileLoading: false,
         profileError: null,
       });
@@ -894,15 +746,6 @@ export const useUserStore = create<UserStore>((set, get) => ({
       // (We need profile to determine user_type for proper config)
       setTimeout(() => {
         get().startLocationTracking();
-
-        // For vendors without captured location, attempt one-time capture
-        if (isVendor && !locationCaptured) {
-          Sentry.captureMessage(
-            "Vendor location not yet captured - will capture on first location update",
-          );
-          // Location will be captured automatically in watchPositionAsync callback
-          // when shouldUpdateServerLocation() returns true and update succeeds
-        }
       }, 1000);
     } catch (error: any) {
       Sentry.captureException(error, { tags: { action: "fetch_profile" } });
@@ -1048,7 +891,7 @@ export const useUserStore = create<UserStore>((set, get) => ({
         profileError: null,
         biometricEnabled: false,
         biometricUnlocked: false,
-        // Reset location state (but keep vendorLocationCaptured for next session)
+        // Reset location state
         currentLocation: null,
         locationPermissionGranted: null,
         locationTrackingActive: false,

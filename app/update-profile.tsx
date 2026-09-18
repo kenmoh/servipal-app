@@ -2,7 +2,7 @@ import {
   deleteUserAccount,
   fetchBanks,
   resolveBank,
-  updatecurrentUserLocation,
+  updateBusinessLocation,
   updateCurrentUserProfile,
 } from "@/api/user";
 import AppModal from "@/components/AppModal";
@@ -195,10 +195,10 @@ const UpdateProfile = () => {
     onSuccess: async () => {
       showSuccess("Success", "Profile updated successfully");
 
-      // If vendor picked a new address, update location_coordinates too
+      // If vendor picked a new address, update business_location_coordinates
       if (isVendor && pendingLocation) {
         try {
-          await updatecurrentUserLocation(pendingLocation);
+          await updateBusinessLocation(pendingLocation);
           setPendingLocation(null);
         } catch {
           // Location update failed — profile still saved, non-critical
