@@ -17,6 +17,7 @@ import { AppTextInput } from "@/components/ui/app-text-input";
 import { states } from "@/constants/state";
 import { useUserStore } from "@/store/userStore";
 import { UserProfileUpdate } from "@/types/user-types";
+import { getCoordinatesFromAddress } from "@/utils/geocoding";
 import Feather from "@react-native-vector-icons/feather/static";
 import {
   BottomSheetModal,
@@ -192,13 +193,23 @@ const UpdateProfile = () => {
 
   const updateMutation = useMutation({
     mutationFn: (data: UserProfileUpdate) => updateCurrentUserProfile(data),
-    onSuccess: async () => {
+    onSuccess: async (data: any) => {
       showSuccess("Success", "Profile updated successfully");
 
-      // If vendor picked a new address, update business_location_coordinates
-      if (isVendor && pendingLocation) {
+      // If vendor, update business_location_coordinates
+      if (isVendor) {
         try {
-          await updateBusinessLocation(pendingLocation);
+          let coords = pendingLocation;
+          // Fallback: geocode the business address text if no coords from picker
+          if (!coords && data?.business_address) {
+            const geo = await getCoordinatesFromAddress(data.business_address);
+            if (geo) {
+              coords = { latitude: geo.lat, longitude: geo.lng };
+            }
+          }
+          if (coords) {
+            await updateBusinessLocation(coords);
+          }
           setPendingLocation(null);
         } catch {
           // Location update failed — profile still saved, non-critical

@@ -279,7 +279,7 @@ export const useUserStore = create<UserStore>((set, get) => ({
 
       // 2. Check Foreground Permissions
       const { status: fgStatus } =
-        await Location.getForegroundPermissionsAsync();
+        await Location.requestForegroundPermissionsAsync();
 
       // 3. Check Background Permissions
       const { status: bgStatus } =
