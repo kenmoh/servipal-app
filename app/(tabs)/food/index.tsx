@@ -36,10 +36,14 @@ const RestaurantScreen = () => {
     useCallback(() => {
       setFocusGeneration((prev) => prev + 1);
 
-      Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.BestForNavigation,
-      })
-        .then((loc) => {
+      (async () => {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== "granted") return;
+
+        try {
+          const loc = await Location.getCurrentPositionAsync({
+            accuracy: Location.Accuracy.BestForNavigation,
+          });
           const newLoc = { lat: loc.coords.latitude, lng: loc.coords.longitude };
           const existing = currentLocation;
           const isRecentlyUpdated =
@@ -52,8 +56,8 @@ const RestaurantScreen = () => {
           if (isRecentlyUpdated && sameCoords) return;
 
           setCurrentLocation(newLoc);
-        })
-        .catch(() => {});
+        } catch {}
+      })();
     }, [setCurrentLocation, currentLocation, lastLocationUpdate]),
   );
 
