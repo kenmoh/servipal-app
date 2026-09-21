@@ -37,14 +37,21 @@ const RestaurantScreen = () => {
       setFocusGeneration((prev) => prev + 1);
 
       (async () => {
+        console.log("[FoodTab] useFocusEffect fired, requesting permission...");
         const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== "granted") return;
+        console.log("[FoodTab] Permission status:", status);
+        if (status !== "granted") {
+          console.log("[FoodTab] Permission NOT granted — returning");
+          return;
+        }
 
         try {
+          console.log("[FoodTab] Getting current GPS position...");
           const loc = await Location.getCurrentPositionAsync({
             accuracy: Location.Accuracy.BestForNavigation,
           });
           const newLoc = { lat: loc.coords.latitude, lng: loc.coords.longitude };
+          console.log("[FoodTab] GPS position acquired:", JSON.stringify(newLoc));
           const existing = currentLocation;
           const isRecentlyUpdated =
             lastLocationUpdate && Date.now() - lastLocationUpdate < 30000;
@@ -53,10 +60,16 @@ const RestaurantScreen = () => {
             existing.lat === newLoc.lat &&
             existing.lng === newLoc.lng;
 
-          if (isRecentlyUpdated && sameCoords) return;
+          if (isRecentlyUpdated && sameCoords) {
+            console.log("[FoodTab] Skipped — recently updated with same coords");
+            return;
+          }
 
+          console.log("[FoodTab] Setting currentLocation:", JSON.stringify(newLoc));
           setCurrentLocation(newLoc);
-        } catch {}
+        } catch (err: any) {
+          console.log("[FoodTab] GPS error:", err?.message || err);
+        }
       })();
     }, [setCurrentLocation, currentLocation, lastLocationUpdate]),
   );
@@ -74,12 +87,19 @@ const RestaurantScreen = () => {
       currentLocation?.lng,
       focusGeneration,
     ],
-    queryFn: () =>
-      searchNearbyRestaurants(searchQuery, {
-        lat: currentLocation?.lat,
-        lng: currentLocation?.lng,
+    queryFn: async () => {
+      const lat = currentLocation?.lat;
+      const lng = currentLocation?.lng;
+      console.log("[FoodTab] queryFn called — lat:", lat, "lng:", lng, "km:", selectedKm);
+      const result = await searchNearbyRestaurants(searchQuery, {
+        lat,
+        lng,
         maxDistanceKm: selectedKm,
-      }),
+      });
+      console.log("[FoodTab] RPC result:", result ? `vendors: ${result.vendors?.length ?? 0}` : "null");
+      if (result?.error) console.log("[FoodTab] RPC error field:", result.error);
+      return result;
+    },
     enabled: !!user?.id && !!currentLocation,
     staleTime: 0,
   });
@@ -87,6 +107,11 @@ const RestaurantScreen = () => {
   const handleRefresh = useCallback(() => {
     refetch();
   }, [refetch]);
+
+  // Log query state changes
+  useEffect(() => {
+    console.log("[FoodTab] Query state — enabled:", !!user?.id && !!currentLocation, "userId:", user?.id, "currentLocation:", JSON.stringify(currentLocation), "error:", error?.message || "none", "vendorCount:", data?.vendors?.length ?? "n/a");
+  }, [data, error, currentLocation, user?.id]);
 
   // Simple debounce for search
   useEffect(() => {

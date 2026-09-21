@@ -35,14 +35,21 @@ const LaundryScreen = () => {
       setFocusGeneration((prev) => prev + 1);
 
       (async () => {
+        console.log("[LaundryTab] useFocusEffect fired, requesting permission...");
         const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== "granted") return;
+        console.log("[LaundryTab] Permission status:", status);
+        if (status !== "granted") {
+          console.log("[LaundryTab] Permission NOT granted — returning");
+          return;
+        }
 
         try {
+          console.log("[LaundryTab] Getting current GPS position...");
           const loc = await Location.getCurrentPositionAsync({
             accuracy: Location.Accuracy.BestForNavigation,
           });
           const newLoc = { lat: loc.coords.latitude, lng: loc.coords.longitude };
+          console.log("[LaundryTab] GPS position acquired:", JSON.stringify(newLoc));
           const existing = currentLocation;
           const isRecentlyUpdated =
             lastLocationUpdate && Date.now() - lastLocationUpdate < 30000;
@@ -51,10 +58,16 @@ const LaundryScreen = () => {
             existing.lat === newLoc.lat &&
             existing.lng === newLoc.lng;
 
-          if (isRecentlyUpdated && sameCoords) return;
+          if (isRecentlyUpdated && sameCoords) {
+            console.log("[LaundryTab] Skipped — recently updated with same coords");
+            return;
+          }
 
+          console.log("[LaundryTab] Setting currentLocation:", JSON.stringify(newLoc));
           setCurrentLocation(newLoc);
-        } catch {}
+        } catch (err: any) {
+          console.log("[LaundryTab] GPS error:", err?.message || err);
+        }
       })();
     }, [setCurrentLocation, currentLocation, lastLocationUpdate]),
   );
@@ -74,12 +87,19 @@ const LaundryScreen = () => {
       currentLocation?.lng,
       focusGeneration,
     ],
-    queryFn: () =>
-      searchNearbyLaundry(searchQuery, {
-        lat: currentLocation?.lat,
-        lng: currentLocation?.lng,
+    queryFn: async () => {
+      const lat = currentLocation?.lat;
+      const lng = currentLocation?.lng;
+      console.log("[LaundryTab] queryFn called — lat:", lat, "lng:", lng, "km:", selectedKm);
+      const result = await searchNearbyLaundry(searchQuery, {
+        lat,
+        lng,
         maxDistanceKm: selectedKm,
-      }),
+      });
+      console.log("[LaundryTab] RPC result:", result ? `vendors: ${result.vendors?.length ?? 0}` : "null");
+      if (result?.error) console.log("[LaundryTab] RPC error field:", result.error);
+      return result;
+    },
     enabled: !!user?.id && !!currentLocation,
     staleTime: 0,
   });
@@ -87,6 +107,11 @@ const LaundryScreen = () => {
   const handleRefresh = useCallback(() => {
     refetch();
   }, [refetch]);
+
+  // Log query state changes
+  useEffect(() => {
+    console.log("[LaundryTab] Query state — enabled:", !!user?.id && !!currentLocation, "userId:", user?.id, "currentLocation:", JSON.stringify(currentLocation), "error:", error?.message || "none", "vendorCount:", data?.vendors?.length ?? "n/a");
+  }, [data, error, currentLocation, user?.id]);
 
   // Simple debounce for search
   useEffect(() => {
