@@ -26,7 +26,6 @@ const LaundryScreen = () => {
   const { user } = useUserStore();
   const currentLocation = useUserStore((s) => s.currentLocation);
   const setCurrentLocation = useUserStore((s) => s.setCurrentLocation);
-  const lastLocationUpdate = useUserStore((s) => s.lastLocationUpdate);
   const isDark = theme === "dark";
   const [focusGeneration, setFocusGeneration] = useState(0);
 
@@ -35,41 +34,34 @@ const LaundryScreen = () => {
       setFocusGeneration((prev) => prev + 1);
 
       (async () => {
-        console.log("[LaundryTab] useFocusEffect fired, requesting permission...");
         const { status } = await Location.requestForegroundPermissionsAsync();
-        console.log("[LaundryTab] Permission status:", status);
-        if (status !== "granted") {
-          console.log("[LaundryTab] Permission NOT granted — returning");
-          return;
-        }
+        if (status !== "granted") return;
 
         try {
-          console.log("[LaundryTab] Getting current GPS position...");
           const loc = await Location.getCurrentPositionAsync({
             accuracy: Location.Accuracy.BestForNavigation,
           });
           const newLoc = { lat: loc.coords.latitude, lng: loc.coords.longitude };
-          console.log("[LaundryTab] GPS position acquired:", JSON.stringify(newLoc));
           const existing = currentLocation;
-          const isRecentlyUpdated =
-            lastLocationUpdate && Date.now() - lastLocationUpdate < 30000;
-          const sameCoords =
-            existing &&
-            existing.lat === newLoc.lat &&
-            existing.lng === newLoc.lng;
 
-          if (isRecentlyUpdated && sameCoords) {
-            console.log("[LaundryTab] Skipped — recently updated with same coords");
-            return;
+          // Only update if moved more than 100m or no location yet
+          if (existing) {
+            const R = 6371e3;
+            const dLat = ((newLoc.lat - existing.lat) * Math.PI) / 180;
+            const dLng = ((newLoc.lng - existing.lng) * Math.PI) / 180;
+            const a =
+              Math.sin(dLat / 2) ** 2 +
+              Math.cos((existing.lat * Math.PI) / 180) *
+                Math.cos((newLoc.lat * Math.PI) / 180) *
+                Math.sin(dLng / 2) ** 2;
+            const dist = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            if (dist < 100) return;
           }
 
-          console.log("[LaundryTab] Setting currentLocation:", JSON.stringify(newLoc));
           setCurrentLocation(newLoc);
-        } catch (err: any) {
-          console.log("[LaundryTab] GPS error:", err?.message || err);
-        }
+        } catch {}
       })();
-    }, [setCurrentLocation, currentLocation, lastLocationUpdate]),
+    }, [setCurrentLocation, currentLocation]),
   );
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -87,19 +79,12 @@ const LaundryScreen = () => {
       currentLocation?.lng,
       focusGeneration,
     ],
-    queryFn: async () => {
-      const lat = currentLocation?.lat;
-      const lng = currentLocation?.lng;
-      console.log("[LaundryTab] queryFn called — lat:", lat, "lng:", lng, "km:", selectedKm);
-      const result = await searchNearbyLaundry(searchQuery, {
-        lat,
-        lng,
+    queryFn: () =>
+      searchNearbyLaundry(searchQuery, {
+        lat: currentLocation?.lat,
+        lng: currentLocation?.lng,
         maxDistanceKm: selectedKm,
-      });
-      console.log("[LaundryTab] RPC result:", result ? `vendors: ${result.vendors?.length ?? 0}` : "null");
-      if (result?.error) console.log("[LaundryTab] RPC error field:", result.error);
-      return result;
-    },
+      }),
     enabled: !!user?.id && !!currentLocation,
     staleTime: 0,
   });
@@ -107,11 +92,6 @@ const LaundryScreen = () => {
   const handleRefresh = useCallback(() => {
     refetch();
   }, [refetch]);
-
-  // Log query state changes
-  useEffect(() => {
-    console.log("[LaundryTab] Query state — enabled:", !!user?.id && !!currentLocation, "userId:", user?.id, "currentLocation:", JSON.stringify(currentLocation), "error:", error?.message || "none", "vendorCount:", data?.vendors?.length ?? "n/a");
-  }, [data, error, currentLocation, user?.id]);
 
   // Simple debounce for search
   useEffect(() => {

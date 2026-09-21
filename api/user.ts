@@ -415,8 +415,6 @@ export async function getNearbyVendors(
     lng,
   } = options;
 
-  console.log("[API] getNearbyVendors called:", JSON.stringify({ userType, maxDistanceKm, lat, lng, searchQuery }));
-
   const { data, error } = await supabase.rpc("get_nearby_vendors_new", {
     p_user_type: userType,
     max_distance_km: maxDistanceKm,
@@ -429,22 +427,8 @@ export async function getNearbyVendors(
   });
 
   if (error) {
-    console.log("[API] getNearbyVendors RPC error:", error.message, error.code);
     return null;
   }
-
-  console.log("[API] getNearbyVendors raw data type:", typeof data, Array.isArray(data) ? "isArray" : "notArray");
-  if (Array.isArray(data) && data.length > 0) {
-    console.log("[API] getNearbyVendors data[0] keys:", Object.keys(data[0]));
-    const inner = data[0] as any;
-    if (inner.get_nearby_vendors_new) {
-      console.log("[API] getNearbyVendors nested RPC result detected — unwrapping");
-      return inner.get_nearby_vendors_new as NearbyVendorsResponse;
-    }
-  }
-
-  const vendors = (data as NearbyVendorsResponse)?.vendors;
-  console.log("[API] getNearbyVendors success — vendor count:", vendors?.length ?? 0);
 
   return data as NearbyVendorsResponse;
 }
