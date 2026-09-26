@@ -281,8 +281,14 @@ const UpdateProfile = () => {
     if (userType === "RESTAURANT_VENDOR" || userType === "LAUNDRY_VENDOR") {
       updateData.opening_hour = data.opening_hours;
       updateData.closing_hour = data.closing_hours;
+      // profiles.pickup_and_delivery_charge is numeric — never send an empty
+      // string ("") or PostgREST fails with "Invalid input syntax for type
+      // numeric". Omit when blank, coerce to Number otherwise.
+      const rawCharge = (data.pickup_and_delivery_charge ?? "").trim();
       updateData.pickup_and_delivery_charge =
-        data.pickup_and_delivery_charge ?? undefined;
+        rawCharge === "" || Number.isNaN(Number(rawCharge))
+          ? undefined
+          : Number(rawCharge);
     }
 
     updateMutation.mutate(updateData);

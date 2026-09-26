@@ -298,12 +298,35 @@ export const updateCurrentUserProfile = async (
     }
 
     const userId = session.user.id;
+
+    // Sanitize payload before sending to PostgREST:
+    // - profiles.pickup_and_delivery_charge is numeric — an empty string ""
+    //   fails with "Invalid input syntax for type numeric", so coerce numbers
+    //   and drop unparseable/empty values.
+    // - Drop empty-string text fields so no "" can reach typed columns.
+    const sanitizedData: Record<string, unknown> = { ...profileData };
+    if ("pickup_and_delivery_charge" in sanitizedData) {
+      const raw = sanitizedData.pickup_and_delivery_charge;
+      const num =
+        typeof raw === "number"
+          ? raw
+          : Number(String(raw ?? "").trim());
+      if (String(raw ?? "").trim() === "" || Number.isNaN(num)) {
+        delete sanitizedData.pickup_and_delivery_charge;
+      } else {
+        sanitizedData.pickup_and_delivery_charge = num;
+      }
+    }
+    for (const [key, value] of Object.entries(sanitizedData)) {
+      if (value === "" || value === undefined) {
+        delete sanitizedData[key];
+      }
+    }
+
     // Fetch profile from profiles table
     const { data, error } = await supabase
       .from("profiles")
-      .update({
-        ...profileData,
-      })
+      .update(sanitizedData)
       .eq("id", userId)
       .select()
       .single();
