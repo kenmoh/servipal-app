@@ -57,7 +57,9 @@ export interface UnifiedOrderResponse {
   washing_instructions?: string;
   additional_info?: string;
   customer_name?: string;
+  customer_phone?: string | null;
   vendor_name?: string;
+  vendor_phone?: string | null;
   scheduled_at?: string
   order_items: OrderItem[];
   vendor_pickup_dropoff_charge?: number;

@@ -516,8 +516,18 @@ const ReceiptPage = () => {
                         <div class="section">
                             <div class="line-item">
                                 <span class="label">Customer</span>
-                                <span class="value">${data.order?.customer_name || "User"}</span>
+                                <span class="value">${data.order?.customer_name || "User"}${data.order?.customer_phone ? ` (${data.order.customer_phone})` : ""}</span>
                             </div>
+                            ${
+                              data.order?.vendor_name || data.order?.vendor_phone
+                                ? `
+                            <div class="line-item">
+                                <span class="label">Vendor</span>
+                                <span class="value">${data.order?.vendor_name || "Vendor"}${data.order?.vendor_phone ? ` (${data.order.vendor_phone})` : ""}</span>
+                            </div>
+                            `
+                                : ""
+                            }
                             <div class="line-item">
                                 <span class="label">Payment Status</span>
                                 <span class="status status-${data.order?.order_payment_status === "SUCCESS" ? "PAID" : "UNPAID"}">
@@ -768,12 +778,36 @@ const ReceiptPage = () => {
 
         {/* Status Section */}
         <View className={`py-4 border-y ${BORDER_COLOR} mb-8 gap-4`}>
-          <View className="flex-row justify-between items-center">
-            <Text className={`${TEXT_SECONDARY} font-poppins`}>Customer</Text>
-            <Text className={`${TEXT_PRIMARY} font-poppins-medium`}>
-              {order?.customer_name || "User"}
-            </Text>
-          </View>
+          {!!(order?.customer_name || order?.customer_phone) && (
+            <View className="flex-row justify-between items-center">
+              <Text className={`${TEXT_SECONDARY} font-poppins`}>Customer</Text>
+              <View className="items-end">
+                <Text className={`${TEXT_PRIMARY} font-poppins-medium`}>
+                  {order?.customer_name || "User"}
+                </Text>
+                {!!order?.customer_phone && (
+                  <Text className="text-[11px] text-gray-400 font-poppins">
+                    {order.customer_phone}
+                  </Text>
+                )}
+              </View>
+            </View>
+          )}
+          {!!(order?.vendor_name || order?.vendor_phone) && (
+            <View className="flex-row justify-between items-center">
+              <Text className={`${TEXT_SECONDARY} font-poppins`}>Vendor</Text>
+              <View className="items-end">
+                <Text className={`${TEXT_PRIMARY} font-poppins-medium`}>
+                  {order?.vendor_name || "Vendor"}
+                </Text>
+                {!!order?.vendor_phone && (
+                  <Text className="text-[11px] text-gray-400 font-poppins">
+                    {order.vendor_phone}
+                  </Text>
+                )}
+              </View>
+            </View>
+          )}
           <View className="flex-row justify-between items-center">
             <Text className={`${TEXT_SECONDARY} font-poppins`}>
               Payment Status
