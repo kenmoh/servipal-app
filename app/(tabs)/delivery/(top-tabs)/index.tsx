@@ -184,9 +184,9 @@ const DeliveryScreen = () => {
           removeClippedSubviews={true}
         />
 
-        {["CUSTOMER", "RESTAURANT_VENDOR", "LAUNDRY_VENDOR"].includes(
+        {/* {["CUSTOMER", "RESTAURANT_VENDOR", "LAUNDRY_VENDOR"].includes(
           user?.user_metadata?.user_type!,
-        ) && <FAB onPress={() => navigateTo("/send-package")} />}
+        ) && <FAB onPress={() => navigateTo("/send-package")} />} */}
       </View>
     </ErrorBoundary>
   );
