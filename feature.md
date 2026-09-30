@@ -44,6 +44,7 @@ Constraints that shaped it: `food_orders` and `laundry_orders` already hold `pic
 | AC-20 | Push reaches a user only if they have a row in `push_tokens`. `get_push_token` reads the **latest** token per user, so a user with two devices is notified on only one of them. A missing token logs `push_notification_no_token` and the push is dropped, never an error. Because push is best effort and there is no in app notification table, every event in the matrix must also be reachable by opening the relevant screen: the dispatch inbox for a connection request, the order screen for a delivery status |
 | AC-21 | **A dispatch that cannot be paid cannot accept.** `POST /dispatch/connection-requests/{id}/accept` returns `409` unless `beneficiaries` holds a row for `id = dispatch_id` with a non empty `account_number` and `bank_code`, and the message says to add a payout account first. This is the last point before any money can be owed, so it is where the check belongs. **No auth or schema change is needed:** `POST /api/v1/beneficiaries` depends only on `get_current_profile` with no user type restriction and writes `id = current_profile["id"]`, which is the same column the payout join uses (`b.id = d.dispatch_id`), so a DISPATCH account can already add a bank account today. The dispatch inbox shows the same state with a link to add one, and the vendor directory marks the dispatch as not yet payable so vendors do not send requests that cannot be answered. The dispatch stays discoverable: hiding it would explain nothing to the dispatch, who would then never add the account. If a dispatch deletes its account after accepting, the existing machinery closes it: `PAYOUT_CLAIMABLE_STATUSES` includes `FAILED`, and `POST /api/v1/payouts/{transfer_id}/retry` already exists, so the failed row stays claimable with no new code |
 | AC-22 | **A held payout is a row, not a log line.** `hold_payout = (assessment.action == RiskAction.REVIEW)` at `app/services/delivery_service.py:693`. Today the held branch writes only `logger.warning("delivery_payout_held_for_review")` and returns, and because `delivery_service.py:733` skips the enqueue, `ensure_pending_payout_row` is never reached from this path: the row that would carry the `reference` is never created, so nothing shows in any admin surface and there is nothing to retry by. The fix calls `ensure_pending_payout_row` **before** the branch and skips only `enqueue_transfer_task_gct` when held, writing the reason to `complete_message` (`_update_payout_status` already uses that column for `NO_BENEFICIARY`) and the fraud reference to `meta` beside `recipient_user_id`. The row lands as `PENDING`. Three schema facts make this cheap: `payouts.status` has **no `CHECK` constraint**; `requires_approval` and `is_approved` are `boolean NOT NULL DEFAULT false` and `build_payout_row_from_order` deliberately omits them so the defaults apply, which already expresses "held, awaiting review"; and `assert_manual_payout_allowed` rejects only `PAYOUT_BLOCKED_STATUSES` and `PAYOUT_IN_FLIGHT_STATUSES`, so a held `PENDING` row still passes and admin can release it through the existing manual payout path. `BLOCK` is unchanged: it still refuses completion outright at `delivery_service.py:685` |
+| AC-23 | **One kill switch, in the backend only.** `DISPATCH_CHECKOUT_ENABLED`, read from the existing `Servi-pal-secret`, decides whether the feature is reachable. When false, `GET /dispatch/riders` returns an empty list and `POST /delivery/quote` returns `404`. The cart already withholds *External delivery* whenever the rider list is empty, so the option disappears with no client change at all. A frontend flag was considered and rejected: `EXPO_PUBLIC_*` values are baked into the bundle at build time, so toggling one would need an EAS build and a store release, which is a release rather than a kill switch. Turning this off hides the feature on the next API deploy, needs no app rebuild, and cannot be bypassed by a client running an older bundle |
 
 ## Decision
 
@@ -272,6 +273,8 @@ Read model
 | Vendor has delivery disabled but every rider is offline or out of range | *External delivery* is withheld; *Pickup from Store* only, so the store stays orderable (AC-6) |
 | Client sends `VENDOR_DELIVERY` with the flag off | Already `400 "This vendor does not offer delivery"` (`food_service.py:798`, `laundry_service.py:631`) |
 | Client sends `DISPATCH_DELIVERY` with the flag on | `400`, mirroring the above, so the exclusivity holds server side and does not depend on the client drawing it correctly (AC-5) |
+| `DISPATCH_CHECKOUT_ENABLED` is turned off | `GET /dispatch/riders` returns `[]`, `POST /delivery/quote` returns `404`, and the cart renders *Pickup from Store* alone on the next request. No app rebuild, no store release, and a client running an older bundle is covered too (AC-23) |
+| Kill switch flipped while a customer is mid checkout | The rider list is refetched when the address or selection changes, so the option disappears before payment. If it is selected anyway the quote call `404`s and the cart stays where it is rather than charging (AC-23) |
 | Duplicate request for the same pair | `UNIQUE` constraint returns `409` |
 | Declined vendor re-requests later | Allowed; the same row flips back to `PENDING` |
 | Scheduled order paid before the pickup time | Rider is assigned and can see the job, but the travel notification is held until `scheduled_at` / `pickup_time` via `schedule_time` on the Cloud Task |
@@ -301,6 +304,7 @@ Every value an acceptance criterion needs, and where it comes from. No blank sou
 |---|---|
 | `can_pickup_and_dropoff` | `profiles.can_pickup_and_dropoff`, read through `vendorProfile` and the same flag the profile toggle labels *Pickup & delivery* (`hooks/status-toggle.ts:149`). **It decides which delivery option renders:** on gives *Vendor Delivery*, off gives *External delivery*, and *Pickup from Store* renders either way (AC-5, AC-6) |
 | external delivery available? | Two conditions anded: `can_pickup_and_dropoff = false`, and the rider query returning at least one rider after layer A and layer B. Either failing withholds the option and leaves *Pickup from Store* (AC-6) |
+| `DISPATCH_CHECKOUT_ENABLED` | Backend settings, read from the existing `Servi-pal-secret`, default true. When false the riders endpoint returns `[]` and the quote endpoint `404`s; the cart needs no flag of its own because it already requires a non-empty rider list (AC-23) |
 | `dispatch_fee` | Server: `charges_and_commissions.base_delivery_fee + delivery_fee_per_km x distance`, computed in `POST /delivery/quote` (AC-7) |
 | `distance`, `duration` | Client, `utils/map.ts` Mapbox Directions route at quote time, sent back in the quote and initiate-payment payloads, stored on `food_orders.distance` / `laundry_orders.distance` and copied to the delivery. **This is the same route source the courier flow uses.** `ST_Distance` is never used for pricing, only for rider proximity |
 | `goods_total` | Food: the `p_total_price` argument of `process_food_payment`, stored in `food_orders.total_price`. Laundry: the `p_subtotal` argument of `process_laundry_payment_new`, stored in `laundry_orders.total_price`. One canonical figure per service, taken from the capture function's own parameter (AC-8) |
@@ -374,53 +378,63 @@ Every value an acceptance criterion needs, and where it comes from. No blank sou
 | T27 | A dispatch that deletes its beneficiary after accepting: completion succeeds, the payout row goes `FAILED`, and `POST /payouts/{transfer_id}/retry` releases it once the account is re-added | AC-14, AC-21 |
 | T28 | The branch matrix, asserted for the restaurant radios and the laundry chips alike: flag on renders *Pickup from Store* + *Vendor Delivery* and never *External delivery* even with riders online; flag off with a reachable rider renders *Pickup from Store* + *External delivery* and never *Vendor Delivery*; flag off with no rider renders *Pickup from Store* alone | AC-5, AC-6 |
 | T29 | `VENDOR_DELIVERY` with the flag off returns `400 "This vendor does not offer delivery"`, and `DISPATCH_DELIVERY` with the flag on returns `400` | AC-5 |
+| T30 | `DISPATCH_CHECKOUT_ENABLED=false`: the riders endpoint returns `[]`, the quote endpoint returns `404`, and `resolveDeliveryMethods` yields `["PICKUP"]` for a vendor with delivery off and riders online. Flipping the flag back restores the option with no other change | AC-23 |
 
 ## Build plan
 
-Default approach: **end to end slices**, thinnest working path first. No `AGENTS.md` or scope file records a project approach, so this is the assumed default.
+Default approach: **end to end slices**, thinnest working path first. `AGENTS.md` now records the repo conventions.
+
+**Slice 0 · Gates, no behaviour change** (AC-5, AC-23)
+
+Ships on its own and changes nothing observable. Each task only deletes a future failure.
+
+1. Widen `Literal["PICKUP", "VENDOR_DELIVERY"]` to include `DISPATCH_DELIVERY` in `app/schemas/food_schemas.py:192` (`CheckoutRequest`) and `app/schemas/laundry_schemas.py:154` (`LaundryOrderCreate`). Without this `/initiate-payment` returns `422` and checkout dies, because these are the request models on `food_router.py:188` and `laundry_route.py:71`
+2. Read `DISPATCH_CHECKOUT_ENABLED` from settings, default true, and gate `GET /dispatch/riders` and `POST /delivery/quote` behind it
+3. Freeze the signatures of `process_food_payment` and `process_laundry_payment_new`. Both already have more than one live overload, so adding a parameter would silently create a third instead of taking effect; replace the body in place following the `pg_get_functiondef` load-assert-replace pattern in `migrations/025_fix_capture_vendor_amounts.sql`
+4. Add a pytest step to `cloudbuild.yaml` so the 55 existing tests gate every deploy. It currently runs build, push, deploy with no test step at all
 
 **Slice 1 · Connections, no money** (AC-1, AC-2, AC-3, AC-4, AC-16, AC-18, AC-21)
 
-1. Migration: `vendor_dispatch_connections` with the `CHECK`, unique pair and indexes
-2. `app/services/dispatch_connection_service.py` + `app/routes/dispatch_connection_route.py`: directory, send, list, accept, decline, disconnect
-3. Payout account gate on accept: check `beneficiaries` for `account_number` and `bank_code` and return `409` with an actionable message when absent. `POST /api/v1/beneficiaries` is left untouched, since it already accepts a DISPATCH account
-4. Connection notifications: push to the dispatch when a request arrives, to the vendor when it is answered or a partner disconnects, fanned out one `enqueue_notification_task_gct` call per recipient
-5. Vendor screens: connections list plus a discover directory (`app/dispatch-connections/`), including the not yet payable marker
-6. Dispatch inbox screen with accept and decline (`app/dispatch-requests/`), showing the missing account state and a link to add one
-7. Vendor profile entry point beside the existing Dispatch link in `app/(tabs)/profile/index.tsx`
+5. Migration: `vendor_dispatch_connections` with the `CHECK`, unique pair and indexes
+6. `app/services/dispatch_connection_service.py` + `app/routes/dispatch_connection_route.py`: directory, send, list, accept, decline, disconnect
+7. Payout account gate on accept: check `beneficiaries` for `account_number` and `bank_code` and return `409` with an actionable message when absent. `POST /api/v1/beneficiaries` is left untouched, since it already accepts a DISPATCH account
+8. Connection notifications: push to the dispatch when a request arrives, to the vendor when it is answered or a partner disconnects, fanned out one `enqueue_notification_task_gct` call per recipient
+9. Vendor screens: connections list plus a discover directory (`app/dispatch-connections/`), including the not yet payable marker
+10. Dispatch inbox screen with accept and decline (`app/dispatch-requests/`), showing the missing account state and a link to add one
+11. Vendor profile entry point beside the existing Dispatch link in `app/(tabs)/profile/index.tsx`
 
 **Slice 2 · Riders and quote visible at checkout** (AC-5, AC-6, AC-7)
 
-8. `GET /dispatch/riders`: call the existing `get_available_riders` RPC with the vendor's pickup coordinates, filter to `ACCEPTED` connections in Python, remap the RPC's rating column names. No RPC change
-9. `POST /delivery/quote` accepting the client's Mapbox `distance_km` and `duration`, validating bounds and recomputing the fee
-10. Cart: rebuild the Delivery Method block on `can_pickup_and_dropoff` so *Pickup from Store* always renders, *Vendor Delivery* only when the flag is on and *External delivery* only when it is off with a rider reachable, replacing the forced single radio at `app/cart.tsx:832`. Restaurant radios and laundry chips follow the same rule, the address sheet condition moves off `PICKUP && !can_pickup_and_dropoff`, plus the rider list sheet showing dispatch name and rating, the fee row, and Mapbox route distance fed into the quote
-11. `api/dispatch.ts` client plus `DISPATCH_DELIVERY` added to `RequireDelivery` in `types/order-types.ts`
+12. `GET /dispatch/riders`: call the existing `get_available_riders` RPC with the vendor's pickup coordinates, filter to `ACCEPTED` connections in Python, remap the RPC's rating column names. No RPC change
+13. `POST /delivery/quote` accepting the client's Mapbox `distance_km` and `duration`, validating bounds and recomputing the fee
+14. Cart: rebuild the Delivery Method block on `can_pickup_and_dropoff` so *Pickup from Store* always renders, *Vendor Delivery* only when the flag is on and *External delivery* only when it is off with a rider reachable, replacing the forced single radio at `app/cart.tsx:832`. Restaurant radios and laundry chips follow the same rule, the address sheet condition moves off `PICKUP && !can_pickup_and_dropoff`, plus the rider list sheet showing dispatch name and rating, the fee row, and Mapbox route distance fed into the quote. `lib/delivery-options.ts` already holds this rule and is covered by `__tests__/delivery-options.test.ts`, so wire the cart to it rather than re-deriving the branch in JSX
+15. `api/dispatch.ts` client plus `DISPATCH_DELIVERY` added to `RequireDelivery` in `types/order-types.ts`
 
 **Slice 3 · Payment and the ledger** (AC-7, AC-8, AC-9, AC-10, AC-11, AC-12)
 
-12. Migration: new `process_food_payment` and `process_laundry_payment_new` splitting the buckets, branched on `delivery_option = 'DISPATCH_DELIVERY'`, plus the row 3 and row 5 inserts
-13. `food_service.py` / `laundry_service.py`: layer A plus read-only layer B at `initiate-payment`, the `quoted_fee` comparison, the distance bounds, and rejection of `DISPATCH_DELIVERY` when `can_pickup_and_dropoff = true` to mirror the `400` the flag already produces for `VENDOR_DELIVERY`
-14. Capture path: create the `delivery_orders` row with `order_number = nextval(...)` and its own `tx_ref`, write `delivery_order_id`, re-run layer A, then call `assign_rider_to_delivery(p_tx_ref, p_rider_id)` so layer B runs atomically
-15. If that assign raises, catch it inside the capture transaction, keep the order and delivery, set `delivery_status = 'PAID_NEEDS_RIDER'`, notify the customer and vendor to re-pick. Never roll back money
-16. `POST /orders/{order_id}/assign-delivery`, order owner only, reusing the stored fee
+16. Migration: new `process_food_payment` and `process_laundry_payment_new` splitting the buckets, branched on `delivery_option = 'DISPATCH_DELIVERY'`, plus the row 3 and row 5 inserts
+17. `food_service.py` / `laundry_service.py`: layer A plus read-only layer B at `initiate-payment`, the `quoted_fee` comparison, the distance bounds, and rejection of `DISPATCH_DELIVERY` when `can_pickup_and_dropoff = true` to mirror the `400` the flag already produces for `VENDOR_DELIVERY`
+18. Capture path: create the `delivery_orders` row with `order_number = nextval(...)` and its own `tx_ref`, write `delivery_order_id`, re-run layer A, then call `assign_rider_to_delivery(p_tx_ref, p_rider_id)` so layer B runs atomically
+19. If that assign raises, catch it inside the capture transaction, keep the order and delivery, set `delivery_status = 'PAID_NEEDS_RIDER'`, notify the customer and vendor to re-pick. Never roll back money
+20. `POST /orders/{order_id}/assign-delivery`, order owner only, reusing the stored fee
 
 **Slice 4 · Lifecycle glue** (AC-4, AC-13, AC-14, AC-15, AC-17, AC-19, AC-22)
 
-17. Add the optional `schedule_time` parameter to `enqueue_notification_task_gct`, and hold the travel notification for scheduled orders
-18. Add `expanded: bool = False` to `app/common/order.py:_send_delivery_notifications` and implement the full recipient matrix behind it, leaving every courier call site untouched
-19. READY notification to the rider, pickup through the existing RPC, which sets `had_escrow = true`
-20. Rider decline: flip to `DECLINED`, clear `has_delivery`, notify the customer to re-pick
-21. Cancel propagation from `app/common/order.py:_handle_cancellation` into the linked delivery, with the full `grand_total` refund and deletion of rows 3 and 5
-22. `get_order_details` gains rider and dispatch fields; show them on the order screen and receipt
-23. Dead letter retry for delivery creation
-24. Held payout row: in `complete_delivery`, call `ensure_pending_payout_row` before the `hold_payout` branch and skip only `enqueue_transfer_task_gct` when held, writing the reason to `complete_message` and the fraud reference to `meta`
-25. Verify, with no new code, that `amount_due_vendor` fires from `app/common/order.py:214` and `amount_due_dispatch` from `delivery_service.py:733`, and that both resolve distinct `payouts` references
-26. Disconnect changes nothing about deliveries already assigned, so an in flight job always runs to completion
+21. Add the optional `schedule_time` parameter to `enqueue_notification_task_gct`, and hold the travel notification for scheduled orders
+22. Add `expanded: bool = False` to `app/common/order.py:_send_delivery_notifications` and implement the full recipient matrix behind it, leaving every courier call site untouched
+23. READY notification to the rider, pickup through the existing RPC, which sets `had_escrow = true`
+24. Rider decline: flip to `DECLINED`, clear `has_delivery`, notify the customer to re-pick
+25. Cancel propagation from `app/common/order.py:_handle_cancellation` into the linked delivery, with the full `grand_total` refund and deletion of rows 3 and 5
+26. `get_order_details` gains rider and dispatch fields; show them on the order screen and receipt
+27. Dead letter retry for delivery creation
+28. Held payout row: in `complete_delivery`, call `ensure_pending_payout_row` before the `hold_payout` branch and skip only `enqueue_transfer_task_gct` when held, writing the reason to `complete_message` and the fraud reference to `meta`
+29. Verify, with no new code, that `amount_due_vendor` fires from `app/common/order.py:214` and `amount_due_dispatch` from `delivery_service.py:733`, and that both resolve distinct `payouts` references
+30. Disconnect changes nothing about deliveries already assigned, so an in flight job always runs to completion
 
-**Slice 5 · Hardening** (AC-17, AC-18, AC-19, AC-20, AC-21, AC-22)
+**Slice 5 · Hardening** (AC-17, AC-18, AC-19, AC-20, AC-21, AC-22, AC-23)
 
-27. Backend tests for connection guards, the five row ledger, the two failure timings, the recipient matrix, the delivery method branch, the accept gate and the held payout, against scenarios T1 to T29
-28. Empty and error states for every new screen
+31. Backend tests for connection guards, the five row ledger, the two failure timings, the recipient matrix, the delivery method branch, the accept gate, the kill switch and the held payout, against scenarios T1 to T30
+32. Empty and error states for every new screen
 
 ## Consequences
 
