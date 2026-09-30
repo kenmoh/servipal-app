@@ -47,6 +47,7 @@ app-example
 expo-env.d.ts
 
 .env.local
+.opencode/
 
 
  
