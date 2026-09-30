@@ -19,14 +19,14 @@ Never `npm install <package>@<version>` for anything Expo, React Native, React o
 
 ## Gates
 
-Run both before merging:
-
 ```
-npm test
-npm run lint
+npm test        # jest, must be green
+npm run lint    # see baseline below
 ```
 
-There is no CI in this repo (no `.github/workflows`). These commands are the entire gate.
+**Lint baseline: 255 problems (63 errors, 192 warnings) on a clean checkout.** `npm run lint` does not exit zero today, so treat it as a *comparison*, not a pass: record the count before your change and make sure it does not go up. `npm test` is the gate that actually fails.
+
+There is no CI in this repo (no `.github/workflows`). These two commands are the entire gate.
 
 ## Structure
 
