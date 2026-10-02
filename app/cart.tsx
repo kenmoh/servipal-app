@@ -1,3 +1,4 @@
+import { getDispatchRiders, quoteDispatchDelivery } from "@/api/dispatch";
 import { initiateRestaurantOrderPayment } from "@/api/food";
 import { initiateLaundryOrderPayment } from "@/api/laundry";
 import { fetchProfile } from "@/api/user";
@@ -13,11 +14,15 @@ import { AppTextInput } from "@/components/ui/app-text-input";
 import { HEADER_BG_DARK, HEADER_BG_LIGHT } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useTrack } from "@/hooks/use-events";
+import { resolveDeliveryMethods } from "@/lib/delivery-options";
 import { useCartStore } from "@/store/cartStore";
 import { useLocationStore } from "@/store/locationStore";
 import { useUserStore } from "@/store/userStore";
 import { OrderCreate, RestaurantOrderCreate } from "@/types/item-types";
 import { RequireDelivery } from "@/types/order-types";
+import type { DispatchQuote } from "@/types/dispatch";
+import { decodeGeography } from "@/utils/geography";
+import { getDirections } from "@/utils/map";
 import { generateIdempotencyKey } from "@/utils/utils";
 import Feather from "@react-native-vector-icons/feather/static";
 import MaterialCommunityIcons from "@react-native-vector-icons/material-design-icons/static";
@@ -38,6 +43,7 @@ import React, {
 import {
   ActivityIndicator,
   Alert,
+  Image,
   Pressable,
   Switch,
   Text,
@@ -117,6 +123,19 @@ const chunk = <T,>(arr: T[], size: number): T[][] => {
   );
 };
 
+const DELIVERY_LABELS: Record<RequireDelivery, string> = {
+  PICKUP: "Pickup from Store",
+  VENDOR_DELIVERY: "Vendor Delivery",
+  DISPATCH_DELIVERY: "External delivery",
+};
+
+/** Mapbox returns seconds; the quote wants the same text the route produced. */
+const formatRouteDuration = (seconds: number) => {
+  const totalMinutes = Math.max(1, Math.round(seconds / 60));
+  if (totalMinutes < 60) return `${totalMinutes} min`;
+  return `${Math.floor(totalMinutes / 60)} hr ${totalMinutes % 60} min`;
+};
+
 // ─── Component ──────────────────────────────────────────────────────────────
 const Cart = () => {
   const [instructions, setInstructions] = useState("");
@@ -124,6 +143,12 @@ const Cart = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [modalFullyOpen, setModalFullyOpen] = useState(false);
   const bottomSheetRef = useRef<BottomSheetModal>(null);
+  // ── Dispatch checkout (External delivery) state ───────────────────────
+  const [selectedRiderId, setSelectedRiderId] = useState<string | null>(null);
+  const [dispatchQuote, setDispatchQuote] = useState<DispatchQuote | null>(
+    null,
+  );
+  const [quoteLoading, setQuoteLoading] = useState(false);
   const theme = useColorScheme();
   const { user } = useUserStore();
   const { isLaundry, deliveryFee } = useLocalSearchParams<{
@@ -190,6 +215,40 @@ const Cart = () => {
     queryFn: () => fetchProfile(vendorId),
     enabled: !!vendorId,
   });
+
+  // Riders reachable from this vendor. An empty result also encodes the kill
+  // switch, so the cart needs no second check (AC-6, AC-23).
+  const { data: dispatchRiders = [] } = useQuery({
+    queryKey: ["dispatch-riders", vendorId],
+    queryFn: () => getDispatchRiders(vendorId as string),
+    enabled: !!vendorId && !isLaundryOrder,
+  });
+
+  // The one rule that decides which delivery options render (AC-5, AC-6).
+  const availableDeliveryMethods = useMemo(
+    () =>
+      resolveDeliveryMethods({
+        canPickupAndDropoff: !!vendorProfile?.can_pickup_and_dropoff,
+        riderCount: dispatchRiders.length,
+      }),
+    [vendorProfile?.can_pickup_and_dropoff, dispatchRiders.length],
+  );
+
+  // Never leave an option selected that no longer renders: a vendor turning
+  // the flag off, or every rider going offline, falls back to pickup.
+  useEffect(() => {
+    if (isLaundryOrder || !vendorProfile) return;
+    if (!availableDeliveryMethods.includes(delivery_option)) {
+      setDeliveryOption("PICKUP");
+      setSelectedRiderId(null);
+    }
+  }, [
+    availableDeliveryMethods,
+    delivery_option,
+    isLaundryOrder,
+    setDeliveryOption,
+    vendorProfile,
+  ]);
 
   // Fetch vendor availability (express fee info)
   // Fetch pickup/drop-off time slots
@@ -265,6 +324,9 @@ const Cart = () => {
     ) {
       total += Number(deliveryFee);
     }
+    if (delivery_option === "DISPATCH_DELIVERY" && dispatchQuote) {
+      total += dispatchQuote.delivery_fee;
+    }
     if (isLaundryOrder && cart.is_express && cart.express_fee > 0) {
       total += cart.express_fee;
     }
@@ -273,14 +335,80 @@ const Cart = () => {
     totalCost,
     deliveryFee,
     delivery_option,
+    dispatchQuote,
     vendorProfile,
     isLaundryOrder,
     cart.is_express,
     cart.express_fee,
   ]);
 
-  const { setDestination, destination } = useLocationStore();
+  const { setDestination, destination, destinationCoords } =
+    useLocationStore();
   const queryClient = useQueryClient();
+
+  // The pickup end of the route is the vendor's stored location, decoded from
+  // the EWKB form PostgREST returns geography columns as.
+  const vendorPickupCoords = useMemo(
+    () =>
+      decodeGeography(
+        (vendorProfile as { location_coordinates?: unknown } | undefined)
+          ?.location_coordinates,
+      ),
+    [vendorProfile],
+  );
+
+  // Mapbox route distance is what gets priced: straight line would understate
+  // road distance and underprice the order, so it is never used (AC-7).
+  useEffect(() => {
+    let cancelled = false;
+
+    const guard =
+      isLaundryOrder ||
+      delivery_option !== "DISPATCH_DELIVERY" ||
+      !vendorId ||
+      !vendorPickupCoords ||
+      !destinationCoords;
+
+    if (guard) {
+      setDispatchQuote(null);
+      setQuoteLoading(false);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    setQuoteLoading(true);
+    (async () => {
+      try {
+        const route = await getDirections(
+          vendorPickupCoords,
+          destinationCoords,
+        );
+        if (cancelled || !route.distance) return;
+        const quote = await quoteDispatchDelivery(
+          vendorId,
+          route.distance / 1000,
+          formatRouteDuration(route.duration),
+        );
+        if (!cancelled) setDispatchQuote(quote);
+      } catch {
+        if (!cancelled) setDispatchQuote(null);
+      } finally {
+        if (!cancelled) setQuoteLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    delivery_option,
+    destinationCoords,
+    isLaundryOrder,
+    vendorId,
+    vendorPickupCoords,
+  ]);
+
   const isDark = theme === "dark";
   const bgColor = isDark ? HEADER_BG_DARK : HEADER_BG_LIGHT;
 
@@ -370,9 +498,16 @@ const Cart = () => {
   // ── Delivery option handler (restaurant only) ─────────────────────────
   const handleDeliveryOptionChange = (option: RequireDelivery) => {
     setDeliveryOption(option);
+    if (option !== "DISPATCH_DELIVERY") {
+      setSelectedRiderId(null);
+    }
+
+    // Pickup from Store needs no address; both delivery methods do. The old
+    // `PICKUP && !can_pickup_and_dropoff` case is gone: that flag now picks
+    // between Vendor Delivery and External delivery, so a pickup no longer
+    // drags an address sheet behind it (AC-6).
     const shouldOpenAddressSheet =
-      option === "VENDOR_DELIVERY" ||
-      (option === "PICKUP" && !vendorProfile?.can_pickup_and_dropoff);
+      option === "VENDOR_DELIVERY" || option === "DISPATCH_DELIVERY";
 
     if (shouldOpenAddressSheet) {
       setModalFullyOpen(false);
@@ -497,7 +632,12 @@ const Cart = () => {
       return;
     }
 
-    if (delivery_option === "VENDOR_DELIVERY" && !destination) {
+    // Both delivery methods need an address; plain pickup does not (AC-6).
+    if (
+      (delivery_option === "VENDOR_DELIVERY" ||
+        delivery_option === "DISPATCH_DELIVERY") &&
+      !destination
+    ) {
       showError("Error", "Please enter a delivery address");
       track("order_failed", {
         reason: "No delivery address selected",
@@ -512,25 +652,29 @@ const Cart = () => {
       return;
     }
 
-    // For pickup-only vendors, also require address
-    if (
-      delivery_option === "PICKUP" &&
-      !vendorProfile?.can_pickup_and_dropoff &&
-      !destination
-    ) {
-      showError("Error", "Please select a delivery address");
-      track("order_failed", {
-        reason: "No delivery address selected",
-        serviceType: isLaundryOrder ? "LAUNDRY" : "FOOD",
-      });
-      if (!isLaundryOrder) {
-        setModalVisible(true);
-        setTimeout(() => {
-          bottomSheetRef.current?.present();
-        }, 100);
+    // External delivery is only complete once the customer has picked a rider
+    // and the server has priced the route (AC-5, AC-7).
+    if (delivery_option === "DISPATCH_DELIVERY") {
+      if (!selectedRiderId) {
+        showError("Error", "Please choose a rider for this delivery");
+        track("order_failed", { reason: "No rider selected", serviceType: "FOOD" });
+        return;
       }
-      return;
+      if (!dispatchQuote) {
+        showError(
+          "Error",
+          quoteLoading
+            ? "Still calculating your delivery fee"
+            : "Could not price this delivery. Please try again.",
+        );
+        track("order_failed", { reason: "No delivery quote", serviceType: "FOOD" });
+        return;
+      }
     }
+
+    const selectedRider = selectedRiderId
+      ? dispatchRiders.find((rider) => rider.id === selectedRiderId)
+      : undefined;
 
     // Shared base payload for both order types
     const basePayload: OrderCreate = {
@@ -539,9 +683,18 @@ const Cart = () => {
       instructions,
       delivery_address:
         delivery_option === "VENDOR_DELIVERY" ||
-        !vendorProfile?.can_pickup_and_dropoff
+        delivery_option === "DISPATCH_DELIVERY"
           ? (destination ?? "")
           : "",
+      ...(delivery_option === "DISPATCH_DELIVERY" &&
+        dispatchQuote &&
+        selectedRider && {
+          rider_id: selectedRider.id,
+          dispatch_id: selectedRider.dispatch_id ?? undefined,
+          quoted_fee: dispatchQuote.delivery_fee,
+          distance_km: dispatchQuote.distance_km,
+          duration: dispatchQuote.duration ?? undefined,
+        }),
       items: cart.order_items.map((item) => ({
         item_id: item.item_id,
         name: item.name ?? "",
@@ -750,6 +903,20 @@ const Cart = () => {
                       </Text>
                     </View>
                   )}
+                {delivery_option === "DISPATCH_DELIVERY" && (
+                  <View className="flex-row justify-between items-center mt-1">
+                    <Text className="text-gray-400 font-poppins-medium">
+                      Delivery Fee
+                    </Text>
+                    <Text className="text-primary font-poppins-semibold">
+                      {quoteLoading
+                        ? "Calculating…"
+                        : dispatchQuote
+                          ? `₦${Number(dispatchQuote.delivery_fee).toFixed(2)}`
+                          : "—"}
+                    </Text>
+                  </View>
+                )}
                 {isLaundryOrder && cart.is_express && cart.express_fee > 0 && (
                   <View className="flex-row justify-between items-center mt-1">
                     <Text className="text-gray-400 font-poppins-medium">
@@ -813,29 +980,91 @@ const Cart = () => {
                     Delivery Method
                   </Text>
                   <View className="bg-input rounded-2xl p-4 border border-gray-300 dark:border-gray-600">
-                    {vendorProfile?.can_pickup_and_dropoff ? (
-                      <>
-                        <RadioButton
-                          label="Pickup from Store"
-                          selected={delivery_option === "PICKUP"}
-                          onPress={() => handleDeliveryOptionChange("PICKUP")}
-                        />
-                        <RadioButton
-                          label="Vendor Delivery"
-                          selected={delivery_option === "VENDOR_DELIVERY"}
-                          onPress={() =>
-                            handleDeliveryOptionChange("VENDOR_DELIVERY")
-                          }
-                        />
-                      </>
-                    ) : (
+                    {availableDeliveryMethods.map((option) => (
                       <RadioButton
-                        label="Select delivery address"
-                        selected={delivery_option === "PICKUP"}
-                        onPress={() => handleDeliveryOptionChange("PICKUP")}
+                        key={option}
+                        label={DELIVERY_LABELS[option]}
+                        selected={delivery_option === option}
+                        onPress={() => handleDeliveryOptionChange(option)}
                       />
-                    )}
+                    ))}
                   </View>
+
+                  {/* ── External delivery: who the server actually reached ── */}
+                  {delivery_option === "DISPATCH_DELIVERY" && (
+                    <View className="mt-4 bg-input rounded-2xl p-4 border border-gray-300 dark:border-gray-600">
+                      <Text className="text-xs text-gray-400 font-poppins-medium mb-3 uppercase ml-1">
+                        Choose a rider
+                      </Text>
+                      {dispatchRiders.length === 0 ? (
+                        <Text className="text-sm text-gray-400 font-poppins-regular">
+                          No riders available right now.
+                        </Text>
+                      ) : (
+                        dispatchRiders.map((rider) => {
+                          const isSelected = selectedRiderId === rider.id;
+                          return (
+                            <Pressable
+                              key={rider.id}
+                              onPress={() => setSelectedRiderId(rider.id)}
+                              className={`flex-row items-center gap-3 p-3 rounded-xl mb-2 border ${
+                                isSelected
+                                  ? "border-button-primary bg-orange-500/10"
+                                  : "border-gray-200 dark:border-gray-700"
+                              }`}
+                            >
+                              {rider.profile_image_url ? (
+                                <Image
+                                  source={{ uri: rider.profile_image_url }}
+                                  className="w-10 h-10 rounded-full"
+                                />
+                              ) : (
+                                <View className="w-10 h-10 rounded-full bg-button-primary/10 items-center justify-center">
+                                  <Ionicons
+                                    name="person"
+                                    size={18}
+                                    color="#FF8C00"
+                                  />
+                                </View>
+                              )}
+                              <View className="flex-1">
+                                <Text className="text-sm font-poppins-semibold text-primary">
+                                  {rider.full_name ?? "Rider"}
+                                </Text>
+                                <Text
+                                  className="text-xs text-gray-400 font-poppins-regular"
+                                  numberOfLines={1}
+                                >
+                                  {rider.dispatch_business_name ?? "Dispatch"}
+                                  {rider.dispatch_average_rating != null &&
+                                    ` · ★ ${Number(rider.dispatch_average_rating).toFixed(1)}`}
+                                </Text>
+                              </View>
+                              <View className="items-end">
+                                {rider.average_rating != null && (
+                                  <Text className="text-xs font-poppins-semibold text-button-primary">
+                                    ★ {Number(rider.average_rating).toFixed(1)}
+                                  </Text>
+                                )}
+                                {rider.distance_km != null && (
+                                  <Text className="text-xs text-gray-400 font-poppins-regular">
+                                    {Number(rider.distance_km).toFixed(1)} km
+                                  </Text>
+                                )}
+                              </View>
+                            </Pressable>
+                          );
+                        })
+                      )}
+                      {quoteLoading && (
+                        <ActivityIndicator
+                          size="small"
+                          color="#FF8C00"
+                          className="mt-1"
+                        />
+                      )}
+                    </View>
+                  )}
                   <View className="mt-4 bg-input rounded-2xl p-4 border border-gray-300 dark:border-gray-600">
                     <Text className="text-xs text-gray-400 font-poppins-medium mb-2 uppercase ml-1">
                       Schedule Order
@@ -1043,8 +1272,7 @@ const Cart = () => {
               {/* ─── Restaurant delivery address summary ─────────── */}
               {!isLaundryOrder &&
                 (delivery_option === "VENDOR_DELIVERY" ||
-                  (delivery_option === "PICKUP" &&
-                    !vendorProfile?.can_pickup_and_dropoff)) &&
+                  delivery_option === "DISPATCH_DELIVERY") &&
                 destination &&
                 !modalVisible && (
                   <View className="mb-8">

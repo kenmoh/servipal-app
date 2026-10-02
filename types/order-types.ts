@@ -13,7 +13,10 @@ export type OrderPaymentStatus =
   | "CANCELLED"
   | "REFUNDED";
 
-export type RequireDelivery = "PICKUP" | "VENDOR_DELIVERY";
+export type RequireDelivery =
+  | "PICKUP"
+  | "VENDOR_DELIVERY"
+  | "DISPATCH_DELIVERY";
 
 import { SizeOption } from "./item-types";
 

@@ -68,12 +68,20 @@ export interface OrderItem {
 export interface OrderCreate {
   vendor_id: string;
   items: OrderItem[];
-  delivery_option: "PICKUP" | "VENDOR_DELIVERY";
+  delivery_option: "PICKUP" | "VENDOR_DELIVERY" | "DISPATCH_DELIVERY";
   instructions: string;
   delivery_address: string;
 
+  // Dispatch checkout (External delivery). Echoed to the server so it can
+  // re-verify them; it never trusts the client's rider or fee.
+  rider_id?: string;
+  dispatch_id?: string;
+  quoted_fee?: number;
+  distance_km?: number;
+  duration?: string;
+
   // Laundry booking fields (optional — only for laundry orders)
-  pickup_date?: string; // YYYY-MM-DD
+  pickup_date?: string; // YYYY-MM/DD
   delivery_date?: string;
   pickup_time?: string; // ISO slot start time
   delivery_time?: string;
