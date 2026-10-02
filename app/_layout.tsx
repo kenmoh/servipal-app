@@ -466,6 +466,20 @@ export default Sentry.wrap(
                           }}
                         />
                         <Stack.Screen
+                          name="dispatch-connections"
+                          options={{
+                            headerShown: false,
+                            animation: "slide_from_bottom",
+                          }}
+                        />
+                        <Stack.Screen
+                          name="dispatch-requests"
+                          options={{
+                            headerShown: false,
+                            animation: "slide_from_bottom",
+                          }}
+                        />
+                        <Stack.Screen
                           name="laundry-store/[storeId]"
                           options={{
                             headerShown: false,

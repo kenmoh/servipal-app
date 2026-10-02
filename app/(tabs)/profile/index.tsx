@@ -661,6 +661,22 @@ const ProfileScreen = () => {
                   />
                 </>
               )}
+              {user?.user_metadata.user_type === "RESTAURANT_VENDOR" && (
+                <>
+                  <HDivider />
+                  <AppLink
+                    onPress={() => router.push("/dispatch-connections")}
+                    name="Delivery Partners"
+                    icon={
+                      <Ionicons
+                        name="people-outline"
+                        size={18}
+                        color="gray"
+                      />
+                    }
+                  />
+                </>
+              )}
               {user?.user_metadata.user_type === "DISPATCH" && (
                 <>
                   <HDivider />
@@ -670,6 +686,18 @@ const ProfileScreen = () => {
                     name="Riders"
                     icon={
                       <Ionicons name="bicycle-outline" size={18} color="gray" />
+                    }
+                  />
+                  <HDivider />
+                  <AppLink
+                    onPress={() => router.push("/dispatch-requests")}
+                    name="Connection Requests"
+                    icon={
+                      <Ionicons
+                        name="git-pull-request-outline"
+                        size={18}
+                        color="gray"
+                      />
                     }
                   />
                 </>
