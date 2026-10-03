@@ -44,6 +44,16 @@ export interface ConnectionRow {
   dispatch_business_name: string | null;
   dispatch_full_name: string | null;
   dispatch_profile_image_url: string | null;
+  // Contact block. The service returns these only while status is ACCEPTED,
+  // so a pending, declined or disconnected row arrives with nulls here.
+  vendor_email: string | null;
+  vendor_phone_number: string | null;
+  vendor_business_address: string | null;
+  vendor_state: string | null;
+  dispatch_email: string | null;
+  dispatch_phone_number: string | null;
+  dispatch_business_address: string | null;
+  dispatch_state: string | null;
 }
 
 export interface ConnectionListResponse {

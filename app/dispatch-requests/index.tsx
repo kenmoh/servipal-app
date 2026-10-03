@@ -4,6 +4,7 @@ import {
   fetchDispatchConnectionRequests,
 } from "@/api/dispatch-connections";
 import EmptyList from "@/components/EmptyList";
+import PartnerContact from "@/components/PartnerContact";
 import { useToast } from "@/components/ToastProvider";
 import { AppButton } from "@/components/ui/app-button";
 import { useUserStore } from "@/store/userStore";
@@ -15,11 +16,21 @@ import { router } from "expo-router";
 import React, { useState } from "react";
 import {
   ActivityIndicator,
+  Pressable,
   RefreshControl,
   Text,
   TextInput,
   View,
 } from "react-native";
+
+type Tab = "requests" | "partners";
+
+const TABS: Tab[] = ["requests", "partners"];
+
+const TAB_LABEL: Record<Tab, string> = {
+  requests: "Requests",
+  partners: "Partners",
+};
 
 const RequestCard = ({
   item,
@@ -135,17 +146,27 @@ const DispatchConnectionRequests = () => {
   const { user } = useUserStore();
   const { showError, showSuccess } = useToast();
   const queryClient = useQueryClient();
+  const [tab, setTab] = useState<Tab>("requests");
 
-  const inboxQuery = useQuery({
+  const requestsQuery = useQuery({
     queryKey: ["dispatch-connection-requests", user?.id],
     queryFn: () => fetchDispatchConnectionRequests("PENDING"),
     enabled: !!user?.id,
   });
 
+  const partnersQuery = useQuery({
+    queryKey: ["dispatch-partners", user?.id],
+    queryFn: () => fetchDispatchConnectionRequests("ACCEPTED"),
+    enabled: !!user?.id && tab === "partners",
+  });
+
   const invalidate = () =>
-    queryClient.invalidateQueries({
-      queryKey: ["dispatch-connection-requests"],
-    });
+    Promise.all([
+      queryClient.invalidateQueries({
+        queryKey: ["dispatch-connection-requests"],
+      }),
+      queryClient.invalidateQueries({ queryKey: ["dispatch-partners"] }),
+    ]);
 
   const acceptMutation = useMutation({
     mutationFn: (id: string) => acceptConnectionRequest(id),
@@ -166,7 +187,9 @@ const DispatchConnectionRequests = () => {
     onError: (error) => showError("COULD NOT DECLINE", error.message),
   });
 
-  if (inboxQuery.isPending) {
+  const activeQuery = tab === "requests" ? requestsQuery : partnersQuery;
+
+  if (activeQuery.isPending) {
     return (
       <View className="flex-1 bg-background justify-center items-center">
         <ActivityIndicator />
@@ -174,71 +197,148 @@ const DispatchConnectionRequests = () => {
     );
   }
 
-  if (inboxQuery.isError) {
+  if (activeQuery.isError) {
     return (
       <EmptyList
         title="Something went wrong"
-        description={inboxQuery.error.message}
+        description={activeQuery.error.message}
       />
     );
   }
 
-  const rows = inboxQuery.data?.data ?? [];
-  const hasPayoutAccount = inboxQuery.data?.has_payout_account ?? false;
+  const rows =
+    tab === "requests"
+      ? (requestsQuery.data?.data ?? [])
+      : (partnersQuery.data?.data ?? []);
+  const hasPayoutAccount = requestsQuery.data?.has_payout_account ?? false;
+  const isBusy = acceptMutation.isPending || declineMutation.isPending;
+
+  const renderPartner = ({ item }: { item: ConnectionRow }) => (
+    <View className="bg-profile-card rounded-2xl p-4 mb-3 gap-3">
+      <View className="flex-row items-start justify-between gap-3">
+        <Text className="flex-1 text-primary font-poppins-semibold text-base">
+          {item.vendor_business_name || item.vendor_full_name || "Restaurant"}
+        </Text>
+        <View className="px-2 py-1 rounded-full bg-status-success-subtle">
+          <Text className="text-[11px] font-poppins-medium text-status-success">
+            Connected
+          </Text>
+        </View>
+      </View>
+
+      <PartnerContact
+        name={
+          item.vendor_business_name || item.vendor_full_name || "this vendor"
+        }
+        email={item.vendor_email}
+        phone={item.vendor_phone_number}
+        address={item.vendor_business_address}
+        state={item.vendor_state}
+      />
+    </View>
+  );
 
   return (
     <View className="flex-1 bg-background">
-      <FlashList
-        data={rows}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={{
-          paddingHorizontal: 12,
-          paddingTop: 12,
-          paddingBottom: 24,
-        }}
-        showsVerticalScrollIndicator={false}
-        renderItem={({ item }) => (
-          <RequestCard
-            item={item}
-            hasPayoutAccount={hasPayoutAccount}
-            isBusy={acceptMutation.isPending || declineMutation.isPending}
-            onAccept={(id) => acceptMutation.mutate(id)}
-            onDecline={(id, note) => declineMutation.mutate({ id, note })}
-          />
-        )}
-        refreshControl={
-          <RefreshControl
-            refreshing={inboxQuery.isRefetching}
-            onRefresh={() => inboxQuery.refetch()}
-          />
-        }
-        ListHeaderComponent={
-          !hasPayoutAccount && rows.length > 0 ? (
-            <View className="mb-3 bg-status-pending-subtle rounded-2xl p-4 gap-3">
-              <Text className="text-primary font-poppins-medium">
-                Add a payout account to accept requests
-              </Text>
-              <Text className="text-muted text-sm">
-                A dispatch can only be paid once it has a bank account on
-                file, so these requests cannot be accepted yet.
-              </Text>
-              <View>
-                <AppButton
-                  text="Add payout account"
-                  variant="fill"
-                  onPress={() => router.push("/wallet/add-payout-account")}
-                />
+      <View className="flex-row gap-2 px-3 pt-3">
+        {TABS.map((key) => (
+          <Pressable
+            key={key}
+            onPress={() => setTab(key)}
+            className={`flex-1 py-2.5 rounded-full ${
+              tab === key ? "bg-brand-primary" : "bg-profile-card"
+            }`}
+          >
+            <Text
+              className={`text-center font-poppins-medium text-sm ${
+                tab === key ? "text-white" : "text-muted"
+              }`}
+            >
+              {TAB_LABEL[key]}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+
+      {tab === "requests" ? (
+        <FlashList
+          data={rows}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={{
+            paddingHorizontal: 12,
+            paddingTop: 12,
+            paddingBottom: 24,
+          }}
+          showsVerticalScrollIndicator={false}
+          renderItem={({ item }) => (
+            <RequestCard
+              item={item}
+              hasPayoutAccount={hasPayoutAccount}
+              isBusy={isBusy}
+              onAccept={(id) => acceptMutation.mutate(id)}
+              onDecline={(id, note) =>
+                declineMutation.mutate({ id, note })
+              }
+            />
+          )}
+          refreshControl={
+            <RefreshControl
+              refreshing={requestsQuery.isRefetching}
+              onRefresh={() => requestsQuery.refetch()}
+            />
+          }
+          ListHeaderComponent={
+            !hasPayoutAccount && rows.length > 0 ? (
+              <View className="mb-3 bg-status-pending-subtle rounded-2xl p-4 gap-3">
+                <Text className="text-primary font-poppins-medium">
+                  Add a payout account to accept requests
+                </Text>
+                <Text className="text-muted text-sm">
+                  A dispatch can only be paid once it has a bank account on
+                  file, so these requests cannot be accepted yet.
+                </Text>
+                <View>
+                  <AppButton
+                    text="Add payout account"
+                    variant="fill"
+                    onPress={() => router.push("/wallet/add-payout-account")}
+                  />
+                </View>
               </View>
-            </View>
-          ) : null
-        }
-        ListEmptyComponent={
-          <EmptyList
-            title="No requests waiting"
-            description="When a restaurant asks to partner with your dispatch it will appear here."
-          />
-        }
-      />
+            ) : null
+          }
+          ListEmptyComponent={
+            <EmptyList
+              title="No requests waiting"
+              description="When a restaurant asks to partner with your dispatch it will appear here."
+            />
+          }
+        />
+      ) : (
+        <FlashList
+          data={rows}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={{
+            paddingHorizontal: 12,
+            paddingTop: 12,
+            paddingBottom: 24,
+          }}
+          showsVerticalScrollIndicator={false}
+          renderItem={renderPartner}
+          refreshControl={
+            <RefreshControl
+              refreshing={partnersQuery.isRefetching}
+              onRefresh={() => partnersQuery.refetch()}
+            />
+          }
+          ListEmptyComponent={
+            <EmptyList
+              title="No delivery partners yet"
+              description="Accept a request and the restaurant will appear here with its contact details."
+            />
+          }
+        />
+      )}
     </View>
   );
 };

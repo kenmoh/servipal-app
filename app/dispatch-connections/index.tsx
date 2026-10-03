@@ -5,6 +5,7 @@ import {
   fetchVendorConnections,
 } from "@/api/dispatch-connections";
 import EmptyList from "@/components/EmptyList";
+import PartnerContact from "@/components/PartnerContact";
 import { useToast } from "@/components/ToastProvider";
 import { AppButton } from "@/components/ui/app-button";
 import { useUserStore } from "@/store/userStore";
@@ -165,6 +166,20 @@ const DispatchConnections = () => {
         </View>
         <StatusBadge status={item.status} />
       </View>
+
+      {item.status === "ACCEPTED" && (
+        <PartnerContact
+          name={
+            item.dispatch_business_name ||
+            item.dispatch_full_name ||
+            "this dispatch"
+          }
+          email={item.dispatch_email}
+          phone={item.dispatch_phone_number}
+          address={item.dispatch_business_address}
+          state={item.dispatch_state}
+        />
+      )}
 
       <AppButton
         text="Disconnect"
