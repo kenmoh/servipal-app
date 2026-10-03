@@ -16,6 +16,10 @@ export interface DispatchDirectoryItem {
   business_name: string | null;
   full_name: string | null;
   profile_image_url: string | null;
+  // Where the dispatch operates. Listing info on Discover; email/phone
+  // only arrive on ConnectionRow once the pair is ACCEPTED.
+  business_address: string | null;
+  state: string | null;
   dispatch_average_rating: number | null;
   rider_count: number;
   online_rider_count: number;

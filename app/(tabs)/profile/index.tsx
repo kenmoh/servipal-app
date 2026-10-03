@@ -71,6 +71,10 @@ const ProfileScreen = () => {
   const [canPickup, setCanPickup] = useState(
     profile?.can_pickup_and_dropoff ?? false,
   );
+  
+  const [isPartnerEnabled, setIsPartnerEnabled] = useState(
+    profile?.can_pickup_and_dropoff ?? false,
+  );
   const [pendingTheme, setPendingTheme] = useState<"light" | "dark" | null>(
     null,
   );
@@ -461,7 +465,6 @@ const ProfileScreen = () => {
         },
       ]);
     } catch (error) {
-      console.error("Error in background toggle:", error);
       showError("Error", "Failed to check permission.");
     }
   };

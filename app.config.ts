@@ -16,6 +16,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     googleServicesFile: "./GoogleService-Info.plist",
     config: {
       googleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_MAP_API_KEY,
+      usesNonExemptEncryption: false,
     },
     bundleIdentifier: "com.kenmoh.servipal",
     infoPlist: {

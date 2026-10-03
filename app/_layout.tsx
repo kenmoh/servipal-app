@@ -243,6 +243,11 @@ export default Sentry.wrap(
             clearTimeout(relockTimer.current);
             relockTimer.current = null;
           }
+
+          const userStore = useUserStore.getState();
+          if (userStore.user) {
+            void userStore.refreshSession();
+          }
         }
       });
 
@@ -522,3 +527,5 @@ export default Sentry.wrap(
     );
   }),
 );
+
+

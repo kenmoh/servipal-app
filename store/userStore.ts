@@ -17,7 +17,7 @@ import {
 } from "@/utils/location-tracking";
 import { supabase } from "@/utils/supabase";
 import * as Sentry from "@sentry/react-native";
-import { AuthChangeEvent, Session } from "@supabase/supabase-js";
+import { AuthChangeEvent, AuthError, Session } from "@supabase/supabase-js";
 import * as Location from "expo-location";
 import * as Notifications from "expo-notifications";
 import * as SecureStore from "expo-secure-store";
@@ -38,6 +38,17 @@ Notifications.setNotificationHandler({
 const LOCATION_TASK_NAME = GENERAL_LOCATION_TASK;
 
 const FIRST_LAUNCH_KEY = "hasLaunched";
+
+const isInvalidSessionError = (error: unknown): boolean => {
+  if (!(error instanceof AuthError)) return false;
+
+  const message = error.message.toLowerCase();
+  return (
+    error.status === 401 ||
+    message.includes("refresh token") ||
+    message.includes("session from session_id claim")
+  );
+};
 
 // Haversine distance calculation (meters)
 const getDistanceMeters = (
@@ -836,9 +847,14 @@ export const useUserStore = create<UserStore>((set, get) => ({
 
       if (error) {
         Sentry.captureException(error, { tags: { action: "refresh_session" } });
-        // Stop location on session error
-        get().stopLocationTracking();
-        set({ user: null, profile: null });
+
+        if (isInvalidSessionError(error)) {
+          await supabase.auth.signOut({ scope: "local" });
+          await authStorage.removeUser();
+          get().stopLocationTracking();
+          set({ user: null, profile: null, biometricUnlocked: false });
+        }
+
         return;
       }
 
@@ -852,8 +868,13 @@ export const useUserStore = create<UserStore>((set, get) => ({
       }
     } catch (error) {
       Sentry.captureException(error, { tags: { action: "refresh_session" } });
-      // Stop location on error
-      get().stopLocationTracking();
+
+      if (isInvalidSessionError(error)) {
+        await supabase.auth.signOut({ scope: "local" });
+        await authStorage.removeUser();
+        get().stopLocationTracking();
+        set({ user: null, profile: null, biometricUnlocked: false });
+      }
     }
   },
 

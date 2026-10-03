@@ -13,7 +13,15 @@ import Ionicons from "@react-native-vector-icons/ionicons/static";
 import { FlashList } from "@shopify/flash-list";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import Animated, {
+  Easing,
+  FadeIn,
+  FadeInDown,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from "react-native-reanimated";
 import {
   ActivityIndicator,
   Pressable,
@@ -52,7 +60,10 @@ const RequestCard = ({
     item.vendor_business_name || item.vendor_full_name || "Restaurant";
 
   return (
-    <View className="bg-profile-card rounded-2xl p-4 mb-3 gap-3">
+    <Animated.View
+      entering={FadeInDown.duration(160)}
+      className="bg-profile-card rounded-2xl p-4 mb-3 gap-3"
+    >
       <View className="gap-1">
         <Text className="text-primary font-poppins-semibold text-base">
           {vendorName}
@@ -138,7 +149,7 @@ const RequestCard = ({
           </View>
         </View>
       )}
-    </View>
+    </Animated.View>
   );
 };
 
@@ -147,6 +158,24 @@ const DispatchConnectionRequests = () => {
   const { showError, showSuccess } = useToast();
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<Tab>("requests");
+
+  // Sliding highlight behind the active tab pill.
+  const [tabsWidth, setTabsWidth] = useState(0);
+  const indicatorX = useSharedValue(0);
+  const tabIndex = tab === "requests" ? 0 : 1;
+  // onLayout width includes the track's 1px border on each side.
+  const segmentWidth = Math.max((tabsWidth - 2) / 2, 0);
+
+  useEffect(() => {
+    indicatorX.value = withTiming(tabIndex * segmentWidth, {
+      duration: 220,
+      easing: Easing.out(Easing.cubic),
+    });
+  }, [tabIndex, segmentWidth, indicatorX]);
+
+  const indicatorStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: indicatorX.value }],
+  }));
 
   const requestsQuery = useQuery({
     queryKey: ["dispatch-connection-requests", user?.id],
@@ -214,7 +243,10 @@ const DispatchConnectionRequests = () => {
   const isBusy = acceptMutation.isPending || declineMutation.isPending;
 
   const renderPartner = ({ item }: { item: ConnectionRow }) => (
-    <View className="bg-profile-card rounded-2xl p-4 mb-3 gap-3">
+    <Animated.View
+      entering={FadeInDown.duration(160)}
+      className="bg-profile-card rounded-2xl p-4 mb-3 gap-3"
+    >
       <View className="flex-row items-start justify-between gap-3">
         <Text className="flex-1 text-primary font-poppins-semibold text-base">
           {item.vendor_business_name || item.vendor_full_name || "Restaurant"}
@@ -235,32 +267,47 @@ const DispatchConnectionRequests = () => {
         address={item.vendor_business_address}
         state={item.vendor_state}
       />
-    </View>
+    </Animated.View>
   );
 
   return (
     <View className="flex-1 bg-background">
-      <View className="flex-row gap-2 px-3 pt-3">
-        {TABS.map((key) => (
-          <Pressable
-            key={key}
-            onPress={() => setTab(key)}
-            className={`flex-1 py-2.5 rounded-full ${
-              tab === key ? "bg-brand-primary" : "bg-profile-card"
-            }`}
-          >
-            <Text
-              className={`text-center font-poppins-medium text-sm ${
-                tab === key ? "text-white" : "text-muted"
-              }`}
+      <View className="px-3 pt-3">
+        <View
+          className="flex-row bg-profile-card border border-border-subtle rounded-full"
+          onLayout={(e) => setTabsWidth(e.nativeEvent.layout.width)}
+        >
+          <Animated.View
+            pointerEvents="none"
+            className="absolute left-0 top-0 bottom-0 rounded-full border border-button-primary bg-button-primary-transparent"
+            style={[{ width: segmentWidth }, indicatorStyle]}
+          />
+          {TABS.map((key) => (
+            <Pressable
+              key={key}
+              onPress={() => setTab(key)}
+              className="flex-1 py-2.5 rounded-full"
             >
-              {TAB_LABEL[key]}
-            </Text>
-          </Pressable>
-        ))}
+              <Text
+                className={`text-center text-sm ${
+                  tab === key
+                    ? "font-poppins-bold text-button-primary"
+                    : "font-poppins-medium text-muted"
+                }`}
+              >
+                {TAB_LABEL[key]}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
       </View>
 
-      {tab === "requests" ? (
+      <Animated.View
+        key={tab}
+        className="flex-1"
+        entering={FadeIn.duration(160)}
+      >
+        {tab === "requests" ? (
         <FlashList
           data={rows}
           keyExtractor={(item) => item.id}
@@ -338,7 +385,8 @@ const DispatchConnectionRequests = () => {
             />
           }
         />
-      )}
+        )}
+      </Animated.View>
     </View>
   );
 };
