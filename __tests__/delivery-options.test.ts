@@ -1,3 +1,6 @@
+import { readFileSync } from "fs";
+import { join } from "path";
+
 import { resolveDeliveryMethods } from "@/lib/delivery-options";
 
 describe("resolveDeliveryMethods", () => {
@@ -91,5 +94,56 @@ describe("resolveDeliveryMethods", () => {
     it.each(cases)("never offers no options (%o)", (input) => {
       expect(resolveDeliveryMethods(input).length).toBeGreaterThan(0);
     });
+  });
+});
+
+describe("the laundry chips are unchanged (T28)", () => {
+  const source = readFileSync(join(__dirname, "../app/cart.tsx"), "utf8");
+
+  /**
+   * The laundry service-type selector, taken between its two marker comments.
+   *
+   * Deliberately source-level: mounting `app/cart.tsx` needs navigation,
+   * payment and store mocks, and what has to be pinned is which options the
+   * markup offers — that laundry always shows today's two and never grows an
+   * *External delivery* chip when the dispatch branch turns on.
+   */
+  const serviceTypeBlock = (): string => {
+    const start = source.indexOf("{/* \u2500\u2500 Service type");
+    const end = source.indexOf(
+      "{/* \u2500\u2500 Delivery address (vendor delivery)",
+    );
+    expect(start).toBeGreaterThan(-1);
+    expect(end).toBeGreaterThan(start);
+    return source.slice(start, end);
+  };
+
+  const offeredOptions = (): string[] => {
+    const pattern = /handleLaundryServiceChange\("([A-Z_]+)"\)/g;
+    const found: string[] = [];
+    let match: RegExpExecArray | null;
+    while ((match = pattern.exec(serviceTypeBlock())) !== null) {
+      found.push(match[1]);
+    }
+    return found;
+  };
+
+  it("offers exactly the two options it has always offered", () => {
+    expect(offeredOptions().sort()).toEqual([
+      "PICKUP",
+      "VENDOR_DELIVERY",
+    ]);
+  });
+
+  it("never offers External delivery", () => {
+    const block = serviceTypeBlock();
+    expect(block).not.toContain("DISPATCH_DELIVERY");
+    expect(block).not.toContain("External delivery");
+  });
+
+  it("keeps the restaurant radios on the tested branch function", () => {
+    // The branch matrix is resolveDeliveryMethods' job, and the assertion
+    // above is what stops laundry being folded into it later.
+    expect(source).toContain("resolveDeliveryMethods({");
   });
 });

@@ -96,6 +96,27 @@ export interface DeliveryDetails {
   duration: string;
   created_at: string;
   updated_at: string;
+
+  /**
+   * Fields only the FOOD branch of `get_order_details` returns (AC-25).
+   *
+   * The courier branch reads `delivery_orders` and has no dispatch company,
+   * no coordinates and no rider name on the row, so every one of these is
+   * optional and the receipt renders the delivery card only where they exist.
+   */
+  food_order_id?: string;
+  tx_ref?: string;
+  rider_name?: string | null;
+  rider_phone?: string | null;
+  dispatch_business_name?: string | null;
+  payment_status?: string;
+  amount_due_dispatch?: number;
+  had_escrow?: boolean;
+  is_sender_cancelled?: boolean;
+  /** jsonb `[lat, lng]` arrays, never GeoJSON — see `_jsonb_point`. */
+  pickup_coordinates?: number[] | null;
+  dropoff_coordinates?: number[] | null;
+  last_known_rider_coordinates?: number[] | null;
 }
 
 export interface DetailResponse {

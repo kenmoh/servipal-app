@@ -9,7 +9,14 @@ export default function TabLayout() {
   const colorScheme = useColorScheme();
   const { user } = useUserStore();
   const BG_COLOR = colorScheme === "dark" ? HEADER_BG_DARK : HEADER_BG_LIGHT;
-  const ALLOWED_USER = ["CUSTOMER", "LAUNDRY_VENDOR", "RESTAURANT_VENDOR"];
+  // RIDER joins so a dispatch rider can open the food order they are running.
+  // Laundry and marketplace stay hidden for them, hence hideForRider below.
+  const ALLOWED_USER = [
+    "CUSTOMER",
+    "LAUNDRY_VENDOR",
+    "RESTAURANT_VENDOR",
+    "RIDER",
+  ];
   const isAllowed = ALLOWED_USER.includes(user?.user_metadata?.user_type!);
   const hideForRider = user?.user_metadata.user_type === "RIDER";
   return (
@@ -31,7 +38,7 @@ export default function TabLayout() {
         <NativeTabs.Trigger.Label>Food</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf="fork.knife" md="restaurant" />
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="laundry" hidden={!isAllowed}>
+      <NativeTabs.Trigger name="laundry" hidden={!isAllowed || hideForRider}>
         <NativeTabs.Trigger.Label>Laundry</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon
           sf="washer"

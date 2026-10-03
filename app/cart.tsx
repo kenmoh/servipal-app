@@ -694,6 +694,10 @@ const Cart = () => {
           quoted_fee: dispatchQuote.delivery_fee,
           distance_km: dispatchQuote.distance_km,
           duration: dispatchQuote.duration ?? undefined,
+          // [lat, lng]: the two ends of the same route that produced the
+          // quote, so the receipt draws what was actually priced (AC-25).
+          pickup_coordinates: vendorPickupCoords ?? undefined,
+          dropoff_coordinates: destinationCoords ?? undefined,
         }),
       items: cart.order_items.map((item) => ({
         item_id: item.item_id,

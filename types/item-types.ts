@@ -79,6 +79,10 @@ export interface OrderCreate {
   quoted_fee?: number;
   distance_km?: number;
   duration?: string;
+  // [lat, lng]. Stored on food_deliveries so the receipt can draw the route
+  // and follow the rider without a second lookup (AC-25).
+  pickup_coordinates?: [number, number];
+  dropoff_coordinates?: [number, number];
 
   // Laundry booking fields (optional — only for laundry orders)
   pickup_date?: string; // YYYY-MM/DD

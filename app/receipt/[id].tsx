@@ -14,11 +14,14 @@ import {
   updateFoodOrderStatus,
   updateLaundryOrderStatus,
 } from "@/api/order";
+import EmptyList from "@/components/EmptyList";
+import FoodDeliveryCard from "@/components/FoodDeliveryCard";
 import LoadingIndicator from "@/components/LoadingIndicator";
 import { useToast } from "@/components/ToastProvider";
 import { AppButton } from "@/components/ui/app-button";
 import { HEADER_BG_DARK, HEADER_BG_LIGHT } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
+import { shouldShowDeliveryCard } from "@/lib/food-delivery-card";
 import { useUserStore } from "@/store/userStore";
 import { DetailResponse, OrderItem, OrderStatus } from "@/types/order-types";
 import { getButtonConfig } from "@/utils/button-config";
@@ -265,7 +268,7 @@ const ReceiptPage = () => {
     orderType: "FOOD" | "LAUNDRY";
   }>();
 
-  const { data, isLoading, refetch } = useQuery<DetailResponse>({
+  const { data, isLoading, isError, error, refetch } = useQuery<DetailResponse>({
     queryKey: ["order", id, orderType],
     queryFn: () => fetchOrderDetails(id, orderType),
     enabled: !!id && !!orderType,
@@ -632,6 +635,32 @@ const ReceiptPage = () => {
   };
 
   if (isLoading) return <LoadingIndicator />;
+
+  // A failed fetch used to fall through to the `!data` null below and leave a
+  // blank screen. That matters more now that AC-24 deliberately hands RLS
+  // denial to anyone who is not customer, vendor, rider or dispatch — they
+  // should be told they cannot see this order rather than shown nothing.
+  if (isError) {
+    return (
+      <View style={{ flex: 1, backgroundColor: BG_COLOR }}>
+        <EmptyList
+          title="Could not load this order"
+          description={
+            error?.message || "Something went wrong while loading this receipt."
+          }
+        />
+        <AppButton
+          text="Try again"
+          variant="outline"
+          width="70%"
+          borderRadius={50}
+          style={{ alignSelf: "center", marginBottom: 40 }}
+          onPress={() => refetch()}
+        />
+      </View>
+    );
+  }
+
   if (!data) return null;
 
   const { order, delivery } = data;
@@ -760,6 +789,29 @@ const ReceiptPage = () => {
           </Text>
         </View>
       </View>
+
+      {/*
+        The rider's half of the order (AC-25), sitting between the food status
+        row above and the receipt below so neither status stands in for the
+        other. The presence rule lives in `lib/food-delivery-card.ts` so it can
+        be asserted without mounting this screen: absent a `delivery` payload —
+        pickup, vendor delivery, laundry — no card and no map are rendered and
+        this screen is exactly what it was.
+      */}
+      {shouldShowDeliveryCard(orderType, delivery) && (
+        <FoodDeliveryCard
+          orderId={order.id}
+          delivery={delivery}
+          isRider={user?.id === delivery.rider_id}
+          onStatusChanged={() => {
+            refetch();
+            queryClient.invalidateQueries({
+              queryKey: ["order", id, orderType],
+            });
+          }}
+        />
+      )}
+
       <View
         className={`${CARD_BG} rounded-xl p-4 ${BORDER_COLOR} border shadow-sm`}
       >
