@@ -122,6 +122,7 @@ export const useToggleEnableReservation = () => {
 export const useTogglePickupAndDropoff = () => {
   const { showSuccess, showError } = useToast();
   const { profile, setProfile } = useUserStore();
+  const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async () => {
@@ -143,7 +144,10 @@ export const useTogglePickupAndDropoff = () => {
           updated_at: data.updated_at,
         });
       }
-
+      queryClient.invalidateQueries({ queryKey: ["vendorProfile", profile?.id] });
+      queryClient.invalidateQueries({ queryKey: ["vendor-profile"] });
+      queryClient.invalidateQueries({ queryKey: ["restaurants"] });
+      queryClient.invalidateQueries({ queryKey: ["laundry"] });
       showSuccess(
         "Success",
         `Pickup & delivery ${data.can_pickup_and_dropoff ? "enabled" : "disabled"}`,

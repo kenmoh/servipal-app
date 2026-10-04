@@ -53,8 +53,12 @@ export async function fetchProfileWithReviews(
     });
   }
 
+  const data = rpcData as (UserProfile & { can_pickup_and_dropoff?: boolean | string }) | null;
+  const rawFlag = data?.can_pickup_and_dropoff;
+
   return {
-    ...(rpcData as UserProfile),
+    ...data,
+    can_pickup_and_dropoff: typeof rawFlag === "string" ? rawFlag === "true" : rawFlag,
     enable_reservation: profile?.enable_reservation,
   } as UserProfile;
 }
