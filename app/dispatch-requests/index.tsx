@@ -10,6 +10,7 @@ import { AppButton } from "@/components/ui/app-button";
 import { useUserStore } from "@/store/userStore";
 import type { ConnectionRow } from "@/types/dispatch-connection";
 import Ionicons from "@react-native-vector-icons/ionicons/static";
+import FontAwesome from "@react-native-vector-icons/fontawesome/static";
 import { FlashList } from "@shopify/flash-list";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
@@ -108,6 +109,9 @@ const RequestCard = ({
               <AppButton
                 text="Send"
                 variant="fill"
+                height={36}
+                borderRadius={36}
+                textStyle={{ fontSize: 14 }}
                 disabled={isBusy}
                 onPress={() => {
                   setDeclining(false);
@@ -120,6 +124,10 @@ const RequestCard = ({
               <AppButton
                 text="Cancel"
                 variant="outline"
+                height={36}
+                borderRadius={36}
+                borderWidth={1}
+                textStyle={{ fontSize: 14 }}
                 disabled={isBusy}
                 onPress={() => {
                   setDeclining(false);
@@ -135,6 +143,9 @@ const RequestCard = ({
             <AppButton
               text="Accept"
               variant="fill"
+              height={36}
+              borderRadius={36}
+              textStyle={{ fontSize: 14 }}
               disabled={isBusy || !hasPayoutAccount}
               onPress={() => onAccept(item.id)}
             />
@@ -143,6 +154,10 @@ const RequestCard = ({
             <AppButton
               text="Decline"
               variant="outline"
+              height={36}
+              borderRadius={36}
+              borderWidth={1}
+              textStyle={{ fontSize: 14 }}
               disabled={isBusy}
               onPress={() => setDeclining(true)}
             />
@@ -251,8 +266,9 @@ const DispatchConnectionRequests = () => {
         <Text className="flex-1 text-primary font-poppins-semibold text-base">
           {item.vendor_business_name || item.vendor_full_name || "Restaurant"}
         </Text>
-        <View className="px-2 py-1 rounded-full bg-status-success-subtle">
-          <Text className="text-[11px] font-poppins-medium text-status-success">
+        <View className="flex-row items-center gap-1.5 px-2.5 py-1 rounded-full border border-button-primary bg-button-primary/55">
+          <FontAwesome name="handshake-o" size={11} color="orange" />
+          <Text className="text-[11px] font-poppins-medium text-button-primary">
             Connected
           </Text>
         </View>
@@ -279,7 +295,7 @@ const DispatchConnectionRequests = () => {
         >
           <Animated.View
             pointerEvents="none"
-            className="absolute left-0 top-0 bottom-0 rounded-full border border-button-primary bg-button-primary-transparent"
+            className="absolute left-0 top-0 bottom-0 rounded-full border border-button-primary bg-button-primary/50"
             style={[{ width: segmentWidth }, indicatorStyle]}
           />
           {TABS.map((key) => (

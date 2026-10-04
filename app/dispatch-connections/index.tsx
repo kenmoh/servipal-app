@@ -43,19 +43,20 @@ const STATUS_LABEL: Record<ConnectionStatus, string> = {
   DISCONNECTED: "Disconnected",
 };
 
-const STATUS_CLASS: Record<ConnectionStatus, string> = {
-  PENDING: "bg-status-pending-subtle text-status-pending",
-  ACCEPTED: "bg-status-success-subtle text-status-success",
-  DECLINED: "bg-status-error-subtle text-status-error",
-  DISCONNECTED: "bg-surface-elevated text-muted",
-};
 
+
+const TEXT_CLASS: Record<ConnectionStatus, string> = {
+  PENDING: "text-status-pending",
+  ACCEPTED: "text-status-success",
+  DECLINED: "text-status-error",
+  DISCONNECTED: "text-status-muted",
+};
 const StatusBadge = ({ status }: { status: ConnectionStatus }) => (
   <View
-    className={`px-2 py-1 rounded-full ${STATUS_CLASS[status]}`}
+    className={`px-2 py-1 rounded-full`}
     testID={`status-${status}`}
   >
-    <Text className="text-[11px] font-poppins-medium">
+    <Text className={`text-[9px] font-poppins-medium uppercase ${TEXT_CLASS[status]}`}>
       {STATUS_LABEL[status]}
     </Text>
   </View>
@@ -263,7 +264,9 @@ const DispatchConnections = () => {
           ) : null}
         </View>
         <View className="items-end gap-2">
-          <StatusBadge status={item.status} />
+          {item.status !== "ACCEPTED" && (
+            <StatusBadge status={item.status} />
+          )}
           <Pressable
             onPress={() => disconnectMutation.mutate(item.dispatch_id)}
             disabled={disconnectMutation.isPending}
@@ -336,7 +339,7 @@ const DispatchConnections = () => {
         >
           <Animated.View
             pointerEvents="none"
-            className="absolute left-0 top-0 bottom-0 rounded-full border border-button-primary bg-button-primary-transparent"
+            className="absolute left-0 top-0 bottom-0 rounded-full border border-button-primary bg-button-primary/50"
             style={[{ width: segmentWidth }, indicatorStyle]}
           />
           {(["discover", "connections"] as Tab[]).map((key) => (
