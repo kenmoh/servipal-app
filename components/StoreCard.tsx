@@ -21,9 +21,11 @@ const IMAGET_HEIGHT = Dimensions.get("window").height * 0.2;
 const StoreCard = ({
   item,
   pathName,
+  routeKm,
 }: {
   item: UserProfile;
   pathName: Href;
+  routeKm?: number;
 }) => {
   const theme = useColorScheme();
   const handleStoreSelect = async () => {
@@ -94,8 +96,8 @@ const StoreCard = ({
           </View>
          
           <Text className="text-xs text-muted shrink-0 pt-[2px]">
-               {`${item?.distance_km} km Away`}
-            </Text>
+               {`${routeKm != null ? routeKm.toFixed(1) : item?.distance_km} km Away`}
+          </Text>
         </View>
 
         {item?.business_address && (

@@ -15,12 +15,14 @@ import {
   TransactionSummaryResponse,
 } from "@/types/user-types";
 import { apiClient } from "@/utils/client";
+import { decodeGeography } from "@/utils/geography";
 import { supabase } from "@/utils/supabase";
 import * as Sentry from "@sentry/react-native";
 import { ApiResponse } from "apisauce";
 import { fetch } from "expo/fetch";
 import { ErrorResponse } from "./auth";
 import { RequireDelivery } from "@/types/order-types";
+import type { Coordinates } from "@/store/locationStore";
 
 const BASE_URL = "/users";
 const BENEFICIARIES_URL = "/beneficiaries";
@@ -72,6 +74,35 @@ export const fetchProfile = async (userId: string): Promise<UserProfile> => {
 
   if (error) throw error;
   return data as UserProfile;
+};
+
+/**
+ * Store pins for a batch of vendors, decoded to [lat, lng].
+ *
+ * Prefers the business pin — the same COALESCE the nearby-vendors RPC uses
+ * for its straight-line distance — so a route computed from this origin
+ * replaces that number one-for-one. Vendors without a usable pin are simply
+ * absent from the map, and callers withhold a route for them.
+ */
+export const fetchVendorPins = async (
+  vendorIds: string[],
+): Promise<Record<string, Coordinates | null>> => {
+  const out: Record<string, Coordinates | null> = {};
+  if (vendorIds.length === 0) return out;
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id, location_coordinates, business_location_coordinates")
+    .in("id", vendorIds);
+
+  if (error || !data) return out;
+
+  for (const row of data) {
+    out[row.id] =
+      decodeGeography(row.business_location_coordinates) ??
+      decodeGeography(row.location_coordinates);
+  }
+  return out;
 };
 
 interface ProfileImageURL {

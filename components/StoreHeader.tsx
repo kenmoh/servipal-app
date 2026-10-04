@@ -10,6 +10,7 @@ import { Image, Pressable, Text, View } from "react-native";
 import { fetchProfileWithReviews } from "@/api/user";
 import BackButton from "@/components/BackButton";
 import LoadingIndicator from "@/components/LoadingIndicator";
+import { useRouteDistances } from "@/hooks/use-route-distances";
 import { useUserStore } from "@/store/userStore";
 import { UserProfile } from "@/types/user-types";
 import { useQuery } from "@tanstack/react-query";
@@ -29,6 +30,11 @@ const StoreHeader = ({ storeId }: StoreHeaderProps) => {
     queryFn: () => fetchProfileWithReviews(storeId!),
     enabled: !!storeId,
   });
+
+  // Road distance from the customer to this store; falls back to nothing
+  // when location permission or the Matrix call is unavailable.
+  const routeDistances = useRouteDistances([storeId]);
+  const routeKm = routeDistances[storeId];
 
   const displayProfile =
     (vendorProfile as UserProfile) || (isOwnStore ? currentUserProfile : null);
@@ -116,6 +122,11 @@ const StoreHeader = ({ storeId }: StoreHeaderProps) => {
                 <Text className="font-poppins text-primary text-sm flex-shrink">
                   {displayProfile?.business_address}
                 </Text>
+                {routeKm != null && (
+                  <Text className="font-poppins text-muted text-sm shrink-0">
+                    · {routeKm.toFixed(1)} km
+                  </Text>
+                )}
               </View>
               <View className="flex-row justify-between items-center mt-2">
                 <Pressable

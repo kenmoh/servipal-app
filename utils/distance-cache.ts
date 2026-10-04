@@ -17,7 +17,10 @@ class DistanceCache {
     itemLat: number,
     itemLng: number
   ): string {
-    return `${userLat},${userLng}-${itemLat},${itemLng}`;
+    // ~110 m: GPS jitter between two readings of the same spot still hits
+    // the same entry, while distinct stores stay distinct.
+    const r3 = (n: number) => Math.round(n * 1000) / 1000;
+    return `${r3(userLat)},${r3(userLng)}-${itemLat},${itemLng}`;
   }
 
   set(

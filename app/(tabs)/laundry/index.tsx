@@ -1,6 +1,6 @@
 import Feather from "@react-native-vector-icons/feather/static";
 import { FlashList } from "@shopify/flash-list";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 import { searchNearbyLaundry } from "@/api/user";
@@ -13,6 +13,7 @@ import HDivider from "@/components/HDivider";
 import RefreshButton from "@/components/RefreshButton";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useTrack } from "@/hooks/use-events";
+import { useRouteDistances } from "@/hooks/use-route-distances";
 import { useUserStore } from "@/store/userStore";
 import { UserProfile } from "@/types/user-types";
 
@@ -92,6 +93,12 @@ const LaundryScreen = () => {
   const handleRefresh = useCallback(() => {
     refetch();
   }, [refetch]);
+
+  const vendorIds = useMemo(
+    () => (data?.vendors ?? []).map((vendor) => vendor.id),
+    [data],
+  );
+  const routeDistances = useRouteDistances(vendorIds, !!currentLocation);
 
   // Simple debounce for search
   useEffect(() => {
@@ -191,7 +198,11 @@ const LaundryScreen = () => {
         refreshing={isFetching}
         onRefresh={handleRefresh}
         renderItem={({ item }: { item: UserProfile }) => (
-          <StoreCard item={item} pathName="/store/[storeId]" />
+          <StoreCard
+            item={item}
+            pathName="/store/[storeId]"
+            routeKm={routeDistances[item.id]}
+          />
         )}
         contentContainerStyle={{
           paddingBottom: 10,
