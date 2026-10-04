@@ -135,10 +135,10 @@ describe("the laundry chips are unchanged (T28)", () => {
     ]);
   });
 
-  it("never offers External delivery", () => {
+  it("never offers Select Dispatch", () => {
     const block = serviceTypeBlock();
     expect(block).not.toContain("DISPATCH_DELIVERY");
-    expect(block).not.toContain("External delivery");
+    expect(block).not.toContain("Select Dispatch");
   });
 
   it("keeps the restaurant radios on the tested branch function", () => {

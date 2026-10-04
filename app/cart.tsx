@@ -126,7 +126,7 @@ const chunk = <T,>(arr: T[], size: number): T[][] => {
 const DELIVERY_LABELS: Record<RequireDelivery, string> = {
   PICKUP: "Pickup from Store",
   VENDOR_DELIVERY: "Vendor Delivery",
-  DISPATCH_DELIVERY: "External delivery",
+  DISPATCH_DELIVERY: "Select Dispatch",
 };
 
 /** Mapbox returns seconds; the quote wants the same text the route produced. */
