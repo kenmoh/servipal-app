@@ -346,16 +346,23 @@ const Cart = () => {
     useLocationStore();
   const queryClient = useQueryClient();
 
-  // The pickup end of the route is the vendor's stored location, decoded from
-  // the EWKB form PostgREST returns geography columns as.
-  const vendorPickupCoords = useMemo(
-    () =>
-      decodeGeography(
-        (vendorProfile as { location_coordinates?: unknown } | undefined)
-          ?.location_coordinates,
-      ),
-    [vendorProfile],
-  );
+  // The pickup end of the route is the store's pin — the business location
+  // first (what the customer ordered from, and what the list distance uses),
+  // falling back to the vendor's personal pin. Pricing from the personal pin
+  // charged a detour to wherever the vendor's phone last was (the two pins
+  // were 6 km apart on a real store).
+  const vendorPickupCoords = useMemo(() => {
+    const profile = vendorProfile as
+      | {
+          business_location_coordinates?: unknown;
+          location_coordinates?: unknown;
+        }
+      | undefined;
+    return (
+      decodeGeography(profile?.business_location_coordinates) ??
+      decodeGeography(profile?.location_coordinates)
+    );
+  }, [vendorProfile]);
 
   // Mapbox route distance is what gets priced: straight line would understate
   // road distance and underprice the order, so it is never used (AC-7).
