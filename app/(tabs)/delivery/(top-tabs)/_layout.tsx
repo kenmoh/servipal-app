@@ -21,6 +21,15 @@ const TopTab = () => {
     "LAUNDRY_VENDOR",
     "CUSTOMER",
     "RESTAURANT_VENDOR",
+   
+  ].includes(profile?.user_type!);
+
+  const showFoodTab = ![
+    "LAUNDRY_VENDOR",
+    "CUSTOMER",
+    "RESTAURANT_VENDOR",
+    "RIDER",
+    "DISPATCH",
   ].includes(profile?.user_type!);
 
   return (
@@ -79,7 +88,7 @@ const TopTab = () => {
       />
 
       <Tab.Screen
-        redirect={showAllTabs}
+        redirect={showFoodTab}
         name="food"
         options={{
           tabBarLabel: "Food",

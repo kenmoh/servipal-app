@@ -15,7 +15,8 @@ export default function TabLayout() {
     "CUSTOMER",
     "LAUNDRY_VENDOR",
     "RESTAURANT_VENDOR",
-    "RIDER",
+    // "RIDER",
+    // "DISPATCH"
   ];
   const isAllowed = ALLOWED_USER.includes(user?.user_metadata?.user_type!);
   const hideForRider = user?.user_metadata.user_type === "RIDER";
