@@ -129,6 +129,19 @@ const DELIVERY_LABELS: Record<RequireDelivery, string> = {
   DISPATCH_DELIVERY: "Select Dispatch",
 };
 
+/**
+ * Flat container-card look: no hairline border, one small shadow that reads
+ * on both platforms — `elevation` is what Android paints, the shadow* quartet
+ * is what iOS paints (RN ignores each on the other platform).
+ */
+const CARD_ELEVATION = {
+  elevation: 2,
+  shadowColor: "#000",
+  shadowOffset: { width: 0, height: 1 },
+  shadowOpacity: 0.1,
+  shadowRadius: 3,
+} as const;
+
 /** Mapbox returns seconds; the quote wants the same text the route produced. */
 const formatRouteDuration = (seconds: number) => {
   const totalMinutes = Math.max(1, Math.round(seconds / 60));
@@ -893,7 +906,10 @@ const Cart = () => {
               </View>
 
               {/* ─── Pricing Summary ─────────────────────────────── */}
-              <View className="bg-input rounded-2xl p-5 border border-gray-300 dark:border-gray-600 mb-8">
+              <View
+                className="bg-input rounded-2xl p-5 mb-8"
+                style={CARD_ELEVATION}
+              >
                 <View className="flex-row justify-between items-center">
                   <Text className="text-gray-400 font-poppins-medium">
                     Subtotal
@@ -919,13 +935,20 @@ const Cart = () => {
                     <Text className="text-gray-400 font-poppins-medium">
                       Delivery Fee
                     </Text>
-                    <Text className="text-primary font-poppins-semibold">
-                      {quoteLoading
-                        ? "Calculating…"
-                        : dispatchQuote
-                          ? `₦${Number(dispatchQuote.delivery_fee).toFixed(2)}`
-                          : "—"}
-                    </Text>
+                    <View className="flex-row items-center gap-3">
+                      {dispatchQuote && (
+                        <Text className="text-muted font-poppins-medium">
+                          {dispatchQuote.distance_km.toFixed(1)} km
+                        </Text>
+                      )}
+                      <Text className="text-primary font-poppins-semibold">
+                        {quoteLoading
+                          ? "Calculating…"
+                          : dispatchQuote
+                            ? `₦${Number(dispatchQuote.delivery_fee).toFixed(2)}`
+                            : "—"}
+                      </Text>
+                    </View>
                   </View>
                 )}
                 {isLaundryOrder && cart.is_express && cart.express_fee > 0 && (
@@ -958,7 +981,8 @@ const Cart = () => {
                   </Text>
                   <Pressable
                     onPress={handleOpenLaundryModal}
-                    className="bg-input rounded-2xl p-4 border border-gray-300 dark:border-gray-600 flex-row items-center justify-between active:opacity-70"
+                    className="bg-input rounded-2xl p-4 flex-row items-center justify-between active:opacity-70"
+                    style={CARD_ELEVATION}
                   >
                     <View className="flex-row items-center gap-3">
                       <View className="w-10 h-10 rounded-full bg-button-primary/10 items-center justify-center">
@@ -990,7 +1014,10 @@ const Cart = () => {
                   <Text className="text-base font-poppins-bold text-primary mb-4">
                     Delivery Method
                   </Text>
-                  <View className="bg-input rounded-2xl p-4 border border-gray-300 dark:border-gray-600">
+                  <View
+                    className="bg-input rounded-2xl p-4"
+                    style={CARD_ELEVATION}
+                  >
                     {availableDeliveryMethods.map((option) => (
                       <RadioButton
                         key={option}
@@ -1003,7 +1030,10 @@ const Cart = () => {
 
                   {/* ── External delivery: who the server actually reached ── */}
                   {delivery_option === "DISPATCH_DELIVERY" && (
-                    <View className="mt-4 bg-input rounded-2xl p-4 border border-gray-300 dark:border-gray-600">
+                    <View
+                      className="mt-4 bg-input rounded-2xl p-4"
+                      style={CARD_ELEVATION}
+                    >
                       <Text className="text-xs text-gray-400 font-poppins-medium mb-3 uppercase ml-1">
                         Choose a rider
                       </Text>
@@ -1076,7 +1106,10 @@ const Cart = () => {
                       )}
                     </View>
                   )}
-                  <View className="mt-4 bg-input rounded-2xl p-4 border border-gray-300 dark:border-gray-600">
+                  <View
+                    className="mt-4 bg-input rounded-2xl p-4"
+                    style={CARD_ELEVATION}
+                  >
                     <Text className="text-xs text-gray-400 font-poppins-medium mb-2 uppercase ml-1">
                       Schedule Order
                     </Text>
@@ -1167,7 +1200,10 @@ const Cart = () => {
                       </Text>
                     </Pressable>
                   </View>
-                  <View className="bg-input rounded-2xl p-4 border border-gray-300 dark:border-gray-600">
+                  <View
+                    className="bg-input rounded-2xl p-4"
+                    style={CARD_ELEVATION}
+                  >
                     {/* Service type */}
                     <View className="flex-row items-center mb-3">
                       <Ionicons
@@ -1301,7 +1337,10 @@ const Cart = () => {
                         </Text>
                       </Pressable>
                     </View>
-                    <View className="bg-input rounded-2xl p-4 border border-gray-600 flex-row">
+                    <View
+                      className="bg-input rounded-2xl p-4 flex-row"
+                      style={CARD_ELEVATION}
+                    >
                       <Feather
                         name="map-pin"
                         size={16}
@@ -1543,7 +1582,10 @@ const Cart = () => {
                     {/* ── Express toggle ───────────────── */}
                     {vendorHasExpress && selectedSlot && (
                       <View className="px-5">
-                        <View className="bg-input rounded-2xl p-4 border border-gray-300 dark:border-gray-600 mb-4">
+                        <View
+                          className="bg-input rounded-2xl p-4 mb-4"
+                          style={CARD_ELEVATION}
+                        >
                           <View className="flex-row items-center justify-between">
                             <View className="flex-1 mr-4">
                               <View className="flex-row items-center gap-2 mb-1">
